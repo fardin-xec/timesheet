@@ -24,8 +24,8 @@ const PayrollView = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [currency, setCurrency] = useState("¥");
-  const [currencyName, setCurrencyName] = useState("Japanese Yen (JPY)");
+  const [currency, setCurrency] = useState("ر.ق");
+  const [currencyName, setCurrencyName] = useState("Qatari riyal (QAR)");
   const [newEmployee, setNewEmployee] = useState({
     id: "",
     name: "",
@@ -35,7 +35,6 @@ const PayrollView = () => {
     paymentStatus: "Yet To Pay",
   });
 
-  // Comprehensive list of world currencies
   const currencies = [
     { symbol: "ر.ق", name: "Qatari riyal (QAR)", code: "QAR" },
     { symbol: "¥", name: "Japanese Yen (JPY)", code: "JPY" },
@@ -153,42 +152,10 @@ const PayrollView = () => {
     const newCurrencySymbol = newValue.symbol;
     setCurrency(newCurrencySymbol);
     setCurrencyName(newValue.name);
-
-    // Update the currency in payroll data
-    const updatedPayrollData = {
-      ...payrollData,
-      totalCost: payrollData.totalCost.replace(/^[^\d]+/, newCurrencySymbol),
-      taxesAndDeductions: {
-        taxes: payrollData.taxesAndDeductions.taxes.replace(
-          /^[^\d]+/,
-          newCurrencySymbol
-        ),
-        preTaxDeductions:
-          payrollData.taxesAndDeductions.preTaxDeductions.replace(
-            /^[^\d]+/,
-            newCurrencySymbol
-          ),
-        postTaxDeductions:
-          payrollData.taxesAndDeductions.postTaxDeductions.replace(
-            /^[^\d]+/,
-            newCurrencySymbol
-          ),
-      },
-      employees: payrollData.employees.map((emp) => ({
-        ...emp,
-        netPay: emp.netPay.replace(/^[^\d]+/, newCurrencySymbol),
-      })),
-    };
-
-    setPayrollData(updatedPayrollData);
   };
 
   const handleAddEmployee = () => {
-    // Format the netPay with the selected currency
-    const formattedNetPay = `${currency}${newEmployee.netPay.replace(
-      /^[^\d]+/,
-      ""
-    )}`;
+    const formattedNetPay = `${currency}${newEmployee.netPay.replace(/^[^\d]+/, "")}`;
 
     const updatedEmployees = [
       ...payrollData.employees,
@@ -234,8 +201,7 @@ const PayrollView = () => {
                 <strong>Payment Mode:</strong> {selectedEmployee.paymentMode}
               </Typography>
               <Typography variant="body1" gutterBottom>
-                <strong>Payment Status:</strong>{" "}
-                {selectedEmployee.paymentStatus}
+                <strong>Payment Status:</strong> {selectedEmployee.paymentStatus}
               </Typography>
             </>
           )}
@@ -252,12 +218,7 @@ const PayrollView = () => {
   return (
     <div className="payroll-container">
       <div className="payroll-header">
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          width="100%"
-        >
+        <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
           <Box>
             <Typography variant="h4" gutterBottom>
               Regular Payroll
@@ -265,11 +226,7 @@ const PayrollView = () => {
             <Typography variant="body1" className="status-badge" gutterBottom>
               APPROVED
             </Typography>
-            <Typography
-              variant="subtitle1"
-              gutterBottom
-              style={{ marginTop: 12 }}
-            >
+            <Typography variant="subtitle1" gutterBottom style={{ marginTop: 12 }}>
               Period: {payrollData.period}
             </Typography>
             <Typography variant="h5" gutterBottom>
@@ -281,35 +238,6 @@ const PayrollView = () => {
           </Box>
 
           <Box>
-            <FormControl
-              variant="outlined"
-              style={{ minWidth: 240, marginRight: 16 }}
-            >
-              <Autocomplete
-                options={currencies}
-                getOptionLabel={(option) => option.name}
-                value={currencies.find((c) => c.symbol === currency)}
-                onChange={handleCurrencyChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Select Currency"
-                    variant="outlined"
-                    className="currency-selector"
-                    InputProps={{
-                      ...params.InputProps,
-                      style: {
-                        color: "black",
-                        backgroundColor: "rgb(255, 251, 251)",
-                      },
-                    }}
-                    InputLabelProps={{
-                      style: { color: "rgba(20, 19, 19, 0.7)" },
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
             <Button
               variant="contained"
               startIcon={<Download />}
@@ -323,12 +251,7 @@ const PayrollView = () => {
       </div>
 
       <div className="payroll-card">
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          marginBottom={2}
-        >
+        <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
           <Typography variant="h6">Employee Summary</Typography>
           <Button
             variant="contained"
@@ -394,32 +317,55 @@ const PayrollView = () => {
         </DialogTitle>
         <DialogContent className="dialog-content">
           <div className="currency-info">
-            <AttachMoney className="currency-icon" />
-            <Typography variant="body2">
-              Current Currency: <strong>{currencyName}</strong>
-            </Typography>
+           
+
+          <FormControl fullWidth margin="dense" variant="outlined">
+            <Autocomplete
+              options={currencies}
+              getOptionLabel={(option) => option.name}
+              value={currencies.find((c) => c.symbol === currency)}
+              onChange={handleCurrencyChange}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Select Currency"
+                  variant="outlined"
+                  className="currency-selector"
+                  InputProps={{
+                    ...params.InputProps,
+                    style: {
+                      color: "black",
+                      backgroundColor: "rgb(255, 251, 251)",
+                    },
+                  }}
+                  InputLabelProps={{
+                    style: { color: "rgba(20, 19, 19, 0.7)" },
+                  }}
+                />
+              )}
+            />
+          </FormControl>
           </div>
+
 
           <TextField
             autoFocus
             margin="dense"
             name="id"
             label="Employee ID"
-            type="text"
+            type=""
             fullWidth
             variant="outlined"
             value={newEmployee.id}
             onChange={handleInputChange}
             style={{ marginTop: 16 }}
-          
           />
           <TextField
             margin="dense"
             name="name"
             label="Employee Name"
-            type="text"
+            type=""
             fullWidth
-            variant="outlined"
             value={newEmployee.name}
             onChange={handleInputChange}
           />
@@ -437,7 +383,7 @@ const PayrollView = () => {
             margin="dense"
             name="netPay"
             label="Net Pay"
-            type="text"
+            type=""
             fullWidth
             variant="outlined"
             value={newEmployee.netPay}

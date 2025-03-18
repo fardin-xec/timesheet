@@ -1,169 +1,96 @@
+/* Add all the styles from the inline styles here */
 .payroll-container {
-  padding: 24px;
-  background-color: #f5f7fa;
-  min-height: 100vh;
+  padding: 20px;
 }
 
 .payroll-header {
-  background: linear-gradient(135deg, #e1e6ec 0%, #1f5eff 100%);
-  color: rgb(13, 12, 12);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  background: linear-gradient(to right, #bccff0, #5276c8); /* Example gradient */
+  border-radius: 0.5rem;
+  padding: 1rem;
 }
 
-.payroll-header h4 {
-  font-weight: 700;
-  margin-bottom: 8px;
+.status-badge {
+  background-color: #4caf50;
+  color: #f5f5f5 !important; /* Force the text color */
+  padding: 5px 10px; /* Add some padding */
+  border-radius: 4px; /* Rounded corners */
+  display: inline-block; /* Ensure it behaves like a block element */
+  
 }
 
-.payroll-header h5 {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 16px 0;
-}
 
-.payroll-header .status-badge {
-  background-color: rgba(3, 93, 13, 0.899);
-  color: #e1e6ec;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 14px;
-  display: inline-block;
-}
 
-.payroll-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  padding: 24px;
-  margin-bottom: 24px;
-}
-
-.payroll-card h6 {
-  font-weight: 600;
-  border-bottom: 1px solid #eaeaea;
-  padding-bottom: 12px;
-  margin-bottom: 16px;
-}
-
-.table-container {
-  overflow: hidden;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.table-header {
-  background-color: #f0f3f8;
-  font-weight: 600;
-}
-
-.currency-selector {
-  background-color: rgb(255, 255, 255);
-  border-radius: 8px;
-  color: #111314;
-}
-
-.action-button {
-  text-transform: none;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-}
-
-.add-employee-button {
-  background: linear-gradient(135deg, #30c974 0%, #25a25a 100%);
-  color: white;
-}
-
-.add-employee-button:hover {
-  background: linear-gradient(135deg, #30c974 0%, #25a25a 100%);
-  opacity: 0.9;
+.currency-selector .MuiOutlinedInput-root {
+  background-color: rgb(255, 251, 251);
 }
 
 .download-button {
-  background-color: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: #3f51b5;
+  color: white;
 }
 
-.download-button:hover {
-  background-color: rgba(255, 255, 255, 0.25);
+.payroll-card {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table-container {
+  margin-top: 20px;
+}
+
+.employee-row:hover {
+  background-color: #f5f5f5;
+}
+
+.table-header {
+  background-color: #f5f5f5;
 }
 
 .deduction-item {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.deduction-item:last-child {
-  border-bottom: none;
+  margin-bottom: 10px;
 }
 
 .deduction-value {
-  font-weight: 600;
-  color: #56595c;
+  font-weight: bold;
 }
 
 .dialog-title {
-  background: linear-gradient(135deg, #3a8ffe 0%, #1f5eff 100%);
+  background-color: #3f51b5;
   color: white;
-  padding: 16px 24px;
+  padding: 16px;
 }
 
 .dialog-content {
-  padding: 24px;
-}
-
-.dialog-footer {
-  padding: 16px 24px;
-  background-color: #f5f7fa;
-}
-
-.employee-row {
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.employee-row:hover {
-  background-color: #f5f7fa;
-}
-
-.employee-status {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.status-pending {
-  background-color: #ffe9cc;
-  color: #b25000;
-}
-
-.status-paid {
-  background-color: #e6f7ed;
-  color: #1e7e34;
-}
-
-.status-processing {
-  background-color: #e3f2fd;
-  color: #0d47a1;
+  padding: 16px;
 }
 
 .currency-info {
-  background-color: #f0f3f8;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin: 12px 0;
   display: flex;
   align-items: center;
+  margin-top: 16px;
+
 }
 
 .currency-icon {
-  margin-right: 12px;
-  color: #1a73e8;
+  margin-right: 8px;
+}
+
+.dialog-footer {
+  padding: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.action-button {
+  background-color: #3f51b5;
+  color: white;
+}
+
+.add-employee-button {
+  background-color: #4caf50;
 }
