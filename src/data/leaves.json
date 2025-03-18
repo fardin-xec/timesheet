@@ -1,0 +1,9 @@
+{
+    "data": [
+      { "id": 1, "type": "Annual Leave", "startDate": "2025-02-10", "endDate": "2025-02-15", "status": "Approved", "days": 5, "reason": "Vacation" },
+      { "id": 2, "type": "Sick Leave", "startDate": "2025-01-05", "endDate": "2025-01-07", "status": "Approved", "days": 2, "reason": "Flu" },
+      { "id": 3, "type": "Family Emergency", "startDate": "2024-12-20", "endDate": "2024-12-23", "status": "Approved", "days": 3, "reason": "Family matter" },
+      { "id": 4, "type": "Personal Leave", "startDate": "2024-11-01", "endDate": "2024-11-02", "status": "Rejected", "days": 1, "reason": "Personal errands" },
+      { "id": 5, "type": "Training", "startDate": "2024-10-15", "endDate": "2024-10-18", "status": "Pending", "days": 3, "reason": "Professional development" }
+    ]
+  }  

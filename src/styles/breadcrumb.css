@@ -1,0 +1,42 @@
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 14px;    
+    z-index: 1000;
+  }
+  
+  
+  .breadcrumb-separator {
+    margin: 0 8px;
+    color: #9e9e9e;
+  }
+  
+  .breadcrumb-link {
+    color: #1976d2;
+    text-decoration: none;
+  }
+  
+  .breadcrumb-link:hover {
+    text-decoration: underline;
+  }
+  
+  .breadcrumb-current {
+    color: #757575;
+    font-weight: 500;
+  }
+
+  .auth-breadcrumb {
+    width: 100%;
+    max-width: 450px;
+    margin-bottom: 15px;
+    padding: 0 10px;
+  }
+  
+  /* If your auth pages have a different layout than the dashboard pages,
+     you might need these additional styles */
+  @media (max-width: 768px) {
+    .auth-breadcrumb {
+      padding: 0 15px;
+    }
+  }

@@ -1,0 +1,184 @@
+/* AboutPage.css */
+
+.about-page {
+    font-family: 'Roboto', sans-serif;
+    background-color: #fafafa;
+  }
+  
+  /* Hero Section */
+  .hero-section {
+    background: linear-gradient(to right, #3f51b5, #303f9f);
+    color: white;
+    padding: 100px 0;
+  }
+  
+  .hero-title {
+    font-weight: 700 !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .hero-subtitle {
+    opacity: 0.9;
+    font-weight: 400 !important;
+  }
+  
+  /* Section Spacing */
+  .section {
+    padding: 64px 0;
+  }
+  
+  .section-title {
+    margin-bottom: 48px !important;
+    font-weight: 700 !important;
+    color: #333;
+  }
+  
+  /* Mission & Vision */
+  .mission-card {
+    padding: 16px;
+  }
+  
+  .mission-text {
+    font-size: 1.1rem !important;
+  }
+  
+  .vision-paper {
+    background-color: #e8eaf6 !important;
+    height: 100%;
+  }
+  
+  /* Values Section */
+  .values-section {
+    background-color: #f5f5f5;
+  }
+  
+  .value-card {
+    height: 100%;
+  }
+  
+  .value-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px !important;
+  }
+  
+  .value-icon {
+    width: 60px !important;
+    height: 60px !important;
+    margin-bottom: 16px;
+  }
+  
+  .value-icon.innovation {
+    background-color: #bbdefb !important;
+    color: #1976d2 !important;
+  }
+  
+  .value-icon.collaboration {
+    background-color: #c8e6c9 !important;
+    color: #388e3c !important;
+  }
+  
+  .value-icon.excellence {
+    background-color: #e1bee7 !important;
+    color: #7b1fa2 !important;
+  }
+  
+  /* Story Section */
+  .story-content {
+    padding: 32px !important;
+  }
+  
+  /* Team Section */
+  .team-section {
+    background-color: #f5f5f5;
+  }
+  
+  .team-card {
+    height: 100%;
+  }
+  
+  .team-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px !important;
+  }
+  
+  .team-avatar {
+    width: 120px !important;
+    height: 120px !important;
+    background-color: #e0e0e0 !important;
+    margin-bottom: 16px;
+  }
+  
+  .team-name {
+    font-weight: 600 !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .team-title {
+    color: #3f51b5 !important;
+    margin-bottom: 16px !important;
+  }
+  
+  /* Impact Section */
+  .impact-stat {
+    display: flex;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+  
+  .impact-icon {
+    margin-right: 16px;
+    width: 56px !important;
+    height: 56px !important;
+  }
+  
+  .impact-icon.global {
+    background-color: #c5cae9 !important;
+    color: #3949ab !important;
+  }
+  
+  .impact-icon.research {
+    background-color: #c8e6c9 !important;
+    color: #388e3c !important;
+  }
+  
+  .impact-icon.community {
+    background-color: #bbdefb !important;
+    color: #1976d2 !important;
+  }
+  
+  .difference-paper {
+    background: linear-gradient(to right, #3949ab, #7b1fa2) !important;
+    color: white;
+  }
+  
+  /* CTA Section */
+  .cta-section {
+    background-color: #263238;
+    color: white;
+    padding: 64px 0;
+  }
+  
+  .cta-text {
+    max-width: 700px;
+    margin: 0 auto 32px auto !important;
+    opacity: 0.9;
+  }
+  
+  .cta-button {
+    padding: 12px 32px !important;
+    border-radius: 28px !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Footer */
+  .footer {
+    background-color: #1a1a1a;
+    color: #9e9e9e;
+    padding: 24px 0;
+  }

@@ -1,0 +1,69 @@
+/* DataTable.css (continued) */
+.toolbar-content {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+  }
+  
+  .error-alert {
+    margin: 16px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+    gap: 16px;
+  }
+  
+  .loading-table {
+    opacity: 0.6;
+  }
+  
+  .status-text {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 16px;
+    text-transform: capitalize;
+  }
+  
+  .no-data-cell {
+    padding: 32px !important;
+    color: rgba(0, 0, 0, 0.54);
+  }
+  
+  .selected-row {
+    background-color: rgba(25, 118, 210, 0.08);
+  }
+  
+  /* Animation for refresh icon */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .spin {
+    animation: spin 1.5s linear infinite;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    .table-toolbar {
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    
+    .search-field {
+      width: 100%;
+    }
+    
+    .toolbar-actions {
+      align-self: flex-end;
+    }
+  }

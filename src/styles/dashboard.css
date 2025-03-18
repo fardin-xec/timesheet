@@ -1,0 +1,680 @@
+:root {
+  --primary-color: #4CAF50;
+  --text-color: #333;
+  --text-light: #666;
+  --border-color: #e0e0e0;
+  --bg-dark: #f5f5f5;
+  --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --success-color: #10B981;
+  --error-color: #EF4444;
+  --working-color: #10B981;
+}
+
+.dashboard-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-dark);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: white;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+/* Add these styles to your existing CSS file */
+
+/* Time tracking section adjustments */
+.time-tracking {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-grow: 1;
+  margin-left: 2rem;
+}
+
+/* User actions section adjustments */
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+
+
+/* Check-out time display styling */
+.checkout-time-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.checkout-label {
+  font-weight: 500;
+  color: var(--error-color);
+}
+
+.checkout-value {
+  font-family: monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .time-tracking {
+    margin-left: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .user-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .checkout-time-display {
+    justify-content: center;
+  }
+  
+  .check-buttons {
+    order: -1; /* Move to the beginning on mobile */
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.check-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.checkin-btn {
+  background-color: var(--success-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.checkin-btn:hover {
+  background-color: #0da271;
+}
+
+.checkout-btn {
+  background-color: var(--error-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.checkout-btn:hover {
+  background-color: #dc2626;
+}
+
+/* Adjust the dashboard content to account for fixed header */
+.dashboard-content {
+  display: flex;
+  flex: 1;
+  margin-top: 70px; /* Adjust this value based on your header height */
+}
+
+/* Make the sidebar start below the header */
+.dashboard-sidebar {
+  width: 240px;
+  background-color: white;
+  border-right: 1px solid var(--border-color);
+  padding: 1.5rem 0;
+  height: calc(100vh - 70px); /* Adjust based on header height */
+  overflow-y: auto;
+  position: fixed;
+  top: 70px; /* Same as header height */
+}
+
+/* Adjust main content area to accommodate fixed sidebar */
+.dashboard-main {
+  flex: 1;
+  padding: 2rem;
+  background-color: var(--bg-dark);
+  margin-left: 240px; /* Same as sidebar width */
+}
+
+.logo h1 {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.user-name {
+  font-weight: 500;
+}
+
+.user-email {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.logout-btn {
+  width: auto;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: var(--bg-dark);
+}
+
+/* Dashboard Content */
+.dashboard-content {
+  display: flex;
+  flex: 1;
+}
+
+
+.sidebar-nav {
+  position: sticky;
+  top: 1.5rem;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+}
+
+.nav-item {
+  margin-bottom: 0.5rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: var(--text-color);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  background-color: var(--bg-dark);
+  text-decoration: none;
+}
+
+.nav-item.active .nav-link {
+  background-color: var(--bg-dark);
+  border-left-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.nav-icon {
+  margin-right: 0.75rem;
+  font-size: 1.25rem;
+}
+
+/* Dashboard Main Content */
+
+
+.dashboard-main h1 {
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.dashboard-main p {
+  margin-bottom: 2rem;
+  color: var(--text-light);
+}
+
+/* Small Cards */
+.small-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.small-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  padding: 1.5rem;
+  border-left: 4px solid var(--primary-color);
+  transition: transform 0.3s ease;
+}
+
+.small-card:hover {
+  transform: translateY(-5px);
+}
+
+.small-card h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-light);
+}
+
+.small-card .value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Dashboard Stats */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  padding: 1.5rem;
+}
+
+.stat-card h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-light);
+  margin: 1rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.stat-progress {
+  background: #e0e0e0;
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.progress-bar {
+  background: var(--primary-color);
+  height: 100%;
+}
+
+/* Charts Section */
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  padding: 1.5rem;
+  margin: 1rem;
+  flex-direction: row;
+}
+
+.chart-card h3 {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  color: var(--text-color);
+}
+
+/* Pie Chart */
+.pie-chart-container {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  padding: 1.5rem;
+}
+
+/* Settings Container */
+.settings-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.change-password-container {
+  padding: 1rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+}
+
+.change-password-container h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+  color: var(--text-color);
+}
+
+.success-message {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  border-left: 4px solid var(--success-color);
+  border-radius: 0.25rem;
+  color: var(--success-color);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    padding: 1rem;
+    height: auto;
+  }
+  
+  .logo, .time-tracking, .user-actions {
+    width: 100%;
+    margin-bottom: 0.75rem;
+  }
+  
+  .time-tracking {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .timer-display {
+    justify-content: center;
+  }
+  
+  .check-buttons {
+    justify-content: center;
+  }
+  
+  .user-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .user-info {
+    text-align: center;
+  }
+  
+  .dashboard-content {
+    flex-direction: column;
+    margin-top: 180px; /* Adjust based on your new header height */
+  }
+
+  .dashboard-sidebar {
+    position: fixed;
+    top: 180px; /* Adjust based on your new header height */
+    width: 100%;
+    height: auto;
+    z-index: 900;
+  }
+  
+  .dashboard-main {
+    margin-left: 0;
+    margin-top: 60px; /* Height of the mobile nav */
+  }
+
+  .sidebar-nav {
+    position: static;
+  }
+
+  .nav-list {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .nav-item {
+    margin-bottom: 0;
+  }
+
+  .nav-link {
+    padding: 1rem;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+  }
+
+  .nav-item.active .nav-link {
+    border-left-color: transparent;
+    border-bottom-color: var(--primary-color);
+  }
+
+  .small-cards,
+  .dashboard-stats,
+  .dashboard-charts {
+    grid-template-columns: repeat(auto-fit, minmax(100%, 1fr));
+  }
+  
+  .checkin-btn, .checkout-btn {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+  
+  .logout-btn {
+    width: 100%;
+  }
+}
+
+/* Additional responsive adjustments for smaller screens */
+@media (max-width: 480px) {
+  .dashboard-header {
+    padding: 0.75rem;
+  }
+  
+  .timer-display {
+    flex-direction: column;
+    padding: 0.5rem;
+  }
+  
+  .logo h1 {
+    font-size: 1.25rem;
+  }
+  
+  .dashboard-content {
+    margin-top: 200px; /* Further adjust for smaller screens */
+  }
+  
+  .dashboard-sidebar {
+    top: 200px; /* Match the above adjustment */
+  }
+  
+  .nav-link {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Time Entry History styles */
+.time-entries {
+  margin-top: 2rem;
+}
+
+.time-entries-header {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.time-entries-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+.time-entries-table th,
+.time-entries-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.time-entries-table th {
+  background-color: var(--bg-dark);
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.time-entries-table tr:last-child td {
+  border-bottom: none;
+}
+
+.time-entries-table tr:hover {
+  background-color: var(--bg-dark);
+}
+
+.status-working {
+  color: var(--working-color);
+  background-color: rgba(16, 185, 129, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-complete {
+  color: var(--text-light);
+  background-color: var(--bg-dark);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Weekly Report styles */
+.weekly-summary {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.weekly-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.weekly-summary-title {
+  font-size: 1.25rem;
+  color: var(--text-color);
+}
+
+.date-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-selector button {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--primary-color);
+}
+
+.weekly-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.weekly-stat-item {
+  text-align: center;
+}
+
+.weekly-stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 0.25rem;
+}
+
+.weekly-stat-label {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.time-distribution {
+  margin-top: 2rem;
+}
+
+.project-distribution {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.project-item {
+  flex: 1;
+  min-width: 200px;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.project-name {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.project-time {
+  color: var(--text-light);
+}
+
+.project-progress {
+  background: #e0e0e0;
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.project-progress-bar {
+  height: 100%;
+}

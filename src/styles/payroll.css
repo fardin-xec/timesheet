@@ -1,0 +1,82 @@
+/* General styles */
+.payroll-container {
+    font-family: 'Arial', sans-serif;
+    background-color: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  /* Header styles */
+  .payroll-header {
+    margin-bottom: 20px;
+  }
+  
+  .payroll-header h4 {
+    color: #1a237e;
+    font-weight: bold;
+  }
+  
+  .payroll-header h6 {
+    color: #4caf50;
+    font-weight: bold;
+  }
+  
+  .payroll-header .subtitle {
+    color: #6b7280;
+    font-size: 14px;
+  }
+  
+  /* Button styles */
+  .download-button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .download-button:hover {
+    background-color: #2563eb;
+  }
+  
+  /* Table container */
+  .table-container {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Comments section */
+  .comments-section {
+    margin-top: 20px;
+  }
+  
+  .comments-section h6 {
+    color: #1a237e;
+    font-weight: bold;
+  }
+  
+  .comments-section p {
+    color: #6b7280;
+    font-size: 14px;
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 768px) {
+    .payroll-container {
+      padding: 10px;
+    }
+  
+    .table-container {
+      padding: 10px;
+    }
+  }

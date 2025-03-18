@@ -1,0 +1,84 @@
+{
+    "transactions": [
+      {
+        "id": 1,
+        "date": "06 Jan 2020",
+        "payee": "Joseph",
+        "details": {
+          "ref": "Ref-9872",
+          "description": "Insurance payment",
+          "cardAccount": "Employee A"
+        },
+        "amount": 4000.00
+      },
+      {
+        "id": 2,
+        "date": "04 Jan 2020",
+        "payee": "Smith",
+        "details": {
+          "ref": "Ref-2134",
+          "description": "Electronics purchase",
+          "cardAccount": "Employee A"
+        },
+        "amount": 7500.00
+      },
+      {
+        "id": 3,
+        "date": "02 Jan 2020",
+        "payee": "John Roberts",
+        "details": {
+          "ref": "Ref-1900",
+          "description": "Payment Thank You",
+          "cardAccount": "Employee A"
+        },
+        "amount": -5000.00,
+        "isDeposit": true
+      },
+      {
+        "id": 4,
+        "date": "01 Jan 2020",
+        "payee": "Office Supply Co",
+        "details": {
+          "ref": "Ref-4567",
+          "description": "Office supplies",
+          "cardAccount": "Employee B"
+        },
+        "amount": 1250.00
+      },
+      {
+        "id": 5,
+        "date": "29 Dec 2019",
+        "payee": "Travel Agency",
+        "details": {
+          "ref": "Ref-7890",
+          "description": "Flight tickets",
+          "cardAccount": "Employee C"
+        },
+        "amount": 3200.00
+      }
+    ],
+    "possibleMatches": [
+      {
+        "id": 101,
+        "dateRange": "20 Dec 2019 - 19 Jan 2020",
+        "amount": 7500.00
+      },
+      {
+        "id": 102,
+        "dateRange": "15 Dec 2019 - 15 Jan 2020",
+        "amount": 4000.00
+      }
+    ],
+    "categories": [
+      "Uncategorized",
+      "Office Supplies",
+      "Travel",
+      "Meals & Entertainment",
+      "Insurance",
+      "Software & Subscriptions",
+      "Hardware & Equipment",
+      "Professional Services",
+      "Marketing & Advertising",
+      "Utilities"
+    ]
+  }

@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "role": "user",
+      "email": "abdullahshaikh@auxaitech.com",
+      "password": "password123",
+      "firstName": "Abdulla",
+      "lastName": "Shaikh",
+      "phone": "555-123-4567",
+      "position": "Software Developer",
+      "department": "Engineering",
+      "bio": "Experienced full-stack developer with passion for React and Node.js",
+      "skills": "JavaScript, React, Node.js, CSS",
+      "avatar": "https://randomuser.me/api/portraits/men/1.jpg",
+      "dateJoined": "2023-01-15"
+    },
+    {
+      "id": 2,
+      "email": "jane.smith@example.com",
+      "password": "securepass456",
+      "role": "admin",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "phone": "555-987-6543",
+      "position": "UX Designer",
+      "department": "Design",
+      "bio": "Creative UX designer with a focus on user-centered design principles",
+      "skills": "Figma, UI/UX, Prototyping, User Research",
+      "avatar": "https://randomuser.me/api/portraits/women/2.jpg",
+      "dateJoined": "2023-02-20"
+    },
+    {
+      "id": 3,
+      "email": "michael.brown@example.com",
+      "password": "mikepass789",
+      "firstName": "Michael",
+      "lastName": "Brown",
+      "phone": "555-456-7890",
+      "position": "Project Manager",
+      "department": "Management",
+      "bio": "Experienced project manager with a track record of delivering successful projects",
+      "skills": "Project Management, Scrum, Agile, Team Leadership",
+      "avatar": "https://randomuser.me/api/portraits/men/3.jpg",
+      "dateJoined": "2023-03-10"
+    }
+  ]
+}

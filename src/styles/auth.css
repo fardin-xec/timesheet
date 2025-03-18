@@ -1,0 +1,67 @@
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  
+  .auth-container .card {
+    width: 100%;
+    max-width: 28rem;
+  }
+  
+  .auth-title {
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-size: 1.5rem;
+    color: var(--text-color);
+  }
+  
+  .auth-form {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-description {
+    margin-bottom: 1.5rem;
+    color: var(--text-light);
+  }
+  
+  .auth-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-light);
+  }
+  
+  .auth-link {
+    color: var(--primary-color);
+    font-weight: 500;
+  }
+  
+  .auth-divider {
+    color: var(--border-color);
+  }
+  /* Add this to your src/styles/auth.css file */
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1.5rem;
+  }
+  
+  .form-actions button {
+    width: 48%;
+  }
+  
+  .secondary-button {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+  }
+  
+  .secondary-button:hover {
+    background-color: var(--bg-dark);
+  }
