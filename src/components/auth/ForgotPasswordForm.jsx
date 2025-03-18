@@ -4,6 +4,7 @@ import Button from '../common/Button';
 import { useAuth } from '../../redux/hooks/useAuth';
 import Loader from '../common/Loader';
 import { verifyOtp, resetPasswordWithOtp } from '../../utils/api';
+import "../../styles/auth.css"
 
 const ForgotPasswordForm = () => {
   const [email, setEmail] = useState('');

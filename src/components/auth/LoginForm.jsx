@@ -4,6 +4,7 @@ import Input from '../common/Input';
 import Button from '../common/Button';
 import { useAuth } from '../../redux/hooks/useAuth';
 import Loader from '../common/Loader';
+import '../../styles/auth.css'
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -47,9 +48,11 @@ const LoginForm = () => {
         onChange={handleChange}
         required
       />
+     <div className='center-div'>
       <Button type="submit" disabled={loading}>
-        {loading ? <Loader size="small" /> : 'Login'}
-      </Button>
+          {loading ? <Loader size="small" /> : 'Login'}
+        </Button>
+     </div>
     </form>
   );
 };

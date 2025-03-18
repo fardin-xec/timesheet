@@ -20,6 +20,7 @@
   
   .auth-form {
     margin-bottom: 1.5rem;
+
   }
   
   .form-description {
@@ -48,12 +49,14 @@
 
 .form-actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     margin-top: 1.5rem;
   }
   
   .form-actions button {
     width: 48%;
+    margin-right: 0.5rem;
+
   }
   
   .secondary-button {
@@ -64,4 +67,11 @@
   
   .secondary-button:hover {
     background-color: var(--bg-dark);
+  }
+
+  .center-div{
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    display: flex;
   }

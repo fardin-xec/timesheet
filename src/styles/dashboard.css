@@ -101,10 +101,7 @@
   }
 }
 
-.check-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
+
 
 .checkin-btn {
   background-color: var(--success-color);
@@ -418,9 +415,7 @@
     justify-content: center;
   }
   
-  .check-buttons {
-    justify-content: center;
-  }
+  
   
   .user-actions {
     flex-direction: column;
