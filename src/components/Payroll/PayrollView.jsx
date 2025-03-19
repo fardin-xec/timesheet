@@ -15,7 +15,7 @@ import {
   InputLabel,
   Autocomplete,
 } from "@mui/material";
-import { Download, PersonAdd, AttachMoney } from "@mui/icons-material";
+import { Download, PersonAdd } from "@mui/icons-material";
 import DataTable from "../common/DataTable";
 import CommonDrawer from "../common/Drawer";
 import "../../styles/payroll.css";
@@ -25,7 +25,6 @@ const PayrollView = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [currency, setCurrency] = useState("ر.ق");
-  const [currencyName, setCurrencyName] = useState("Qatari riyal (QAR)");
   const [newEmployee, setNewEmployee] = useState({
     id: "",
     name: "",
@@ -151,7 +150,6 @@ const PayrollView = () => {
 
     const newCurrencySymbol = newValue.symbol;
     setCurrency(newCurrencySymbol);
-    setCurrencyName(newValue.name);
   };
 
   const handleAddEmployee = () => {
