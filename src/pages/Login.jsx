@@ -11,8 +11,6 @@ const Login = () => {
         <LoginForm />
         <div className="auth-links">
           <Link to="/forgot-password" className="auth-link">Forgot Password?</Link>
-          <span className="auth-divider">•</span>
-          <Link to="/signup" className="auth-link">Create Account</Link>
         </div>
       </Card>
     </div>
