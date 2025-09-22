@@ -8,7 +8,8 @@ const Input = ({
   onChange, 
   required = false, 
   error = '', 
-  placeholder = '' 
+  placeholder = '',
+  disabled,
 }) => {
   return (
     <div className="input-group">
@@ -22,6 +23,7 @@ const Input = ({
         required={required}
         placeholder={placeholder}
         className={error ? 'input-error' : ''}
+        disabled={disabled}
       />
       {error && <div className="error-text">{error}</div>}
     </div>

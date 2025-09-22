@@ -1,35 +1,28 @@
-import React from 'react';
-import { useAuth } from '../redux/hooks/useAuth';
-import DashboardHeader from '../components/dashboard/DashboardHeader';
-import DashboardSidebar from '../components/dashboard/DashboardSidebar';
-import Breadcrumb from '../components/common/Breadcrumb';
-import Card from '../components/common/Card';
-import '../styles/dashboard.css';
-import LeavesView from '../components/leave/LeavesView';
+import { useAuth } from "../redux/hooks/useAuth";
+import Breadcrumb from "../components/common/Breadcrumb";
+import "../styles/dashboard.css";
+import SuperadminLeavesView from "../components/leave/SuperadminLeavesView";
+import UserLeavesView from "../components/leave/UserLeavesView";
 
 const Leaves = () => {
-  const { user, logout } = useAuth();
-  
+  const { user } = useAuth();
+
   const breadcrumbItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Leaves', path: '/leaves' }
+    { label: "Dashboard", path: "/dashboard" },
+    { label: "Leaves", path: "/leaves" },
   ];
 
+  // Assuming the role is part of the user object (e.g., user.role)
+  const role = user?.role; // Use optional chaining to safely access role
+
   return (
-    <div className="dashboard-container">
-      <DashboardHeader user={user} onLogout={logout} />
-      <div className="dashboard-content">
-        <DashboardSidebar activePage="Leaves" />
-        <main className="dashboard-main">
-          <Breadcrumb items={breadcrumbItems} />
-          <h1>Leaves</h1>
-          <p>View your Leaves information.</p>
-          <Card>
-            <LeavesView />
-          </Card>
-        </main>
-      </div>
-    </div>
+    <>
+      <Breadcrumb items={breadcrumbItems} />
+
+      <>
+        {role === "superadmin" ? <SuperadminLeavesView /> : <UserLeavesView />}
+      </>
+    </>
   );
 };
 

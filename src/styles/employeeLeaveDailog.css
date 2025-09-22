@@ -1,0 +1,159 @@
+/* Dialog Container */
+.dialog-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+  
+  /* Dialog Title */
+  .MuiDialogTitle-root {
+    background-color: #f5f5f5;
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  /* Dialog Content */
+  .MuiDialogContent-root {
+    padding: 1rem;
+  }
+  
+  /* Tabs */
+  .MuiTabs-root {
+    margin-bottom: 1rem;
+  }
+  
+  .MuiTab-root {
+    text-transform: none;
+    font-weight: bold;
+  }
+  
+  /* Year Filter */
+  .year-filter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .year-filter .MuiFormControl-root {
+    min-width: 120px;
+  }
+  
+  /* Table Container */
+  .table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+  }
+  
+ /* Increased specificity for table header */
+.dialog-container .table-container .table-header {
+    background-color: #007bff; /* Updated background color */
+    color: #fff; /* Text color for better contrast */
+  }
+  
+  .dialog-container .table-container .table-header .MuiTableCell-root {
+    font-weight: bold;
+    padding: 0.75rem;
+  }
+  .table-header .MuiTableCell-root {
+    font-weight: bold;
+    padding: 0.75rem;
+  }
+  
+  /* Table Row */
+  .table-row:nth-of-type(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .table-cell {
+    padding: 0.75rem;
+  }
+  
+  /* Action Cell */
+  .action-cell {
+    display: flex;
+    align-items: center;
+  }
+  
+  .action-cell .MuiIconButton-root {
+    margin-right: 0.5rem;
+  }
+  
+  /* No Data Message */
+  .no-data {
+    text-align: center;
+    margin-top: 2rem;
+    color: #757575;
+  }
+  
+  /* Assign Rule Section */
+  .assign-rule-section {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .assign-rule-section .MuiButton-root {
+    align-self: flex-end;
+  }
+  
+  /* Loading Message */
+  .loading-message {
+    text-align: center;
+    margin-top: 2rem;
+    color: #757575;
+  }
+  
+  /* Typography */
+  .MuiTypography-subtitle1 {
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+  
+  /* Form Control */
+  .MuiFormControl-root {
+    margin-bottom: 1rem;
+  }
+  
+  /* Select */
+  .MuiSelect-root {
+    min-width: 200px;
+  }
+  
+  /* Button */
+  .MuiButton-contained {
+    background-color: #1976d2;
+    color: #fff;
+  }
+  
+  .MuiButton-contained:hover {
+    background-color: #1565c0;
+  }
+  
+  /* Icon Button */
+  .MuiIconButton-root {
+    padding: 0.5rem;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 600px) {
+    .year-filter {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  
+    .year-filter .MuiFormControl-root {
+      margin-top: 1rem;
+    }
+  
+    .assign-rule-section {
+      align-items: stretch;
+    }
+  
+    .assign-rule-section .MuiButton-root {
+      width: 100%;
+    }
+  }
+  

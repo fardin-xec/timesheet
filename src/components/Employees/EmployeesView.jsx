@@ -1,43 +1,437 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, IconButton, Avatar, Chip, Menu, MenuItem ,Card, CardContent} from '@mui/material';
-import { MoreVertical, Edit, Check, X, User, UserX } from 'lucide-react';
-import CommonDrawer from '../common/Drawer';
-import "../../styles/employee.css"
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Box,
+  Typography,
+  IconButton,
+  Avatar,
+  Card,
+  CardContent,
+  Button,
+  Menu,
+  MenuItem,
+} from "@mui/material";
+import { MoreVertical, User, UserX, Plus, Trash2 } from "lucide-react";
+import { debounce } from "lodash";
+import {
+  Event,
+  BeachAccess,
+  People,
+  PersonAdd,
+  Business,
+  Refresh,
+  Search,
+} from "@mui/icons-material";
+import AddEmployee from "./AddEmployee";
+import CommonDrawer from "../common/Drawer";
+import Toast from "../common/Toast";
+import DeleteConfirmationDialog from "../common/DeleteConfirmationDialog";
+import EmployeeProfileDialog from "./EmployeeProfileDialog";
+import EmployeeDialog from "../leave/EmployeeLeaveDialog";
+import AttendanceEmployeeDialog from "../Attendance/AttendanceEmployeeDialog";
+import api from "../../utils/api_call";
+import "../../styles/employee.css";
+
+// Utility to format dates consistently
+const formatDate = (dateString) =>
+  dateString
+    ? new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "N/A";
+
 const EmployeesView = () => {
   const [employees, setEmployees] = useState([]);
+  const [department, setDepartment] = useState([]);
+  const [subDepartment, setSubDepartment] = useState([]);
+  const [jobTitle, setJobTitle] = useState([]);
+  const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [menuEmployee, setMenuEmployee] = useState(null);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [workLocation, setWorkLocation] = useState([]);
+  const [employmentType, setEmploymentType] = useState([]);
+  const [positions, setPositions] = useState([]);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  const token = localStorage.getItem("access_token");
+  const orgId = localStorage.getItem("orgId");
+
+  const API_ENDPOINTS = {
+    EMPLOYEES: `/employees/organization/${orgId}`,
+    DEPARTMENTS: "/dropdowns/types/1",
+    SUB_DEPARTMENTS: "/dropdowns/types/2",
+    POSITIONS: "/dropdowns/types/5",
+    EMPLOYMENT_TYPES: "/dropdowns/types/4",
+    WORK_LOCATIONS: "/dropdowns/types/3",
+    JOB_TITLES: "/dropdowns/types/9",
+    MANAGERS: "/employees/managers",
+  };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: {
+      opacity: 0,
+      y: 20,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut",
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const headerVariants = {
+    hidden: {
+      opacity: 0,
+      x: -50,
+      scale: 0.9,
+    },
+    visible: {
+      opacity: 1,
+      x: 0,
+      scale: 1,
+      transition: {
+        duration: 0.7,
+        ease: "easeOut",
+        type: "spring",
+        damping: 15,
+      },
+    },
+  };
+
+  const statsCardVariants = {
+    hidden: {
+      opacity: 0,
+      scale: 0.8,
+      y: 30,
+    },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+      },
+    },
+    hover: {
+      scale: 1.02,
+      y: -5,
+      boxShadow: "0px 8px 25px rgba(0,0,0,0.15)",
+      transition: {
+        duration: 0.2,
+        ease: "easeInOut",
+      },
+    },
+  };
+
+  const employeeCardVariants = {
+    hidden: {
+      opacity: 0,
+      y: 20,
+      scale: 0.95,
+    },
+    visible: (index) => ({
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut",
+        delay: index * 0.05,
+      },
+    }),
+    hover: {
+      scale: 1.02,
+      y: -2,
+      boxShadow: "0px 4px 20px rgba(0,0,0,0.1)",
+      transition: {
+        duration: 0.2,
+        ease: "easeInOut",
+      },
+    },
+    tap: {
+      scale: 0.98,
+      transition: {
+        duration: 0.1,
+      },
+    },
+  };
+
+  const loadingVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.3,
+      },
+    },
+  };
+
+  const refreshButtonVariants = {
+    hover: {
+      scale: 1.1,
+      rotate: 180,
+      transition: {
+        duration: 0.3,
+        ease: "easeInOut",
+      },
+    },
+    tap: {
+      scale: 0.9,
+      transition: {
+        duration: 0.1,
+      },
+    },
+  };
+
+  const iconVariants = {
+    hidden: { scale: 0, rotate: -90 },
+    visible: {
+      scale: 1,
+      rotate: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+        type: "spring",
+      },
+    },
+  };
+
+  const searchBarVariants = {
+    hidden: {
+      opacity: 0,
+      scale: 0.95,
+      y: -10,
+    },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+        delay: 0.2,
+      },
+    },
+  };
+
+  const fetchData = useCallback(
+    async (url, setter, errorMessage) => {
+      try {
+        const response = await api.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data.statusCode !== 200) throw new Error(errorMessage);
+        const data = response.data.data || [];
+        setter(
+          url.includes("manager")
+            ? data.map((item) => ({
+                id: item.id,
+                firstName: item.firstName,
+                lastName: item.lastName,
+                midName: item.midName || "",
+                department: item.department || "Unknown",
+              }))
+            : data.map((item) => ({
+                id: item.valueId,
+                name: item.valueName || "Unnamed",
+              }))
+        );
+      } catch (err) {
+        setError(err.message);
+        setToastMessage(errorMessage);
+        setToastOpen(true);
+        console.error(err);
+      }
+    },
+    [token]
+  );
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(API_ENDPOINTS.EMPLOYEES, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.data.statusCode !== 200)
+        throw new Error("Failed to fetch employee data");
+      const employeeData = response.data.data || [];
+      const processedEmployees = employeeData.map((emp) => ({
+        id: emp.id,
+        employeeId: emp.employeeId,
+        firstName: emp.firstName,
+        middleName: emp.midName,
+        lastName: emp.lastName,
+        email: emp.email,
+        department: emp.department,
+        designation: emp.designation,
+        jobTitle: emp.jobTitle,
+        dob: emp.dob,
+        joiningDate: formatDate(emp.joiningDate),
+        avatar: emp.avatar || "/default-avatar.png",
+        status: emp.status,
+        createdat: formatDate(emp.createdat),
+        organization: emp.organization,
+        bio: emp.bio,
+        skills: emp.skills,
+        phone: emp.phone,
+        gender: emp.gender,
+        orgId: emp.organization.orgId,
+        ctc: emp.ctc,
+        currency: emp.currency,
+      }));
+      setEmployees(processedEmployees);
+      setError(null);
+      setHasLoaded(true);
+    } catch (err) {
+      setError(err.message);
+      setToastMessage("Failed to load employee data");
+      setToastOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, API_ENDPOINTS.EMPLOYEES]);
+
+  // Handle refresh with animation
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setLoading(true);
+
+    try {
+      await fetchEmployees();
+      // Add a small delay for better UX
+      setTimeout(() => {
+        setLoading(false);
+        setIsRefreshing(false);
+      }, 500);
+    } catch (error) {
+      console.error("Failed to refresh employees:", error);
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchEmployees = () => {
+    if (!token || !orgId) {
+      setError("Authentication token or organization ID missing");
+      setLoading(false);
+      return;
+    }
+
+    const fetchAllData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const data = [
-          { id: 1, name: 'Alex Pires', department: 'Support', active: true, signedIn: '4 hours ago', time: 'Today at 9:50 AM', avatar: '/api/placeholder/40/40' },
-          { id: 2, name: 'Betty Taylor', department: 'Sales', active: true, signedIn: '1 hour ago', time: 'Today at 12:55 AM', avatar: '/api/placeholder/40/40' },
-          { id: 3, name: 'Bobby Joe', department: 'Visitor', active: false, signedIn: '3 hours ago', time: 'Today at 10:52 AM', visiting: 'Lauren Wicks', avatar: '/api/placeholder/40/40' },
-          { id: 4, name: 'Carolyn Brooke', department: 'Pending Visitor', active: true, signedIn: '3 hours ago', time: 'Today at 10:49 AM', visiting: 'Betty Taylor', avatar: '/api/placeholder/40/40' },
-          { id: 5, name: 'Carrie Bradshaw', department: '', active: true, signedIn: '5 hours ago', time: 'Today at 9:48 AM', avatar: '/api/placeholder/40/40' },
-          { id: 6, name: 'Dee Reynolds', department: 'Visitor', active: false, signedIn: '3 hours ago', time: 'Today at 10:49 AM', visiting: 'Alex Pires', avatar: '/api/placeholder/40/40' },
-          { id: 7, name: 'Fin Boyle', department: '', active: false, signedIn: '3 hours ago', time: 'Today at 10:52 AM', avatar: '/api/placeholder/40/40' }
-        ];
-        setEmployees(data);
-        setError(null);
+        await Promise.all([
+          fetchData(
+            API_ENDPOINTS.DEPARTMENTS,
+            setDepartment,
+            "Failed to fetch department data"
+          ),
+          fetchData(
+            API_ENDPOINTS.SUB_DEPARTMENTS,
+            setSubDepartment,
+            "Failed to fetch sub department data"
+          ),
+          fetchData(
+            API_ENDPOINTS.POSITIONS,
+            setPositions,
+            "Failed to fetch position data"
+          ),
+          fetchData(
+            API_ENDPOINTS.EMPLOYMENT_TYPES,
+            setEmploymentType,
+            "Failed to fetch employment type data"
+          ),
+          fetchData(
+            API_ENDPOINTS.WORK_LOCATIONS,
+            setWorkLocation,
+            "Failed to fetch work location data"
+          ),
+          fetchData(
+            API_ENDPOINTS.JOB_TITLES,
+            setJobTitle,
+            "Failed to fetch job title data"
+          ),
+          fetchData(
+            API_ENDPOINTS.MANAGERS,
+            setManagers,
+            "Failed to fetch managers data"
+          ),
+          fetchEmployees(),
+        ]);
       } catch (err) {
-        setError('Failed to load employee data');
-        console.error(err);
+        setError(err.message);
+        setToastMessage("Failed to load data");
+        setToastOpen(true);
       } finally {
         setLoading(false);
       }
     };
-    fetchEmployees();
-  }, []);
+
+    fetchAllData();
+  }, [
+    token,
+    orgId,
+    fetchData,
+    fetchEmployees,
+    API_ENDPOINTS.DEPARTMENTS,
+    API_ENDPOINTS.SUB_DEPARTMENTS,
+    API_ENDPOINTS.POSITIONS,
+    API_ENDPOINTS.EMPLOYMENT_TYPES,
+    API_ENDPOINTS.WORK_LOCATIONS,
+    API_ENDPOINTS.JOB_TITLES,
+    API_ENDPOINTS.MANAGERS,
+  ]);
+
+  const debouncedSearch = useMemo(
+    () => debounce((term) => setSearchTerm(term), 300),
+    []
+  );
+
+  useEffect(() => {
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
+
+  const handleSearchChange = (e) => {
+    debouncedSearch(e.target.value);
+  };
+
+  const filteredEmployees = useMemo(() => {
+    if (!searchTerm) return employees;
+    return employees.filter((emp) =>
+      [
+        emp.firstName,
+        emp.lastName,
+        emp.email,
+        emp.department,
+        emp.designation,
+      ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [searchTerm, employees]);
 
   const handleMenuOpen = (event, employee) => {
+    event.stopPropagation();
     setMenuAnchorEl(event.currentTarget);
     setMenuEmployee(employee);
   };
@@ -47,19 +441,100 @@ const EmployeesView = () => {
     setMenuEmployee(null);
   };
 
-  const handleEditEmployee = () => {
-    setSelectedEmployee({...menuEmployee});
+  const handleAddEmployee = () => {
+    setSelectedEmployee(null);
     setDrawerOpen(true);
-    handleMenuClose();
   };
 
-  const handleToggleStatus = () => {
-    if (!menuEmployee) return;
-    const updatedEmployees = employees.map(emp => 
-      emp.id === menuEmployee.id ? { ...emp, active: !emp.active } : emp
-    );
-    setEmployees(updatedEmployees);
-    handleMenuClose();
+  const handleSaveEmployee = async (employeeData) => {
+    try {
+      let payload;
+      let endpoint;
+      const isNewEmployee = !employeeData.id;
+
+      setLoading(true);
+      if (isNewEmployee) {
+        endpoint = `/employees`;
+        payload = {
+          employeeId: employeeData.employeeId,
+          firstName: employeeData.firstName,
+          midName: employeeData.middleName || null,
+          lastName: employeeData.lastName,
+          email: employeeData.email,
+          department: employeeData.department,
+          designation: employeeData.designation,
+          status: employeeData.status || "active",
+          phone: employeeData.phone,
+          orgId: orgId ? parseInt(orgId) : null,
+          address: employeeData.address,
+          jobTitle: employeeData.jobTitle,
+          gender: employeeData.gender,
+          employmentType: employeeData.employmentType,
+          joiningDate: employeeData.joiningDate,
+          ctc: employeeData.ctc ? parseFloat(employeeData.ctc) : null,
+          reportTo: employeeData.reportTo
+            ? parseInt(employeeData.reportTo)
+            : null,
+          isProbation: Boolean(employeeData.isProbation),
+          probationPeriod: employeeData.probationPeriod,
+          dob: employeeData.dob,
+          bankAccounts: {
+            accountHolderName: employeeData.bank_info?.account_holder_name,
+            bankName: employeeData.bank_info?.bank_name,
+            branchName: employeeData.bank_info?.branch_name,
+            city: employeeData.bank_info?.city,
+            ifscCode: employeeData.bank_info?.ifsc_code,
+            accountNo: employeeData.bank_info?.account_number,
+          },
+        };
+      } else {
+        endpoint = `/employees/${employeeData.id}`;
+        if (
+          employeeData.reportTo ||
+          employeeData.ctc ||
+          employeeData.currency
+        ) {
+          payload = {
+            reportTo: employeeData.reportTo
+              ? parseInt(employeeData.reportTo)
+              : null,
+            ctc: employeeData.ctc,
+            currency: employeeData.currency,
+          };
+        } else {
+          endpoint = `/personal/${employeeData.id}`;
+          payload = employeeData;
+        }
+      }
+
+      const method = isNewEmployee ? api.post : api.put;
+      const response = await method(endpoint, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data.statusCode !== (isNewEmployee ? 201 : 200))
+        throw new Error(
+          `Failed to ${isNewEmployee ? "create" : "update"} employee`
+        );
+
+      await fetchEmployees();
+      await fetchData(
+        API_ENDPOINTS.MANAGERS,
+        setManagers,
+        "Failed to fetch managers data"
+      );
+      setToastMessage(
+        `Employee ${isNewEmployee ? "added" : "updated"} successfully`
+      );
+      setToastOpen(true);
+    } catch (err) {
+      setToastMessage(err.message || "Failed to save employee data");
+      setToastOpen(true);
+    } finally {
+      setLoading(false);
+      setDrawerOpen(false);
+      setProfileDialogOpen(false);
+    }
   };
 
   const handleCloseDrawer = () => {
@@ -67,185 +542,560 @@ const EmployeesView = () => {
     setSelectedEmployee(null);
   };
 
-  const handleSaveChanges = () => {
-    if (!selectedEmployee) return;
-    const updatedEmployees = employees.map(emp => 
-      emp.id === selectedEmployee.id ? { ...selectedEmployee } : emp
-    );
-    setEmployees(updatedEmployees);
-    handleCloseDrawer();
+  const handleToggleStatus = async () => {
+    if (!menuEmployee) return;
+    try {
+      setLoading(true);
+      const newStatus =
+        menuEmployee.status === "active" ? "inactive" : "active";
+      const response = await api.put(
+        `/employees/${menuEmployee.id}`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.statusCode !== 200)
+        throw new Error("Failed to update employee status");
+      await fetchEmployees();
+      setToastMessage("Employee status updated successfully");
+      setToastOpen(true);
+    } catch (err) {
+      setToastMessage(err.message || "Failed to update employee status");
+      setToastOpen(true);
+    } finally {
+      setLoading(false);
+      handleMenuClose();
+    }
   };
 
-  const drawerContent = (
-    <Box className="employee-edit-form p-4">
-      {selectedEmployee && (
-        <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Avatar src={selectedEmployee.avatar} alt={selectedEmployee.name} className="w-12 h-12" />
-            <div>
-              <Typography variant="h6">{selectedEmployee.name}</Typography>
-              <Chip 
-                label={selectedEmployee.active ? "Active" : "Inactive"} 
-                color={selectedEmployee.active ? "success" : "default"}
-                size="small"
-              />
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-              <select 
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={selectedEmployee.department}
-                onChange={(e) => setSelectedEmployee({...selectedEmployee, department: e.target.value})}
-              >
-                <option value="">None</option>
-                <option value="Support">Support</option>
-                <option value="Sales">Sales</option>
-                <option value="Visitor">Visitor</option>
-                <option value="Pending Visitor">Pending Visitor</option>
-              </select>
-            </div>
-            {(selectedEmployee.department === 'Visitor' || selectedEmployee.department === 'Pending Visitor') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Visiting</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  value={selectedEmployee.visiting || ''}
-                  onChange={(e) => setSelectedEmployee({...selectedEmployee, visiting: e.target.value})}
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <div className="flex space-x-4">
-                <button
-                  className={`px-4 py-2 rounded-md ${selectedEmployee.active ? 'bg-green-100 border border-green-500' : 'bg-gray-100 border border-gray-300'}`}
-                  onClick={() => setSelectedEmployee({...selectedEmployee, active: true})}
-                >
-                  <Check size={16} className={selectedEmployee.active ? 'text-green-500' : 'text-gray-500'} />
-                  <span className="ml-2">Active</span>
-                </button>
-                <button
-                  className={`px-4 py-2 rounded-md ${!selectedEmployee.active ? 'bg-red-100 border border-red-500' : 'bg-gray-100 border border-gray-300'}`}
-                  onClick={() => setSelectedEmployee({...selectedEmployee, active: false})}
-                >
-                  <X size={16} className={!selectedEmployee.active ? 'text-red-500' : 'text-gray-500'} />
-                  <span className="ml-2">Inactive</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </Box>
-  );
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+    try {
+      setIsDeleting(true);
+      const response = await api.delete(`/employees/${employeeToDelete.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.data.statusCode !== 200)
+        throw new Error("Failed to delete employee");
+      await fetchEmployees();
+      setToastMessage("Employee deleted successfully");
+      setToastOpen(true);
+    } catch (err) {
+      setToastMessage(err.message || "Failed to delete employee");
+      setToastOpen(true);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+    }
+  };
+
+  const handleEmployeeClick = (employee) => {
+    setSelectedEmployee(employee);
+    setProfileDialogOpen(true);
+  };
+
+  const handleLeaveManagement = (employee) => {
+    if (!employee) return;
+    setSelectedEmployee(employee);
+    setLeaveDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleAttendanceManagement = (employee) => {
+    if (!employee) return;
+    setSelectedEmployee(employee);
+    setAttendanceDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleLeaveDialogClose = () => {
+    setLeaveDialogOpen(false);
+    setSelectedEmployee(null);
+  };
+
+  const handleAttendanceDialogClose = () => {
+    setAttendanceDialogOpen(false);
+    setSelectedEmployee(null);
+  };
+
+  // Calculate stats
+  const totalEmployees = employees.length;
+  const activeEmployees = employees.filter(
+    (emp) => emp.status === "active"
+  ).length;
+  const departments = [
+    ...new Set(employees.map((emp) => emp.department).filter(Boolean)),
+  ].length;
+  const recentJoiners = employees.filter((emp) => {
+    const joinDate = new Date(emp.joiningDate);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return joinDate > thirtyDaysAgo;
+  }).length;
 
   return (
-    <Card className="w-full">
-      <CardContent className="p-0">
-        <Box className="bg-blue-50 p-4 border-b">
-          <Typography variant="h5" className="font-medium">
-            Employees ({employees.length})
-          </Typography>
-        </Box>
-        <Box className="p-4">
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Type name to search..."
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          {loading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : error ? (
-            <div className="text-center py-8 text-red-500">{error}</div>
-          ) : (
-            <div className="space-y-2">
-              {employees.map((employee) => (
-                <div 
-                  key={employee.id} 
-                  className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="w-full"
+    >
+      <Card className="w-full">
+        <CardContent className="p-0">
+          {/* Header Section */}
+          <motion.div
+            variants={headerVariants}
+            className="bg-blue-50 p-4 border-b"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <motion.div variants={iconVariants}>
+                  <People sx={{ fontSize: 32, color: "#1976d2" }} />
+                </motion.div>
+                <Typography variant="h5" className="font-medium">
+                  Employees ({totalEmployees})
+                </Typography>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <motion.button
+                  variants={refreshButtonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="p-2 bg-gray-100 text-gray-600 rounded-lg shadow-sm hover:bg-gray-200 disabled:opacity-50 transition-colors duration-200"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <Avatar 
-                        src={employee.avatar} 
-                        alt={employee.name}
-                        className="w-10 h-10"
-                      />
-                      {employee.active && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-medium">{employee.name}</div>
-                      <div className="text-sm text-gray-500">{employee.department}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    {employee.visiting && (
-                      <div className="text-sm text-gray-500">
-                        Visiting {employee.visiting}
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500">
-                      <div>Signed in {employee.signedIn}</div>
-                      <div>{employee.time}</div>
-                    </div>
-                    <IconButton 
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, employee)}
-                    >
-                      <MoreVertical size={16} />
-                    </IconButton>
-                  </div>
-                </div>
-              ))}
+                  <Refresh
+                    className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
+                </motion.button>
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleAddEmployee}
+                  startIcon={<Plus size={16} />}
+                  className="shadow-md"
+                >
+                  Add Employee
+                </Button>
+              </div>
             </div>
-          )}
-        </Box>
-      </CardContent>
-      <Menu
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={handleEditEmployee}>
-          <Edit size={16} className="mr-2" />
-          Edit Details
-        </MenuItem>
-        <MenuItem onClick={handleToggleStatus}>
-          {menuEmployee?.active ? (
-            <>
-              <UserX size={16} className="mr-2" />
-              Mark as Inactive
-            </>
-          ) : (
-            <>
-              <User size={16} className="mr-2" />
-              Mark as Active
-            </>
-          )}
-        </MenuItem>
-      </Menu>
-      <CommonDrawer
-        open={drawerOpen}
-        onClose={handleCloseDrawer}
-        width={400}
-        tabs={[
-          { label: "Edit Employee", content: drawerContent }
-        ]}
-        footerActions={{
-          primaryLabel: "Save Changes",
-          primaryAction: handleSaveChanges,
-          secondaryLabel: "Cancel",
-          secondaryAction: handleCloseDrawer
-        }}
+
+            {/* Stats Cards */}
+            {hasLoaded && (
+              <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+                variants={containerVariants}
+              >
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-blue-100 rounded-full"
+                    >
+                      <People sx={{ color: "#1976d2", fontSize: 24 }} />
+                    </motion.div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Total Employees</p>
+                      <motion.p
+                        className="text-xl font-bold text-gray-800"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 0.5 }}
+                        style={{
+                          marginTop: "-1rem",
+                          marginLeft: "2rem",
+                        }}
+                      >
+                        {totalEmployees}
+                      </motion.p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-orange-100 rounded-full"
+                    >
+                      <PersonAdd sx={{ color: "#f57c00", fontSize: 24 }} />
+                    </motion.div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Active Employees</p>
+                      <motion.p
+                        className="text-xl font-bold text-gray-800"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 0.7 }}
+                        style={{
+                          marginTop: "-1rem",
+                          marginLeft: "2rem",
+                        }}
+                      >
+                        {activeEmployees}
+                      </motion.p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-green-100 rounded-full"
+                    >
+                      <Business sx={{ color: "#388e3c", fontSize: 24 }} />
+                    </motion.div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Departments</p>
+                      <motion.p
+                        className="text-xl font-bold text-gray-800"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 0.9 }}
+                        style={{
+                          marginTop: "-1rem",
+                          marginLeft: "2rem",
+                        }}
+                      >
+                        {departments}
+                      </motion.p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-purple-100 rounded-full"
+                    >
+                      <Search sx={{ color: "#7b1fa2", fontSize: 24 }} />
+                    </motion.div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Recent Joiners</p>
+                      <motion.p
+                        className="text-xl font-bold text-gray-800"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 1.1 }}
+                        style={{
+                          marginTop: "-1rem",
+                          marginLeft: "2rem",
+                        }}
+                      >
+                        {recentJoiners}
+                      </motion.p>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </motion.div>
+
+          <Box className="p-4">
+            {/* Search Bar */}
+            <motion.div
+              variants={searchBarVariants}
+              className="mb-4 relative flex gap-2"
+            >
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search employees..."
+                className="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                onChange={handleSearchChange}
+              />
+            </motion.div>
+
+            {/* Loading State */}
+            <AnimatePresence>
+              {loading && (
+                <motion.div
+                  variants={loadingVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="flex justify-center items-center p-8"
+                >
+                  <motion.div
+                    animate={{
+                      rotate: 360,
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                      scale: {
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      },
+                    }}
+                    className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Employee List */}
+            {!loading && (
+              <>
+                {error ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-8"
+                  >
+                    <Typography color="error" align="center">
+                      {error}
+                    </Typography>
+                  </motion.div>
+                ) : filteredEmployees.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-8"
+                  >
+                    <Typography color="textSecondary" align="center">
+                      No employees found
+                    </Typography>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    className="space-y-2"
+                    variants={containerVariants}
+                  >
+                    <AnimatePresence>
+                      {filteredEmployees.map((employee, index) => (
+                        <motion.div
+                          key={employee.id}
+                          custom={index}
+                          variants={employeeCardVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="hidden"
+                          whileHover="hover"
+                          whileTap="tap"
+                          className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200 hover:shadow-md transition-all duration-200"
+                          onClick={() => handleEmployeeClick(employee)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="relative">
+                              <motion.div
+                                whileHover={{ scale: 1.1 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <Avatar
+                                  src={employee.avatar}
+                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                  className="w-12 h-12"
+                                />
+                              </motion.div>
+                              {employee.status === "active" && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ delay: 0.3, type: "spring" }}
+                                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <motion.div
+                                className="font-semibold text-gray-800"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.1 }}
+                              >
+                                {employee.firstName} {employee.lastName}
+                              </motion.div>
+                              <motion.div
+                                className="text-sm text-gray-500"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.2 }}
+                              >
+                                {employee.jobTitle} • {employee.department}
+                              </motion.div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <motion.div
+                              className="text-xs text-gray-500 text-right"
+                              initial={{ opacity: 0, x: 10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.3 }}
+                            >
+                              <div className="font-medium">Joined on</div>
+                              <div>{employee.joiningDate}</div>
+                            </motion.div>
+                            <motion.div
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleMenuOpen(e, employee)}
+                              >
+                                <MoreVertical size={16} />
+                              </IconButton>
+                            </motion.div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Menu */}
+      <AnimatePresence>
+        <Menu
+          anchorEl={menuAnchorEl}
+          open={Boolean(menuAnchorEl)}
+          onClose={handleMenuClose}
+          className="animate-in fade-in duration-200"
+        >
+          <MenuItem onClick={() => handleAttendanceManagement(menuEmployee)}>
+            <Event sx={{ mr: 1 }} /> View Attendance
+          </MenuItem>
+          <MenuItem onClick={() => handleLeaveManagement(menuEmployee)}>
+            <BeachAccess sx={{ mr: 1 }} /> Manage Leave
+          </MenuItem>
+          <MenuItem onClick={handleToggleStatus}>
+            {menuEmployee?.status === "active" ? (
+              <>
+                <UserX size={16} className="mr-2" />
+                Mark as Inactive
+              </>
+            ) : (
+              <>
+                <User size={16} className="mr-2" />
+                Mark as Active
+              </>
+            )}
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setEmployeeToDelete(menuEmployee);
+              setDeleteDialogOpen(true);
+              handleMenuClose();
+            }}
+          >
+            <Trash2 size={16} className="mr-2" />
+            Delete
+          </MenuItem>
+        </Menu>
+      </AnimatePresence>
+
+      {/* Drawer */}
+      <AnimatePresence>
+        <CommonDrawer
+          open={drawerOpen}
+          onClose={handleCloseDrawer}
+          width={650}
+          tabs={[
+            {
+              label: "Add Employee",
+              content: (
+                <AddEmployee
+                  departments={department}
+                  workLocation={workLocation}
+                  employmentType={employmentType}
+                  designations={positions}
+                  subdepartment={subDepartment}
+                  jobTitle={jobTitle}
+                  managers={managers}
+                  onSave={handleSaveEmployee}
+                  onCancel={handleCloseDrawer}
+                />
+              ),
+            },
+          ]}
+        />
+      </AnimatePresence>
+
+      {/* Profile Dialog */}
+      <AnimatePresence>
+        <EmployeeProfileDialog
+          open={profileDialogOpen}
+          onClose={() => setProfileDialogOpen(false)}
+          employee={selectedEmployee}
+          departments={department}
+          workLocation={workLocation}
+          employmentType={employmentType}
+          positions={positions}
+          onSave={handleSaveEmployee}
+          managers={managers}
+        />
+      </AnimatePresence>
+
+      {/* Toast */}
+      <Toast
+        open={toastOpen}
+        message={toastMessage}
+        severity={toastMessage.includes("Failed") ? "error" : "success"}
+        onClose={() => setToastOpen(false)}
+        autoHideDuration={5000}
       />
-    </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          onConfirm={handleDeleteEmployee}
+          loading={isDeleting}
+          title="Delete Employee?"
+          message={
+            employeeToDelete
+              ? `Are you sure you want to delete ${employeeToDelete.firstName} ${employeeToDelete.lastName}?`
+              : "Are you sure you want to delete this employee?"
+          }
+        />
+      </AnimatePresence>
+
+      {/* Leave Dialog */}
+      <AnimatePresence>
+        <EmployeeDialog
+          open={leaveDialogOpen}
+          onClose={handleLeaveDialogClose}
+          employee={selectedEmployee}
+        />
+      </AnimatePresence>
+
+      {/* Attendance Dialog */}
+      <AnimatePresence>
+        <AttendanceEmployeeDialog
+          open={attendanceDialogOpen}
+          onClose={handleAttendanceDialogClose}
+          employee={selectedEmployee}
+        />
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

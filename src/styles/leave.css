@@ -1,156 +1,31 @@
-/* General Styles */
 .leave-container {
-    padding: 20px;
-    background-color: #f5f5f5;
-    min-height: 100vh;
-  }
-  
-  .leave-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-  
-  .leave-header h1 {
-    font-size: 24px;
-    font-weight: 600;
-    color: #333;
-  }
-  
-  .add-button {
-    background-color: #1976d2;
-    color: white;
-    text-transform: none;
-    font-weight: 500;
-  }
-  
-  .add-button:hover {
-    background-color: #1565c0;
-  }
-  
-  .home-button {
-    margin-left: 10px;
-    color: #1976d2;
-  }
-  
-  /* Error Alert */
-  .error-alert {
-    margin-bottom: 20px;
-  }
-  
-  /* Loading State */
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-  }
-  
-  .loading-container .MuiCircularProgress-root {
-    margin-bottom: 10px;
-  }
-  
-  .loading-container p {
-    font-size: 16px;
-    color: #666;
-  }
-  
-  /* Table Styles */
-  .leave-table-container {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
-  
-  .MuiTable-root {
-    min-width: 600px;
-  }
-  
-  .MuiTableHead-root {
-    background-color: #1976d2;
-  }
-  
-  .MuiTableHead-root .MuiTableCell-root {
-    color: white;
-    font-weight: 600;
-  }
-  
-  .MuiTableBody-root .MuiTableCell-root {
-    color: #333;
-  }
-  
-  .MuiTableBody-root .MuiTableRow-root:hover {
-    background-color: #f1f1f1;
-  }
-  
-  /* Edit Drawer Styles */
-  .leave-edit-form {
-    padding: 20px;
-  }
-  
-  .form-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 20px;
-  }
-  
-  .MuiTextField-root {
-    margin-bottom: 16px;
-  }
-  
-  .MuiButton-containedPrimary {
-    background-color: #1976d2;
-    color: white;
-    text-transform: none;
-    font-weight: 500;
-  }
-  
-  .MuiButton-containedPrimary:hover {
-    background-color: #1565c0;
-  }
-  
-  .MuiButton-outlinedError {
-    border-color: #d32f2f;
-    color: #d32f2f;
-  }
-  
-  .MuiButton-outlinedError:hover {
-    background-color: rgba(211, 47, 47, 0.04);
-  }
-  
-  /* Toast Notification */
-  .Toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-  }
-  
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .leave-header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-  
-    .leave-header h1 {
-      margin-bottom: 10px;
-    }
-  
-    .add-button {
-      width: 100%;
-      margin-bottom: 10px;
-    }
-  
-    .home-button {
-      margin-left: 0;
-    }
-  
-    .MuiTable-root {
-      min-width: 100%;
-    }
-  }
+  padding: 20px;
+}
+
+.leave-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+}
+
+.add-button {
+  margin-right: 10px;
+}
+
+.home-button {
+  color: #1976d2;
+}
+
+.leave-edit-form {
+  padding: 20px;
+}
+
+.form-title {
+  margin-bottom: 20px;
+}
+
+.superadmin-container {
+  padding: 20px;
+}

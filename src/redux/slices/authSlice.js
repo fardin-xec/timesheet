@@ -1,144 +1,183 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { loginUser, registerUser, resetPassword,verifyOtp,resetPasswordWithOtp } from '../../utils/api';
+import api from '../../utils/api_call'; // Assuming you have an API service set up
+import { setProfile, clearProfile } from './userSlice'; // Import actions from userSlice
 
-const initialState = {
-  isAuthenticated: false,
-  token: localStorage.getItem('token') || null,
-  user: null,
-  loading: false,
-  error: null,
-};
-
-export const login = createAsyncThunk(
+// Async thunk for login
+export const loginUser = createAsyncThunk(
   'auth/login',
-  async (credentials, { rejectWithValue }) => {
+  async (credentials, { dispatch, rejectWithValue }) => {
     try {
-      const response = await loginUser(credentials);
-      localStorage.setItem('token', response.token);
-      return response;
+      console.log(credentials);
+      
+      const response = await api.post('/auth/login', credentials);
+      // Store token and user data in localStorage      
+      localStorage.setItem('access_token', response.data.data.access_token);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      localStorage.setItem('orgId', response.data.data.user.orgId);
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      localStorage.setItem('timezone', timezone);
+
+
+
+     
+      
+      
+
+      // Sync user profile with userSlice
+      dispatch(setProfile(response.data.data.user));
+
+      return response.data.data;
+    } catch (error) {
+      console.log(error);
+      
+      return rejectWithValue(
+        error.response?.data?.message || 'Login failed. Please try again.'
+      );
+    }
+  }
+);
+
+// Async thunk for logout
+export const logoutUser = createAsyncThunk(
+  'auth/logout',
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      // You might want to call a logout endpoint here
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('orgId');
+      localStorage.removeItem('timezone');
+      localStorage.removeItem('elapsedTime');
+      localStorage.removeItem('checkOutTime');
+      localStorage.removeItem('showCheckOutTime');
+      localStorage.removeItem('isCheckedIn');
+
+ 
+      // Clear user profile in userSlice when logging out
+      dispatch(clearProfile());
+
+      return null;
     } catch (error) {
       return rejectWithValue(error.message);
     }
   }
 );
 
-export const signup = createAsyncThunk(
-  'auth/signup',
-  async (userData, { rejectWithValue }) => {
+// Check if user is already logged in
+export const checkAuthStatus = createAsyncThunk(
+  'auth/checkAuthStatus',
+  async (_, { dispatch, rejectWithValue }) => {
     try {
-      const response = await registerUser(userData);
-      localStorage.setItem('token', response.token);
-      return response;
+      const token = localStorage.getItem('access_token');
+      const user = localStorage.getItem('user');
+
+
+      if (!token || !user) {
+        console.log('Check Auth Status - No token or user data found');
+        return false;
+      }
+
+      const response = await api.get('/token/check', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.message==="Token is valid") {
+        const parsedUser = JSON.parse(user);
+        dispatch(setProfile(parsedUser));
+        return { token, user: parsedUser };
+      } else {
+        localStorage.removeItem('access_token');
+        dispatch(clearProfile());
+        console.log('Auth check failed - Invalid token');
+        return false;
+      }
     } catch (error) {
+      localStorage.removeItem('access_token');
+      dispatch(clearProfile());
+      console.error('Check Auth Status - Error:', error.message);
       return rejectWithValue(error.message);
     }
   }
 );
 
 
-
-export const forgotPassword = createAsyncThunk(
-    'auth/forgotPassword',
-    async (email, { rejectWithValue }) => {
-      try {
-        const response = await resetPassword(email);
-        return response;
-      } catch (error) {
-        return rejectWithValue(error.message);
-      }
-    }
-  );
-  
-  // You can also add these actions for OTP verification and password reset
-  export const verifyOtpAction = createAsyncThunk(
-    'auth/verifyOtp',
-    async ({ email, otp }, { rejectWithValue }) => {
-      try {
-        const response = await verifyOtp(email, otp);
-        return response;
-      } catch (error) {
-        return rejectWithValue(error.message);
-      }
-    }
-  );
-  
-  export const resetPasswordWithOtpAction = createAsyncThunk(
-    'auth/resetPasswordWithOtp',
-    async ({ email, otp, newPassword }, { rejectWithValue }) => {
-      try {
-        const response = await resetPasswordWithOtp(email, otp, newPassword);
-        return response;
-      } catch (error) {
-        return rejectWithValue(error.message);
-      }
-    }
-  );
+const initialState = () => {
+  try {
+    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+    const token = localStorage.getItem('access_token');
+    return {
+      user,
+      token,
+      isAuthenticated: !!token,
+      loading: false,
+      error: null
+    };
+  } catch (error) {
+    return {
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      loading: false,
+      error: null
+    };
+  }
+};
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState,
+  initialState: initialState(),
   reducers: {
-    logout: (state) => {
-      localStorage.removeItem('token');
-      state.isAuthenticated = false;
-      state.token = null;
-      state.user = null;
+    clearErrors: (state) => {
       state.error = null;
-    },
-    clearError: (state) => {
-      state.error = null;
-    },
+    }
   },
   extraReducers: (builder) => {
     builder
       // Login cases
-      .addCase(login.pending, (state) => {
+      .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.isAuthenticated = true;
-        state.token = action.payload.token;
         state.user = action.payload.user;
-      })
-      .addCase(login.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // Signup cases
-      .addCase(signup.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(signup.fulfilled, (state, action) => {
-        state.loading = false;
+        state.token = action.payload.access_token;
         state.isAuthenticated = true;
-        state.token = action.payload.token;
-        state.user = action.payload.user;
       })
-      .addCase(signup.rejected, (state, action) => {
+      .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-      // Forgot password cases
-      .addCase(forgotPassword.pending, (state) => {
+
+      // Logout cases
+      .addCase(logoutUser.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
-      .addCase(forgotPassword.fulfilled, (state) => {
+      .addCase(logoutUser.fulfilled, (state) => {
         state.loading = false;
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
       })
-      .addCase(forgotPassword.rejected, (state, action) => {
+      .addCase(logoutUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
-      
-  },
+      })
+
+      // Check auth status cases
+      .addCase(checkAuthStatus.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(checkAuthStatus.rejected, (state) => {
+        state.loading = false;
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+      })
+  }
 });
 
-
-
-export const { logout, clearError } = authSlice.actions;
+export const { clearErrors } = authSlice.actions;
 export default authSlice.reducer;
-

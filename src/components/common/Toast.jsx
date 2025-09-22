@@ -12,6 +12,7 @@ const Toast = ({ open, message, severity, onClose }) => {
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       className="toast-container"
     >
+
       <Alert
         onClose={onClose}
         severity={severity}

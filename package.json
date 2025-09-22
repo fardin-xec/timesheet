@@ -4,22 +4,34 @@
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^6.4.7",
-    "@mui/material": "^6.4.8",
-    "@mui/x-date-pickers": "^7.28.0",
+    "@mui/material": "^6.5.0",
+    "@mui/x-data-grid": "^8.3.0",
+    "@mui/x-date-pickers": "^7.29.4",
     "@reduxjs/toolkit": "^2.6.1",
+    "@tailwindcss/cli": "^4.1.4",
+    "@tailwindcss/vite": "^4.1.4",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
-    "date-fns": "^4.1.0",
+    "axios": "^1.8.4",
+    "chart.js": "^4.4.9",
+    "date-fns": "^2.30.0",
+    "framer-motion": "^12.11.0",
+    "jwt-decode": "^4.0.0",
     "lucide-react": "^0.482.0",
+    "pdfjs-dist": "^2.16.105",
     "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.5.2",
+    "react-pdf": "^7.7.3",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.3.0",
     "react-scripts": "5.0.1",
+    "react-toastify": "^11.0.5",
     "recharts": "^2.15.1",
     "timesheet": "file:",
     "web-vitals": "^2.1.4"
@@ -47,5 +59,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.4"
   }
 }

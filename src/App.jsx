@@ -1,78 +1,71 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-// import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword';
-import Dashboard from './pages/Dashboard';
-import Settings from './pages/Settings';
-import PrivateRoute from './routes/PrivateRoute';
-import { useSelector } from 'react-redux';
-import Profile from './pages/Profile';
-import Expenses from './pages/Expenses';
-import Timesheet from './pages/Timesheet';
-import Leaves from './pages/Leaves';
+// App.jsx
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import Dashboard from "./pages/Dashboard";
+import Settings from "./pages/Settings";
+import PrivateRoute from "./routes/PrivateRoute";
+import Profile from "./pages/Profile";
+import Expenses from "./pages/Expenses";
+import Leaves from "./pages/Leaves";
+import Employees from "./pages/Employees";
+import Payroll from "./pages/Payroll";
+import About from "./pages/About";
+import DashboardLayout from "./components/layout/DashboardLayout";
 import "./styles/global.css";
-import Employees from './pages/Employees';
-import Payroll from './pages/Payroll';
-import React from 'react';
-import About from './pages/About';
+import { useAuth } from "./redux/hooks/useAuth";
+import Attendance from "./pages/Attendance";
+import LeavesRequest from "./pages/LeaveRequest";
 
 const App = () => {
-  const { isAuthenticated, user } = useSelector(state => state.auth); // Assuming `user` contains role information
+  const { isAuthenticated, checkAuth } = useAuth();
+  const token = localStorage.getItem("access_token");
+
+  useEffect(() => {
+    if (token !== null) {
+      checkAuth().catch((error) => {
+        console.error("Authentication check failed:", error);
+      });
+    }
+  }, [checkAuth, token]);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
-        {/* <Route path="/signup" element={!isAuthenticated ? <Signup /> : <Navigate to="/dashboard" />} /> */}
-        <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/dashboard" />} />
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        } />
-        <Route path="/settings" element={
-          <PrivateRoute>
-            <Settings />
-          </PrivateRoute>
-        } />
-        <Route path="/profile" element={
-          <PrivateRoute>
-            <Profile />
-          </PrivateRoute>
-        } />
-        <Route path="/expenses" element={
-          <PrivateRoute>
-            <Expenses />
-          </PrivateRoute>
-        } />
-        <Route path="/timesheet" element={
-          <PrivateRoute>
-            <Timesheet />
-          </PrivateRoute>
-        } />
-        <Route path="/leaves" element={
-          <PrivateRoute>
-            <Leaves />
-          </PrivateRoute>
-        } />
-        <Route path="/employees" element={
-          <PrivateRoute>
-            {user?.role === 'admin' ? <Employees /> : <Navigate to="/dashboard" />}
-          </PrivateRoute>
-        } />
-        <Route path="/payroll" element={
-          <PrivateRoute>
-            {user?.role === 'admin' ? <Payroll /> : <Navigate to="/dashboard" />}
-          </PrivateRoute>
-        } />
-         <Route path="/about" element={
-          <PrivateRoute>
-            <About />
-          </PrivateRoute>
-        } />
-        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
-      </Routes>
-    </Router>
+    <Routes>
+      {/* Public Routes */}
+      <Route
+        path="/login"
+        element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />}
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          !isAuthenticated ? <ForgotPassword /> : <Navigate to="/dashboard" />
+        }
+      />
+
+      {/* Protected Routes with Shared Layout */}
+      <Route element={<PrivateRoute />}>
+        <Route element={<DashboardLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/leaves" element={<Leaves />} />
+          <Route path="/leaveRequests" element={<LeavesRequest />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/payroll" element={<Payroll />} />
+          <Route path="/about" element={<About />} />
+        </Route>
+      </Route>
+
+      {/* Default Route */}
+      <Route
+        path="/"
+        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />}
+      />
+    </Routes>
   );
 };
 

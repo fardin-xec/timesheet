@@ -1,0 +1,315 @@
+/* employeeDialog.css */
+
+/* Dialog container */
+.MuiDialog-root {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Dialog content */
+.MuiDialogContent-root {
+  background-color: #f9fafb;
+  padding: 0 !important;
+  overflow-y: auto;
+  max-height: 80vh; /* Ensure content is scrollable */
+}
+
+/* Sticky header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #ffffff;
+}
+
+/* Sticky tabs */
+.sticky-tabs {
+  position: sticky;
+  top: 64px; /* Adjust based on header height */
+  z-index: 9;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Header section with avatar and name */
+.employee-header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  z-index: 11;
+}
+
+.employee-header .MuiAvatar-root {
+  width: 64px;
+  height: 64px;
+  margin-right: 16px;
+}
+
+.employee-header .MuiTypography-h5 {
+  font-weight: 500;
+  color: #111827;
+}
+
+.employee-header .MuiTypography-body2 {
+  color: #6b7280;
+}
+
+/* Tabs styling */
+.tabs-container {
+  background-color: #ffffff;
+}
+
+.tab {
+  text-transform: none !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #6b7280 !important;
+  padding: 12px 16px !important;
+}
+
+.tab.active {
+  color: #2563eb !important;
+}
+
+.tab:hover {
+  color: #2563eb !important;
+}
+
+.MuiTabs-indicator {
+  background-color: #2563eb !important;
+}
+
+/* Tab content */
+.tab-content {
+  padding: 24px;
+  background-color: #ffffff;
+  min-height: 400px;
+}
+
+/* Form inputs */
+input, select, textarea {
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  transition: border-color 0.2s ease-in-out;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+}
+
+input[readonly] {
+  background-color: #f3f4f6 !important;
+  cursor: not-allowed !important;
+}
+
+/* Work week table */
+.work-week-table-container {
+  max-height: 300px; /* Adjust as needed for scrollable table */
+  overflow-y: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  text-align: center;
+  font-size: 14px;
+}
+
+th {
+  background-color: #f9fafb;
+  color: #374151;
+  font-weight: 500;
+}
+
+td .w-8 {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 4px !important;
+  display: inline-block !important;
+}
+
+/* Ensure inline styles are overridden by CSS classes if needed */
+td div {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Color classes (explicitly defined to avoid Tailwind dependency issues) */
+.bg-green-500 {
+  background-color: #22c55e !important;
+}
+
+.bg-red-500 {
+  background-color: #ef4444 !important;
+}
+
+.bg-yellow-500 {
+  background-color: #eab308 !important;
+}
+
+.bg-gray-300 {
+  background-color: #d1d5db !important;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+/* Social profile links */
+a.bg-blue-600, a.bg-blue-800, a.bg-blue-400 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease-in-out;
+}
+
+a.bg-blue-600:hover {
+  background-color: #1e40af !important;
+}
+
+a.bg-blue-800:hover {
+  background-color: #1e3a8a !important;
+}
+
+a.bg-blue-400:hover {
+  background-color: #0284c7 !important;
+}
+
+/* Edit button */
+button.text-blue-500 {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+button.text-blue-500:hover {
+  color: #1e40af !important;
+}
+
+/* Buttons */
+.MuiButton-root {
+  text-transform: none !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+}
+
+.MuiButton-containedPrimary {
+  background-color: #2563eb !important;
+}
+
+.MuiButton-containedPrimary:hover {
+  background-color: #1e40af !important;
+}
+
+.MuiButton-outlined {
+  border-color: #d1d5db !important;
+  color: #374151 !important;
+}
+
+.MuiButton-outlined:hover {
+  border-color: #9ca3af !important;
+  background-color: #f9fafb !important;
+}
+
+/* Paper component */
+.MuiPaper-root {
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Typography */
+.MuiTypography-h6 {
+  color: #111827;
+  font-weight: 500;
+}
+
+.MuiTypography-subtitle2 {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.MuiTypography-body2 {
+  color: #6b7280;
+}
+
+/* Color legend */
+.color-legend {
+  margin-top: 16px;
+  display: flex !important; /* Ensure flex display */
+  gap: 16px; /* Space between legend items */
+}
+
+.color-legend .w-5 {
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 8px !important;
+  border-radius: 4px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tab-content {
+    padding: 16px;
+  }
+
+  .employee-header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: center;
+  }
+
+  .employee-header .MuiAvatar-root {
+    margin: 0 0 16px 0;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  td .w-8 {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .color-legend .w-5 {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .sticky-tabs {
+    top: 80px; /* Adjust for mobile header height */
+  }
+}
+
+/* Loading state */
+.MuiCircularProgress-root {
+  color: #2563eb !important;
+}

@@ -1,35 +1,39 @@
-import React from 'react';
-import { useAuth } from '../redux/hooks/useAuth';
-import DashboardHeader from '../components/dashboard/DashboardHeader';
-import DashboardSidebar from '../components/dashboard/DashboardSidebar';
-import Breadcrumb from '../components/common/Breadcrumb';
-import Card from '../components/common/Card';
-import '../styles/dashboard.css';
-import PayrollView from '../components/Payroll/PayrollView';
+import { useAuth } from "../redux/hooks/useAuth";
+import Breadcrumb from "../components/common/Breadcrumb";
+import "../styles/dashboard.css";
+import PayrollView from "../components/Payroll/PayrollView";
+import UserPayroll from "../components/Payroll/UserPayroll";
 
 const Payroll = () => {
-  const { user, logout } = useAuth();
-  
+  const { user } = useAuth();
+
   const breadcrumbItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Payroll', path: '/payroll' }
+    { label: "Dashboard", path: "/dashboard" },
+    { label: "Payroll", path: "/payroll" },
+  ];
+  const breadcrumbUserItems = [
+    { label: "Dashboard", path: "/dashboard" },
+    { label: "Payslip", path: "/payslip" },
   ];
 
   return (
-    <div className="dashboard-container">
-      <DashboardHeader user={user} onLogout={logout} />
-      <div className="dashboard-content">
-        <DashboardSidebar activePage="Payroll" />
-        <main className="dashboard-main">
+    <>
+      {user.role === "superadmin" ? (
+        <>
           <Breadcrumb items={breadcrumbItems} />
           <h1>Payroll</h1>
           <p>View your Payroll information.</p>
-          <Card>
-            <PayrollView />
-          </Card>
-        </main>
-      </div>
-    </div>
+          <PayrollView user={user} />
+        </>
+      ) : (
+        <>
+          <Breadcrumb items={breadcrumbUserItems} />
+          <h1>Payslip</h1>
+          <p>View your Payslip information.</p>
+          <UserPayroll user={user} />
+        </>
+      )}
+    </>
   );
 };
 

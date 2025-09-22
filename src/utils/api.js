@@ -1,434 +1,681 @@
-// src/utils/api.js
-import usersData from '../data/users.json';
-import expensesData from '../data/expenses.json';
-import timesheetData from '../data/timesheet.json';
-import leaveData from '../data/leaves.json';
+import api from "./api_call";
 
-// In a real app, you'd use a backend API to handle this
-// This is a simulated API using localStorage to persist the data
-const USERS_STORAGE_KEY = 'auth_app_users';
 
-// Load initial data from JSON file if not already in localStorage
-const initializeUsers = () => {
-  if (!localStorage.getItem(USERS_STORAGE_KEY)) {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersData.users));
+
+const getToken = () => {
+  const token = localStorage.getItem("access_token");
+  if (!token) {
+    throw new Error("No authentication token found. Please log in.");
   }
-  return JSON.parse(localStorage.getItem(USERS_STORAGE_KEY));
+  return token;
+};
+/*
+ Leaves Api
+*/
+export const fetchLeavesEntries = async (role,employeeId) => {
+  const token = getToken();
+  const url = role==='user' ? `/leaves/employees/${employeeId}` : '/leaves';
+  const response = await api.get(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+ if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+
+return response.data.data;
 };
 
-// Get users from localStorage
-const getUsers = () => {
-  return usersData.users|| [];
+export const createLeaveEntry = async (data) => {
+  const token = getToken();
+
+
+  const response = await api.post('/leaves', data, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+  if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+    throw new Error(response.data.message);
+} 
+  
+  return response.data.data;
 };
 
-// Save users to localStorage
-const saveUsers = (users) => {
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+export const updateLeaveEntry = async (data) => {
+  const token = getToken();
+ 
+
+  const response = await api.put(`/leaves/${data.id}`, data, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+
+ if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+
+return response.data.data;
 };
 
-// Simulate network delay
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+export const deleteLeaveEntry = async (id) => {
+  const token = getToken();
+ 
 
-// Login user
-export const loginUser = async (credentials) => {
-  await delay(800); // Simulate API delay
-  
-  // Initialize users if needed
-  initializeUsers();
-  
-  const users = getUsers();
-  const user = users.find(u => u.email === credentials.email);
-  
-  if (!user || user.password !== credentials.password) {
-    throw new Error('Invalid email or password');
-  }
-  
-  const { password, ...userWithoutPassword } = user;
-  
-  return {
-    token: `mock-jwt-token-${user.id}`,
-    user: userWithoutPassword
-  };
+  const response = await api.delete(`/leaves/${id}`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+  if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+    throw new Error(response.data.message);
+} 
+
+return response.data.data;
 };
 
-// Register user
-export const registerUser = async (userData) => {
-  await delay(1000); // Simulate API delay
+export const fetchEmployees = async (orgId) => {
+  const token = getToken();
+
+
+  const response = await api.get(`/employees/organization/${orgId}`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
   
-  // Initialize users if needed
-  initializeUsers();
   
-  const users = getUsers();
-  
-  if (users.find(u => u.email === userData.email)) {
-    throw new Error('Email already in use');
-  }
-  
-  const newUser = {
-    id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
-    ...userData
-  };
-  
-  const updatedUsers = [...users, newUser];
-  saveUsers(updatedUsers);
-  
-  const { password, ...userWithoutPassword } = newUser;
-  
-  return {
-    token: `mock-jwt-token-${newUser.id}`,
-    user: userWithoutPassword
-  };
+  return response.data.data;
 };
 
+export const fetchEmployeesWithLeaves = async () => {
+  const token = getToken();
 
-const getUsersUsingJson = () => {
-  return usersData.users || [];
+
+  const response = await api.get(`/employees/leaves`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+  
+  
+  return response.data.data;
 };
 
+export const updateLeaveStatus = async (leaveId,data) => {
+    const token = getToken();
+  
+  
+    const response = await api.put(`/leaves/${leaveId}/updateStatus`,data, {
+  headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
 
-// Update password (when user knows their current password)
-export const updatePassword = async (userId, currentPassword, newPassword) => {
-  await delay(800); // Simulate API delay
-  
-  const users = getUsers();
-  const userIndex = users.findIndex(u => u.id === userId);
-  
-  if (userIndex === -1) {
-    throw new Error('User not found');
-  }
-  
-  if (users[userIndex].password !== currentPassword) {
-    throw new Error('Current password is incorrect');
-  }
-  
-  // Update the password
-  users[userIndex].password = newPassword;
-  saveUsers(users);
-  
-  return {
-    success: true,
-    message: 'Password updated successfully'
-  };
-};
-
-// Reset forgotten password with token
-export const completePasswordReset = async (email, newPassword, token) => {
-  await delay(800); // Simulate API delay
-  
-  // In a real app, you would validate the token
-  // Here we're simulating that the token is valid
-  
-  const users = getUsers();
-  const userIndex = users.findIndex(u => u.email === email);
-  
-  if (userIndex === -1) {
-    throw new Error('User not found');
-  }
-  
-  // Update the password
-  users[userIndex].password = newPassword;
-  saveUsers(users);
-  
-  return {
-    success: true,
-    message: 'Password has been reset successfully'
-  };
-};
-
-// Add these functions to your src/utils/api.js file
-
-// Store OTPs temporarily (in a real app, these would be stored in a database)
-const otpStore = 123456;
-
-// Generate a random 6-digit OTP
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-// Reset password with OTP (modify the existing resetPassword function)
-export const resetPassword = async (email) => {
-  await delay(1000); // Simulate API delay
-  
-  const users = getUsers();
-  const user = users.find(u => u.email === email);
-  
-  if (!user) {
-    throw new Error('No account found with this email address');
-  }
-  
-  // Generate and store OTP
-  const otp = generateOTP();
-  otpStore[email] = {
-    otp,
-    expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes expiry
-  };
-  
-  console.log(`OTP for ${email}: ${otp}`); // For testing purposes only
-  
-  // In a real app, you would send this OTP via email or SMS
-  return {
-    success: true,
-    message: 'OTP has been sent to your email'
-  };
-};
-
-// Verify OTP
-export const verifyOtp = async (email, otp) => {
-  await delay(800); // Simulate API delay
-  
-  if (!otpStore[email]) {
-    throw new Error('OTP expired or not requested. Please request a new OTP.');
-  }
-  
-  const storedOtp = otpStore[email];
-  
-  if (Date.now() > storedOtp.expiresAt) {
-    delete otpStore[email];
-    throw new Error('OTP has expired. Please request a new one.');
-  }
-  
-  if (storedOtp.otp !== otp) {
-    throw new Error('Invalid OTP. Please try again.');
-  }
-  
-  return {
-    success: true,
-    message: 'OTP verified successfully'
-  };
-};
-
-// Reset password with verified OTP
-export const resetPasswordWithOtp = async (email, otp, newPassword) => {
-  await delay(800); // Simulate API delay
-  
-  // Verify OTP first
-  try {
-    await verifyOtp(email, otp);
-  } catch (error) {
-    throw error;
-  }
-  
-  // Update password
-  const users = getUsers();
-  const userIndex = users.findIndex(u => u.email === email);
-  
-  if (userIndex === -1) {
-    throw new Error('User not found');
-  }
-  
-  // Update the password
-  users[userIndex].password = newPassword;
-  saveUsers(users);
-  
-  // Clear the OTP
-  delete otpStore[email];
-  
-  return {
-    success: true,
-    message: 'Password has been reset successfully'
-  };
-};
-
-// Add these functions to your src/utils/api.js file
-
-// Get user profile
-export const getUserProfile = async (email) => {
-  await delay(600); // Simulate API delay
-  
-  const users =  getUsersUsingJson();
-  const user = users.find(u => u.email === email);
-  
-  if (!user) {
-    throw new Error('User not found');
-  }
-  
-  // Return user profile without sensitive information
-  const { password, ...userProfile } = user;
-  
-  return {
-    success: true,
-    profile: userProfile
-  };
-};
-
-// Update user profile
-export const updateUserProfile = async (email, profileData) => {
-  await delay(800); // Simulate API delay
-  
-  const users = getUsers();
-  const userIndex = users.findIndex(u => u.email === email);
-  
-  if (userIndex === -1) {
-    throw new Error('User not found');
-  }
-  
-  // Update only the provided fields, preserving other user data
-  const updatedUser = {
-    ...users[userIndex],
-    ...profileData,
-    // Ensure id remains unchanged
-    id: users[userIndex].id
-  };
-  
-  // Don't allow password to be updated through this endpoint
-  updatedUser.password = users[userIndex].password;
-  
-  // Update the user in the array
-  users[userIndex] = updatedUser;
-  saveUsers(users);
-  
-  // Return updated profile without sensitive information
-  const { password, ...updatedProfile } = updatedUser;
-  
-  return {
-    success: true,
-    message: 'Profile updated successfully',
-    profile: updatedProfile
-  };
-};
-
-const expensesDataUsingJson = () => {
-  return expensesData || {};
-};
-
-// API utility function to fetch expenses data
-export const getExpensesData = () => {
-  try {
-    // In a real app, you would use fetch or axios to get data from an API
-    // For this example, we'll simulate an API call by importing the JSON directly
-    const response = expensesDataUsingJson();
-    console.log(response)
-   
-    return  response;
-  } catch (error) {
-    console.error('Error fetching expenses:', error);
-    throw error;
-  }
-};
-
-
-const timesheetDataUsingJson = () => {
-  return timesheetData.data || [];
-};
-
-export const fetchTimesheetEntries = () => {
-  try {
-    // In a real app, you would use fetch or axios to get data from an API
-    // For this example, we'll simulate an API call by importing the JSON directly
-    const response = timesheetDataUsingJson();
-    console.log(response)
-   
-    return  response;
-  } catch (error) {
-    console.error('Error fetching expenses:', error);
-    throw error;
-  }
-};
-
-export const updateTimesheetEntry = async (entry) => {
-  try {
-    // In a real app, you would send a PUT request to update data
-    // For this example, we'll simulate the update and return the entry
-    console.log('Updating entry:', entry);
+     },    });
+      if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
     
-    // Here you would normally update the JSON or database
-    // For now, we'll just return the updated entry as if it was successful
-    return entry;
-  } catch (error) {
-    console.error('Error updating timesheet entry:', error);
-    throw error;
-  }
-};
-
-export const createTimesheetEntry = async (entry) => {
-  try {
-    // In a real app, you would send a PUT request to update data
-    // For this example, we'll simulate the update and return the entry
-    console.log('Creating entry:', entry);
     
-    // Here you would normally update the JSON or database
-    // For now, we'll just return the updated entry as if it was successful
-    return entry;
-  } catch (error) {
-    console.error('Error updating timesheet entry:', error);
-    throw error;
-  }
-};
-export const deleteTimesheetEntry = async (entry) => {
-  try {
-    // In a real app, you would send a PUT request to update data
-    // For this example, we'll simulate the update and return the entry
-    console.log('Deleting entry:', entry);
+    return response.data.data;
+  };
+
+export const fetchEmployeeLeaves = async (employeeId) => {
+    const token = getToken();
+  
+  
+    const response = await api.get(`/leaves/employees/${employeeId}`, {
+  headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },    });
+      if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
     
-    // Here you would normally update the JSON or database
-    // For now, we'll just return the updated entry as if it was successful
-    return entry;
-  } catch (error) {
-    console.error('Error updating timesheet entry:', error);
-    throw error;
-  }
-};
-
-
-
-const leavesDataUsingJson = () => {
-  return leaveData.data || [];
-};
-
-export const fetchleavesEntries = () => {
-  try {
-    // In a real app, you would use fetch or axios to get data from an API
-    // For this example, we'll simulate an API call by importing the JSON directly
-    const response = leavesDataUsingJson();
-    console.log(response)
-   
-    return  response;
-  } catch (error) {
-    console.error('Error fetching leaves:', error);
-    throw error;
-  }
-};
-
-export const updateleavesEntry = async (entry) => {
-  try {
-    // In a real app, you would send a PUT request to update data
-    // For this example, we'll simulate the update and return the entry
-    console.log('Updating entry:', entry);
     
-    // Here you would normally update the JSON or database
-    // For now, we'll just return the updated entry as if it was successful
-    return entry;
+    return response.data.data;
+  };
+export const fetchLeaveBalance = async (employeeId) => {
+  const token = getToken();
+  const response = await api.get(`/leaves/balance/employees/${employeeId}`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+
+     console.log(response.data.statusCode);
+     
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 404){
+        throw new Error(response.data.message);
+    } 
+  
+  
+  return response.data.data;
+};
+
+export const fetchEmployeeRules = async (employeeId) => {
+  const token = getToken();
+  const response = await api.get(`/leaves/rules/employees/${employeeId}`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201&& response.data.message!=='No leave rules found for the employee'){
+        throw new Error(response.data.message);
+    } 
+    
+    const data=response.data.data
+
+    return data.map((item) => ({
+        id: item.rule.id,
+        name: item.rule.leaveType,
+    
+      }))
+  
+};
+
+export const fetchAllLeaveRules = async (orgId) => {
+  const token = getToken();
+ 
+  const response = await api.get(`/leaves/rules/${orgId}`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+    const data=response.data.data
+    return data.map((item) => ({
+        id: item.id,
+        name: item.leaveType,
+    
+      }))
+};
+
+export const assignRule = async (employeeId, ruleId) => {
+  const token = getToken();
+  const response = await api.post(`/leaves/assign-rule/${employeeId}/${ruleId}`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+  
+  
+  return response.data.data;
+};
+
+export const unassignLeaveRule = async (employeeId, ruleId) => {
+  const token = getToken();
+  const response = await api.delete(`/leaves/unassign-rule/${employeeId}/${ruleId}`, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+  
+  
+  return response.data.data;
+};
+
+export const fetchPendingEmployeesLeaves = async (employeeIds) => {
+  const token = getToken();
+  const response = await api.post(`/leaves/employees/pending-leaves`,{employeeIds}, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+  
+  
+  return response.data.data;
+};
+
+export const fetchAttendance = async ({
+  page,
+  limit,
+  employeeId,
+  startDate,
+  endDate,
+}) => {
+  const token = getToken();
+  let url = `/attendances?page=${page}&limit=${limit}`;
+  if (employeeId) url += `&employeeId=${employeeId}`;
+  if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
+  if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
+
+  const response = await api.get(url, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+  if (response.data.statusCode !== 200 && response.data.statusCode !== 201) {
+    throw new Error(response.data.message);
+  }
+  return {
+    data: response.data.data,
+    total: response.data.total || response.data.data.length, // Adjust based on API response structure
+  };
+};
+
+export const updateAttendance = async (employeeId,data) => {
+  const token = getToken();
+
+
+  const response = await api.put(`/attendances/employees/${employeeId}`,data, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+      throw new Error(response.data.message);
+  } 
+  
+  
+  return response.data.data;
+};
+
+
+export const updateAttendanceTask = async (id,data) => {
+  const token = getToken();
+
+
+  const response = await api.put(`/attendances/${id}`,data, {
+headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },  });
+    if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+      throw new Error(response.data.message);
+  } 
+  
+  
+  return response.data.data;
+};
+
+
+export const fetchPayroll = async ({ page, limit, month, year, employeeId },orgId) => {
+  const token = getToken();
+
+  
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    month: month.toString(),
+    year: year.toString(),
+    ...(employeeId && { employeeId }),
+  });
+
+  const response = await api.get(`/payroll/${orgId}?${queryParams}`, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },
+  });
+
+  if (response.data.statusCode !== 200 && response.data.statusCode !== 201) {
+    throw new Error(response.data.message);
+  }
+
+  const { data, total } = response.data.data;
+
+  return {
+    data,
+    total,
+  };
+};
+
+
+
+export const fetchPresignedUrlBackend = async (payslipId,signal) => {
+  try {
+    
+    const token = getToken();
+
+    // Important: responseType must be 'arraybuffer' to handle binary data correctly  13.203.97.195
+    const response = await api.get(`/payroll/presignedUrl/${payslipId}`, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+  
+       },
+    });
+
+    console.log(response);
+    
+    
+    
+    const { url } = response.data;
+    if (!url) throw new Error('No presigned URL received from backend');
+
+    const responseData = await fetch(url);
+    const reader = responseData.body.getReader();
+    const chunks = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+
+    const blob = new Blob(chunks, { type: 'application/pdf' });
+    return blob;
+
   } catch (error) {
-    console.error('Error updating leaves entry:', error);
-    throw error;
+    console.log(error);
+    
+    // Handle errors and provide meaningful message
+    let errorMessage = 'Failed to fetch payslip PDF';
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      if (error.response.status === 404) {
+        errorMessage = 'Payslip PDF not found';
+      } else {
+        errorMessage = `Server error: ${error.response.status}`;
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      errorMessage = 'No response from server';
+    }
+    
+    throw new Error(errorMessage);
   }
 };
 
-export const createleavesEntry = async (entry) => {
-  try {
-    // In a real app, you would send a PUT request to update data
-    // For this example, we'll simulate the update and return the entry
-    console.log('Creating entry:', entry);
+
+
+
+export const bulkUpdatePayroll = async (data) => {
+    const token = getToken();
     
-    // Here you would normally update the JSON or database
-    // For now, we'll just return the updated entry as if it was successful
-    return entry;
-  } catch (error) {
-    console.error('Error updating leaves entry:', error);
-    throw error;
-  }
+  
+    const response = await api.put(`/payroll/bulkApprove`,{data}, {
+  headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+  
+       },  });
+      if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+    
+    
+    return response.data.data;
+  };
+
+
+export const updatePayroll = async (payslipId,data) => {
+    const token = getToken();
+  
+  
+    const response = await api.patch(`/payroll/${payslipId}`,{ "otherAllowances": data.otherAllowances}, {
+  headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+  
+       },  });
+      if (response.data.statusCode !== 200 && response.data.statusCode !== 201){
+        throw new Error(response.data.message);
+    } 
+    
+    
+    return response.data.data;
+  };
+
+  export const deletePayroll = async (id) => {
+    const token = getToken();
+  
+  
+    const response = await api.delete(`/payroll/${id}`, {
+  headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+  
+       },  });
+       
+      if (response.status !== 200 && response.status !== 204){
+        throw new Error(response.data.message);
+    } 
+    
+    
+    return response.data.data;
+  };
+
+  export const requestPasswordResetOtp = async (email) => {
+  
+  
+      const response = await api.post('auth/otp/request', { email },{
+      headers: { 
+        'Content-Type': 'application/json'
+  
+       },  });
+       
+      if (response.status !== 200 && response.status !== 201){
+        throw new Error(response.data.message);
+    } 
+    
+    
+    return response.data.data;
+  };
+  
+  
+  export const verifyOtp = async (email, otp) => {
+  
+  
+    const response = await api.post('auth/otp/verify', { email,otp },{
+    headers: { 
+      'Content-Type': 'application/json'
+
+     },  });
+
+     
+    if (response.status !== 200 && response.status !== 201){
+      throw new Error(response.data.message);
+  } 
+
+  
+  
+  
+  return response.data;
+
 };
-export const deleteleavesEntry = async (entry) => {
+  
+  export const resetPassword = async (id,password) => {
+  
+  
+    const response = await api.put(`auth/user/${id}`, {
+      password
+    });
+     
+    if (response.status !== 200 && response.status !== 204){
+      throw new Error(response.data.message);
+  } 
+  
+  
+  return response.data;
+  };
+  
+
+  export const resendOtp = async (email) => {
+  
+  
+    const response = await api.post('auth/otp/resend', { email },{
+    headers: { 
+      'Content-Type': 'application/json'
+
+     },  });
+     
+    if (response.status !== 200 && response.status !== 201){
+      throw new Error(response.data.message);
+  } 
+  
+  
+  return response.data.data;
+  };
+  
+  export const resetEmployeePassword = async (id,oldPassword,newPassword) => {
+    const token = getToken();
+ 
+  
+    const response = await api.put(`employees/user/${id}`, {
+      oldPassword,
+      newPassword,
+    },{ headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+
+     },});
+
+     
+     
+    if (response.status !== 200 && response.status !== 204){
+      throw new Error(response.data.message);
+  } 
+  
+  
+  return response;
+  };
+
+export const leaveAPI = {
+  
+uploadAttachment: async (file, onProgress) => {
   try {
-    // In a real app, you would send a PUT request to update data
-    // For this example, we'll simulate the update and return the entry
-    console.log('Deleting entry:', entry);
-    
-    // Here you would normally update the JSON or database
-    // For now, we'll just return the updated entry as if it was successful
-    return entry;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post('/leaves/upload-attachment', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded * 100) / event.total;
+          onProgress?.(percentComplete);
+        }
+      },
+    });
+
+    return response.data;
   } catch (error) {
-    console.error('Error updating leaves entry:', error);
-    throw error;
+    throw new Error(error.response?.data?.message || 'Upload failed');
   }
+},
+
+
+  createLeave: async (leaveData) => {
+    try {
+      const response = await api.post('/leaves', leaveData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to create leave application');
+    }
+  },
+
+  updateLeave: async (id, leaveData) => {
+    try {
+      const response = await api.put(`/leaves/${id}`, leaveData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to update leave application');
+    }
+  },
+
+  updateLeaveStatus: async (id, statusData) => {
+    try {
+      const response = await api.put(`/leaves/${id}/updateStatus`, statusData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to update leave status');
+    }
+  },
+
+  deleteLeave: async (id) => {
+    try {
+      const response = await api.delete(`/leaves/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to delete leave application');
+    }
+  },
+
+  getLeaveBalance: async (employeeId) => {
+    try {
+      const response = await api.get(`/leaves/balance/employees/${employeeId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch leave balance');
+    }
+  },
+
+  getEmployeeLeaveRules: async (employeeId) => {
+    try {
+      const response = await api.get(`/leaves/rules/employees/${employeeId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch leave rules');
+    }
+  },
+
+  getPendingLeaves: async (employeeIds) => {
+    try {
+      const response = await api.post(
+        '/leaves/employees/pending-leaves',
+        { employeeIds },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch pending leaves');
+    }
+  },
 };

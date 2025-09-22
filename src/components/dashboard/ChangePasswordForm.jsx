@@ -1,13 +1,14 @@
-// src/components/dashboard/ChangePasswordForm.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Input from '../common/Input';
 import Button from '../common/Button';
-import { updatePassword } from '../../utils/api';
+import { resetEmployeePassword } from '../../utils/api';
 import Loader from '../common/Loader';
 import { useAuth } from '../../redux/hooks/useAuth';
 
 const ChangePasswordForm = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -51,20 +52,27 @@ const ChangePasswordForm = () => {
     setSuccess('');
     
     try {
-      const result = await updatePassword(
+      const result = await resetEmployeePassword(
         user.id, 
         formData.currentPassword, 
         formData.newPassword
       );
+      console.log(result);
       
-      setSuccess(result.message);
+      setSuccess(result.message || 'Password updated successfully');
       setFormData({
         currentPassword: '',
         newPassword: '',
         confirmNewPassword: '',
       });
+      
+      // Redirect to login page after successful password update
+      setTimeout(() => {
+        logout(); // Optional: logout the user first
+        navigate('/login'); // Redirect to login page
+      }, 2000); // Short delay to show success message
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || 'Failed to update password');
     } finally {
       setLoading(false);
     }
@@ -92,6 +100,7 @@ const ChangePasswordForm = () => {
           value={formData.newPassword}
           onChange={handleChange}
           required
+          minLength={6}
         />
         <Input
           type="password"

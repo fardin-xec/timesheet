@@ -71,6 +71,9 @@
   .space-y-2 > * + * {
     margin-top: 0.5rem;
   }
+  .space-y-2 > *:hover {
+    cursor: pointer;
+  }
   
   /* Employee item */
   .flex {
@@ -324,3 +327,468 @@
       display: none;
     }
   }
+
+.employees-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.employee-edit-form {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 2rem;
+}
+
+.employee-edit-form .form-section {
+  margin-bottom: 1.5rem;
+}
+
+.employee-edit-form input[type="text"],
+.employee-edit-form input[type="email"],
+.employee-edit-form input[type="tel"],
+.employee-edit-form select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.925rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.employee-edit-form input[type="text"]:focus,
+.employee-edit-form input[type="email"]:focus,
+.employee-edit-form input[type="tel"]:focus,
+.employee-edit-form select:focus {
+  border-color: #4299e1;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+.status-button-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.status-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.status-button-active {
+  background-color: #48bb78;
+  color: white;
+  border: 1px solid #38a169;
+}
+
+.status-button-inactive {
+  background-color: #e2e8f0;
+  color: #4a5568;
+  border: 1px solid #cbd5e0;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .employee-edit-form {
+    padding: 1rem;
+  }
+
+  .grid-cols-2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+  
+
+/* Base styles */
+.employee-form-container {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.form-content {
+  padding: 24px;
+}
+
+/* Form header tabs */
+.form-tabs {
+  background: linear-gradient(to right, #1e293b, #334155);
+  border-radius: 8px 8px 0 0;
+  padding: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.form-tab-button {
+  padding: 12px 24px;
+  font-weight: 500;
+  color: #f8fafc;
+  border: none;
+  background: transparent;
+  position: relative;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.form-tab-button.active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.form-tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #3b82f6;
+}
+
+/* Section styles */
+.form-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  letter-spacing: 0.5px;
+}
+
+/* Input fields */
+.input-wrapper {
+  margin-bottom: 16px;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.input-field.error {
+  border-color: #ef4444;
+}
+
+.input-error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.input-field.bg-highlight {
+  background-color: #eff6ff;
+}
+
+/* Textarea styles */
+.text-area {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Input with icon */
+.input-with-icon {
+  position: relative;
+}
+
+.input-with-icon .input-field {
+  padding-right: 36px;
+}
+
+.input-with-icon .icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+/* Select styles */
+.select-field {
+  appearance: none;
+  background-color: #fff;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* Status buttons */
+.status-button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.status-button {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.status-button:hover {
+  background-color: #f1f5f9;
+}
+
+.status-button.active-status {
+  background-color: #dcfce7;
+  border-color: #22c55e;
+}
+
+.status-button.inactive-status {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+}
+
+.status-button.pending-status {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.status-button .status-icon {
+  margin-right: 8px;
+}
+
+/* Grid layouts */
+.grid-cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.grid-cols-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Employee profile section */
+.employee-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.status-badge.active {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #3b82f6;
+}
+
+input:focus + .toggle-slider {
+  box-shadow: 0 0 1px #3b82f6;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* Button styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.button-outlined {
+  background-color: transparent;
+  border: 1px solid #64748b;
+  color: #64748b;
+}
+
+.button-outlined:hover {
+  background-color: #f1f5f9;
+}
+
+.button-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.button-primary:hover {
+  background-color: #2563eb;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 32px;
+}
+
+/* Pre-onboarding toggle */
+.pre-onboarding-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  margin: 24px 0;
+}
+
+.pre-onboarding-label {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+.pre-onboarding-help {
+  color: #3b82f6;
+  margin-left: 6px;
+}
+
+/* Gender button group */
+.gender-button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.gender-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.gender-button.selected {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
