@@ -142,12 +142,11 @@ const EmployeeForm = ({
 
   const validate = () => {
     const newErrors = {};
-    const { firstName, lastName, email, employeeId } = employeeData;
+    const { firstName, lastName, email } = employeeData;
 
     if (!firstName) newErrors.firstName = "First Name is required.";
     if (!lastName) newErrors.lastName = "Last Name is required.";
     if (!email) newErrors.email = "Email is required.";
-    if (!employeeId) newErrors.employeeId = "Employee ID is required.";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -159,8 +158,11 @@ const EmployeeForm = ({
     if (validate()) {
       onSave(employeeData);
     } else {
+
       // Scroll to first error field and focus it
       const firstErrorField = document.querySelector(".input-field.error");
+      console.log(firstErrorField);
+
       if (firstErrorField) {
         firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
         firstErrorField.focus();
