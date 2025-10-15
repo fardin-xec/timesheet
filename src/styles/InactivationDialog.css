@@ -1,0 +1,340 @@
+/* InactivationDialog.css */
+
+/* Dialog Container */
+.inactivation-dialog {
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Dialog Paper Override */
+.inactivation-dialog .MuiDialog-paper {
+  background-color: #fff;
+  border-radius: 8px;
+}
+
+/* Dialog Title */
+.inactivation-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
+}
+
+.inactivation-dialog-title-icon {
+  color: #ff9800;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.inactivation-dialog-title-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+/* Dialog Content */
+.inactivation-dialog-content {
+  padding: 24px !important;
+  background-color: #fff;
+}
+
+.inactivation-dialog-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.inactivation-dialog-description strong {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Form Container */
+.inactivation-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 4px;
+}
+
+/* Form Fields */
+.inactivation-form-field {
+  width: 100%;
+}
+
+/* MUI FormControl Override */
+.inactivation-form-field.MuiFormControl-root {
+  margin: 0;
+}
+
+/* MUI Select Override */
+.inactivation-form-field .MuiOutlinedInput-root {
+  background-color: #fff;
+}
+
+.inactivation-form-field .MuiOutlinedInput-notchedOutline {
+  border-color: #d0d0d0;
+}
+
+.inactivation-form-field .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #1976d2;
+}
+
+.inactivation-form-field .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1976d2;
+  border-width: 2px;
+}
+
+.inactivation-form-field .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline {
+  border-color: #d32f2f;
+}
+
+/* MUI TextField Override */
+.inactivation-form-field .MuiInputBase-root {
+  background-color: #fff;
+}
+
+.inactivation-form-field .MuiInputBase-input {
+  color: #333;
+  font-size: 14px;
+  padding: 14px;
+}
+
+.inactivation-form-field .MuiInputBase-input::placeholder {
+  color: #999;
+  opacity: 1;
+}
+
+/* MUI InputLabel Override */
+.inactivation-form-field .MuiInputLabel-root {
+  color: #666;
+}
+
+.inactivation-form-field .MuiInputLabel-root.Mui-focused {
+  color: #1976d2;
+}
+
+.inactivation-form-field .MuiInputLabel-root.Mui-error {
+  color: #d32f2f;
+}
+
+/* MUI Helper Text Override */
+.inactivation-form-field .MuiFormHelperText-root {
+  margin-left: 14px;
+  margin-right: 14px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666;
+}
+
+.inactivation-form-field .MuiFormHelperText-root.Mui-error {
+  color: #d32f2f;
+}
+
+/* Error Text */
+.inactivation-error-text {
+  color: #d32f2f;
+  font-size: 12px;
+  margin-top: 6px;
+  margin-left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Dialog Actions */
+.inactivation-dialog-actions {
+  padding: 16px 24px 20px 24px !important;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #fff;
+}
+
+/* MUI Button Overrides */
+.inactivation-dialog-actions .MuiButton-root {
+  text-transform: none;
+  font-weight: 500;
+  font-size: 14px;
+  padding: 10px 24px;
+  border-radius: 4px;
+  min-width: 100px;
+}
+
+.inactivation-dialog-actions .MuiButton-outlined {
+  border-color: #d0d0d0;
+  color: #666;
+  background-color: #fff;
+}
+
+.inactivation-dialog-actions .MuiButton-outlined:hover {
+  background-color: #f5f5f5;
+  border-color: #999;
+}
+
+.inactivation-dialog-actions .MuiButton-contained {
+  background-color: #1976d2;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(25, 118, 210, 0.2);
+}
+
+.inactivation-dialog-actions .MuiButton-contained:hover {
+  background-color: #1565c0;
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.3);
+}
+
+.inactivation-dialog-actions .MuiButton-contained.Mui-disabled {
+  background-color: #e0e0e0;
+  color: #999;
+  box-shadow: none;
+}
+
+/* Loading Spinner */
+.inactivation-spinner {
+  width: 16px !important;
+  height: 16px !important;
+  color: #fff;
+}
+
+/* Responsive Design */
+
+/* Tablet and below */
+@media (max-width: 768px) {
+  .inactivation-dialog {
+    max-width: 100%;
+    margin: 0 16px;
+  }
+
+  .inactivation-dialog-title {
+    padding: 20px 20px 16px 20px;
+  }
+
+  .inactivation-dialog-title-text {
+    font-size: 18px;
+  }
+
+  .inactivation-dialog-content {
+    padding: 20px !important;
+  }
+
+  .inactivation-form-container {
+    gap: 20px;
+  }
+
+  .inactivation-dialog-actions {
+    padding: 12px 20px 16px 20px !important;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .inactivation-dialog-actions .MuiButton-root {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+/* Mobile devices */
+@media (max-width: 480px) {
+  .inactivation-dialog {
+    margin: 0;
+  }
+
+  .inactivation-dialog-title {
+    padding: 16px 16px 14px 16px;
+  }
+
+  .inactivation-dialog-title-text {
+    font-size: 16px;
+  }
+
+  .inactivation-dialog-title-icon {
+    font-size: 20px;
+  }
+
+  .inactivation-dialog-content {
+    padding: 16px !important;
+  }
+
+  .inactivation-dialog-description {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .inactivation-form-container {
+    gap: 18px;
+  }
+
+  .inactivation-form-field .MuiInputBase-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px;
+  }
+
+  .inactivation-dialog-actions {
+    padding: 12px 16px 16px 16px !important;
+  }
+
+  .inactivation-dialog-actions .MuiButton-root {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 360px) {
+  .inactivation-dialog-title {
+    padding: 14px 14px 12px 14px;
+  }
+
+  .inactivation-dialog-content {
+    padding: 14px !important;
+  }
+
+  .inactivation-form-container {
+    gap: 16px;
+  }
+
+  .inactivation-dialog-actions {
+    padding: 10px 14px 14px 14px !important;
+  }
+
+  .inactivation-dialog-actions .MuiButton-root {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Accessibility improvements */
+.inactivation-dialog *:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .inactivation-dialog-actions {
+    display: none;
+  }
+}
+
+/* Remove dark mode - keep white background always */
+.inactivation-dialog .MuiDialog-paper {
+  background-color: #fff !important;
+}
+
+.inactivation-dialog-title,
+.inactivation-dialog-content,
+.inactivation-dialog-actions {
+  background-color: #fff !important;
+}
+
+.inactivation-form-field .MuiOutlinedInput-root,
+.inactivation-form-field .MuiInputBase-root {
+  background-color: #fff !important;
+}

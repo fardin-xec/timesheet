@@ -3,7 +3,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import toast from 'react-hot-toast';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { fetchPresignedUrlBackend, fetchPayroll } from '../../utils/api';
+import { fetchPayroll } from '../../utils/api';
 
 // Safe toast wrapper
 const safeToast = {
@@ -21,6 +21,51 @@ const initializePdfWorker = () => {
   }
 };
 initializePdfWorker();
+
+// Fetch PDF directly from backend
+const fetchPdfFromBackend = async (pdfUrl, signal) => {
+  try {
+    // If pdfUrl starts with '/', it's already formatted correctly
+    // If not, prepend '/'
+    const formattedUrl = pdfUrl.startsWith('/') ? pdfUrl : `/${pdfUrl}`;
+    const backendUrl = `http://localhost:3000${formattedUrl}`;
+    
+    const response = await fetch(backendUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/pdf',
+        
+      },
+      mode: 'cors',
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Unauthorized");
+      } else if (response.status === 404) {
+        throw new Error("PDF not found");
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/pdf')) {
+      throw new Error("Invalid PDF content received");
+    }
+
+    const blob = await response.blob();
+    
+    if (blob.size === 0) {
+      throw new Error("Received empty PDF file");
+    }
+
+    return blob;
+  } catch (error) {
+    console.error("Error fetching PDF from backend:", error);
+    throw error;
+  }
+};
 
 // Utility to get month names
 const months = [
@@ -52,19 +97,15 @@ const UserPayroll = ({ user }) => {
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth(); // 0-based (0 = January)
 
-  const {employee,orgId}=user;
-
-
-  
+  const { employee, orgId } = user;
 
   const fetchPayrollData = useCallback(async () => {
-   
     try {
       setLoading(true);
-      const monthNumber = months.indexOf(selectedMonth) + 1; // Get 1-based month number
-    if (monthNumber === 0) { // indexOf returns -1 if not found, so +1 gives 0
-      throw new Error('Invalid month selected');
-    }
+      const monthNumber = months.indexOf(selectedMonth) + 1;
+      if (monthNumber === 0) {
+        throw new Error('Invalid month selected');
+      }
       const response = await fetchPayroll(
         {
           page: 1,
@@ -75,12 +116,10 @@ const UserPayroll = ({ user }) => {
         },
         orgId
       );
-      console.log(response);
       
       setPayrollData(response.data[0]);
     } catch (err) {
-        console.log(err);
-        
+      console.error(err);
       safeToast.error(`Error: ${err.message || "Unknown error"}`);
       setPayrollData(null);
     } finally {
@@ -94,8 +133,8 @@ const UserPayroll = ({ user }) => {
     for (let year = 2000; year <= currentYear; year++) {
       years.push(year);
     }
-    setAvailableYears(years.reverse()); // Latest year first
-    setSelectedYear(currentYear.toString()); // Default to current year
+    setAvailableYears(years.reverse());
+    setSelectedYear(currentYear.toString());
   }, [currentYear]);
 
   // Populate months based on selected year
@@ -116,15 +155,34 @@ const UserPayroll = ({ user }) => {
     setPageNumber(1);
     setRetryCount(0);
     fetchAttemptedRef.current = false;
+    setPayrollData(null);
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
   }, [selectedMonth, selectedYear]);
 
+  // Check if payroll ID has changed
+  useEffect(() => {
+    if (payrollData?.payslip?.id !== payrollIdRef.current) {
+      payrollIdRef.current = payrollData?.payslip?.id;
+      fetchAttemptedRef.current = false;
+      setPdfData(null);
+      setPdfError(null);
+      setRetryCount(0);
+    }
+  }, [payrollData?.payslip?.id]);
+
   // Fetch PDF data
   const fetchPdfData = useCallback(async () => {
-    if (!selectedMonth || !selectedYear || loading || retryCount > maxRetries || fetchAttemptedRef.current || !payrollData?.payslip?.id) {
+    const pdfUrl = payrollData?.payslip?.pdfUrl;
+    
+    if (
+      loading ||
+      !pdfUrl ||
+      retryCount > maxRetries ||
+      fetchAttemptedRef.current
+    ) {
       return;
     }
 
@@ -137,8 +195,10 @@ const UserPayroll = ({ user }) => {
     abortControllerRef.current = new AbortController();
 
     try {
-      const payslipId = payrollData.payslip.id;
-      const blob = await fetchPresignedUrlBackend(payslipId, abortControllerRef.current.signal);
+      const blob = await fetchPdfFromBackend(
+        pdfUrl,
+        abortControllerRef.current.signal
+      );
 
       if (!blob || blob.type !== 'application/pdf') {
         throw new Error('Invalid PDF content received');
@@ -150,7 +210,6 @@ const UserPayroll = ({ user }) => {
       setPdfData(blob);
       setPdfError(null);
       setRetryCount(0);
-      payrollIdRef.current = payslipId;
     } catch (error) {
       if (error.name === 'AbortError') return;
 
@@ -165,6 +224,10 @@ const UserPayroll = ({ user }) => {
 
       setPdfError(errorMessage);
       safeToast.error(errorMessage);
+      console.error('Fetch error:', error.message, error.stack, {
+        payslipId: payrollData?.payslip?.id,
+        pdfUrl,
+      });
 
       if (retryCount < maxRetries) {
         const delay = Math.pow(2, retryCount) * 1000;
@@ -176,22 +239,27 @@ const UserPayroll = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear, loading, retryCount, payrollData?.payslip?.id]);
+  }, [payrollData?.payslip?.pdfUrl, payrollData?.payslip?.id, loading, retryCount]);
 
   // Trigger payroll data fetch when selections are made
   useEffect(() => {
     if (selectedMonth && selectedYear && employee?.id && orgId) {
-        
-       fetchPayrollData();
+      fetchPayrollData();
     }
   }, [selectedMonth, selectedYear, employee?.id, orgId, fetchPayrollData]);
 
   // Trigger PDF fetch when payroll data is available
   useEffect(() => {
-    if (payrollData?.payslip?.id && !pdfData && !pdfError) {
+    if (payrollData?.payslip?.pdfUrl && !fetchAttemptedRef.current) {
       fetchPdfData();
     }
-  }, [payrollData, fetchPdfData, pdfData, pdfError]);
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [payrollData?.payslip?.pdfUrl, fetchPdfData]);
 
   // PDF event handlers
   const onDocumentLoadSuccess = ({ numPages }) => {
@@ -202,9 +270,11 @@ const UserPayroll = ({ user }) => {
   };
 
   const onDocumentLoadError = (error) => {
+    console.error('PDF load error details:', error);
+    
     let errorMessage = 'Failed to render payslip. The file may be corrupted.';
-    if (error.message?.includes('worker')) {
-      errorMessage = 'PDF worker failed to load. Please try reloading.';
+    if (error.message?.includes('worker') || error.message?.includes('Worker')) {
+      errorMessage = 'PDF worker failed to load. Please try refreshing the page.';
     }
     setPdfError(errorMessage);
     safeToast.error(errorMessage);
@@ -231,10 +301,11 @@ const UserPayroll = ({ user }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => window.URL.revokeObjectURL(url), 100);
       safeToast.success('Download started');
     } catch (error) {
       safeToast.error('Failed to download payslip');
+      console.error('Download error:', error);
     }
   };
 
@@ -368,7 +439,7 @@ const UserPayroll = ({ user }) => {
       )}
 
       {/* PDF Viewer */}
-      <div className="relative overflow-auto bg-gray-100 flex items-center justify-center min-h-[400px]" aria-live="polite">
+      <div className="relative bg-gray-100 flex items-center justify-center min-h-[400px]" aria-live="polite">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
             <div className="flex flex-col items-center">
@@ -397,44 +468,51 @@ const UserPayroll = ({ user }) => {
             </button>
           </div>
         ) : pdfData ? (
-          <Document
-            file={pdfData}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={
-              <div className="flex items-center justify-center h-full">
-                <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                  <p className="mt-3 text-gray-600">Rendering PDF...</p>
+          <div className="w-full max-h-[600px] overflow-y-auto p-4">
+            <Document
+              file={pdfData}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="flex items-center justify-center h-full">
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                    <p className="mt-3 text-gray-600">Rendering PDF...</p>
+                  </div>
                 </div>
-              </div>
-            }
-            error={
-              <div className="flex flex-col items-center justify-center h-full">
-                <p className="text-red-500 mb-3">Failed to render PDF</p>
-                <button
-                  onClick={() => {
-                    fetchAttemptedRef.current = false;
-                    fetchPdfData();
-                  }}
-                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                  disabled={loading}
-                >
-                  Retry
-                </button>
-              </div>
-            }
-            className="flex justify-center p-4"
-            options={pdfOptions}
-          >
-            <Page
-              pageNumber={pageNumber}
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-              scale={scale}
-              className="shadow-xl rounded"
-            />
-          </Document>
+              }
+              error={
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-red-500 mb-3">Failed to render PDF</p>
+                  <button
+                    onClick={() => {
+                      fetchAttemptedRef.current = false;
+                      fetchPdfData();
+                    }}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                    disabled={loading}
+                  >
+                    Retry
+                  </button>
+                </div>
+              }
+              className="flex flex-col items-center"
+              options={pdfOptions}
+            >
+              {numPages &&
+                Array.from({ length: numPages }, (_, index) => (
+                  <Page
+                    key={index + 1}
+                    pageNumber={index + 1}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    scale={scale}
+                    className="shadow-xl rounded mb-4"
+                    width={undefined}
+                  />
+                ))}
+            </Document>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-6">
             <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
@@ -442,7 +520,9 @@ const UserPayroll = ({ user }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <p className="text-center text-gray-600">payslip not found</p>
+            <p className="text-center text-gray-600">
+              {selectedMonth && selectedYear ? 'Payslip not found' : 'Select a month and year to view payslip'}
+            </p>
           </div>
         )}
       </div>

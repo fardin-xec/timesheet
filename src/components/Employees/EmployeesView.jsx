@@ -29,6 +29,7 @@ import DeleteConfirmationDialog from "../common/DeleteConfirmationDialog";
 import EmployeeProfileDialog from "./EmployeeProfileDialog";
 import EmployeeDialog from "../leave/EmployeeLeaveDialog";
 import AttendanceEmployeeDialog from "../Attendance/AttendanceEmployeeDialog";
+import InactivationDialog from "./InactivationDialog"; // Import the new dialog
 import api from "../../utils/api_call";
 import "../../styles/employee.css";
 
@@ -68,11 +69,16 @@ const EmployeesView = () => {
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  
+  // New state for inactivation dialog
+  const [inactivationDialogOpen, setInactivationDialogOpen] = useState(false);
+  const [employeeToInactivate, setEmployeeToInactivate] = useState(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const token = localStorage.getItem("access_token");
   const orgId = localStorage.getItem("orgId");
 
-  const API_ENDPOINTS = {
+  const API_ENDPOINTS = useMemo(() => ({
     EMPLOYEES: `/employees/organization/${orgId}`,
     DEPARTMENTS: "/dropdowns/types/1",
     SUB_DEPARTMENTS: "/dropdowns/types/2",
@@ -81,128 +87,68 @@ const EmployeesView = () => {
     WORK_LOCATIONS: "/dropdowns/types/3",
     JOB_TITLES: "/dropdowns/types/9",
     MANAGERS: "/employees/managers",
-  };
+  }), [orgId]);
 
-  // Animation variants
+  // Animation variants (keeping all existing variants)
   const containerVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-    },
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut",
-        staggerChildren: 0.1,
-      },
+      transition: { duration: 0.6, ease: "easeOut", staggerChildren: 0.1 },
     },
   };
 
   const headerVariants = {
-    hidden: {
-      opacity: 0,
-      x: -50,
-      scale: 0.9,
-    },
+    hidden: { opacity: 0, x: -50, scale: 0.9 },
     visible: {
       opacity: 1,
       x: 0,
       scale: 1,
-      transition: {
-        duration: 0.7,
-        ease: "easeOut",
-        type: "spring",
-        damping: 15,
-      },
+      transition: { duration: 0.7, ease: "easeOut", type: "spring", damping: 15 },
     },
   };
 
   const statsCardVariants = {
-    hidden: {
-      opacity: 0,
-      scale: 0.8,
-      y: 30,
-    },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut",
-      },
-    },
+    hidden: { opacity: 0, scale: 0.8, y: 30 },
+    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
     hover: {
       scale: 1.02,
       y: -5,
       boxShadow: "0px 8px 25px rgba(0,0,0,0.15)",
-      transition: {
-        duration: 0.2,
-        ease: "easeInOut",
-      },
+      transition: { duration: 0.2, ease: "easeInOut" },
     },
   };
 
   const employeeCardVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-      scale: 0.95,
-    },
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
     visible: (index) => ({
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: {
-        duration: 0.4,
-        ease: "easeOut",
-        delay: index * 0.05,
-      },
+      transition: { duration: 0.4, ease: "easeOut", delay: index * 0.05 },
     }),
     hover: {
       scale: 1.02,
       y: -2,
       boxShadow: "0px 4px 20px rgba(0,0,0,0.1)",
-      transition: {
-        duration: 0.2,
-        ease: "easeInOut",
-      },
+      transition: { duration: 0.2, ease: "easeInOut" },
     },
-    tap: {
-      scale: 0.98,
-      transition: {
-        duration: 0.1,
-      },
-    },
+    tap: { scale: 0.98, transition: { duration: 0.1 } },
   };
 
   const loadingVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.3,
-      },
-    },
+    visible: { opacity: 1, transition: { duration: 0.3 } },
   };
 
   const refreshButtonVariants = {
     hover: {
       scale: 1.1,
       rotate: 180,
-      transition: {
-        duration: 0.3,
-        ease: "easeInOut",
-      },
+      transition: { duration: 0.3, ease: "easeInOut" },
     },
-    tap: {
-      scale: 0.9,
-      transition: {
-        duration: 0.1,
-      },
-    },
+    tap: { scale: 0.9, transition: { duration: 0.1 } },
   };
 
   const iconVariants = {
@@ -210,29 +156,17 @@ const EmployeesView = () => {
     visible: {
       scale: 1,
       rotate: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut",
-        type: "spring",
-      },
+      transition: { duration: 0.5, ease: "easeOut", type: "spring" },
     },
   };
 
   const searchBarVariants = {
-    hidden: {
-      opacity: 0,
-      scale: 0.95,
-      y: -10,
-    },
+    hidden: { opacity: 0, scale: 0.95, y: -10 },
     visible: {
       opacity: 1,
       scale: 1,
       y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut",
-        delay: 0.2,
-      },
+      transition: { duration: 0.5, ease: "easeOut", delay: 0.2 },
     },
   };
 
@@ -313,14 +247,12 @@ const EmployeesView = () => {
     }
   }, [token, API_ENDPOINTS.EMPLOYEES]);
 
-  // Handle refresh with animation
   const handleRefresh = async () => {
     setIsRefreshing(true);
     setLoading(true);
 
     try {
       await fetchEmployees();
-      // Add a small delay for better UX
       setTimeout(() => {
         setLoading(false);
         setIsRefreshing(false);
@@ -343,41 +275,13 @@ const EmployeesView = () => {
       setLoading(true);
       try {
         await Promise.all([
-          fetchData(
-            API_ENDPOINTS.DEPARTMENTS,
-            setDepartment,
-            "Failed to fetch department data"
-          ),
-          fetchData(
-            API_ENDPOINTS.SUB_DEPARTMENTS,
-            setSubDepartment,
-            "Failed to fetch sub department data"
-          ),
-          fetchData(
-            API_ENDPOINTS.POSITIONS,
-            setPositions,
-            "Failed to fetch position data"
-          ),
-          fetchData(
-            API_ENDPOINTS.EMPLOYMENT_TYPES,
-            setEmploymentType,
-            "Failed to fetch employment type data"
-          ),
-          fetchData(
-            API_ENDPOINTS.WORK_LOCATIONS,
-            setWorkLocation,
-            "Failed to fetch work location data"
-          ),
-          fetchData(
-            API_ENDPOINTS.JOB_TITLES,
-            setJobTitle,
-            "Failed to fetch job title data"
-          ),
-          fetchData(
-            API_ENDPOINTS.MANAGERS,
-            setManagers,
-            "Failed to fetch managers data"
-          ),
+          fetchData(API_ENDPOINTS.DEPARTMENTS, setDepartment, "Failed to fetch department data"),
+          fetchData(API_ENDPOINTS.SUB_DEPARTMENTS, setSubDepartment, "Failed to fetch sub department data"),
+          fetchData(API_ENDPOINTS.POSITIONS, setPositions, "Failed to fetch position data"),
+          fetchData(API_ENDPOINTS.EMPLOYMENT_TYPES, setEmploymentType, "Failed to fetch employment type data"),
+          fetchData(API_ENDPOINTS.WORK_LOCATIONS, setWorkLocation, "Failed to fetch work location data"),
+          fetchData(API_ENDPOINTS.JOB_TITLES, setJobTitle, "Failed to fetch job title data"),
+          fetchData(API_ENDPOINTS.MANAGERS, setManagers, "Failed to fetch managers data"),
           fetchEmployees(),
         ]);
       } catch (err) {
@@ -390,19 +294,8 @@ const EmployeesView = () => {
     };
 
     fetchAllData();
-  }, [
-    token,
-    orgId,
-    fetchData,
-    fetchEmployees,
-    API_ENDPOINTS.DEPARTMENTS,
-    API_ENDPOINTS.SUB_DEPARTMENTS,
-    API_ENDPOINTS.POSITIONS,
-    API_ENDPOINTS.EMPLOYMENT_TYPES,
-    API_ENDPOINTS.WORK_LOCATIONS,
-    API_ENDPOINTS.JOB_TITLES,
-    API_ENDPOINTS.MANAGERS,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, orgId]);
 
   const debouncedSearch = useMemo(
     () => debounce((term) => setSearchTerm(term), 300),
@@ -420,13 +313,9 @@ const EmployeesView = () => {
   const filteredEmployees = useMemo(() => {
     if (!searchTerm) return employees;
     return employees.filter((emp) =>
-      [
-        emp.firstName,
-        emp.lastName,
-        emp.email,
-        emp.department,
-        emp.designation,
-      ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
+      [emp.firstName, emp.lastName, emp.email, emp.department, emp.designation].some(
+        (field) => field?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     );
   }, [searchTerm, employees]);
 
@@ -453,58 +342,94 @@ const EmployeesView = () => {
       const isNewEmployee = !employeeData.id;
 
       setLoading(true);
+
+      const buildBankAccountPayload = (bankInfo) => {
+        if (!bankInfo) return undefined;
+        return {
+          accountHolderName: bankInfo.account_holder_name || bankInfo.accountHolderName,
+          bankName: bankInfo.bank_name || bankInfo.bankName,
+          branchName: bankInfo.branch_name || bankInfo.branchName,
+          city: bankInfo.city,
+          ifscCode: bankInfo.ifsc_code || bankInfo.ifscCode,
+          accountNumber: bankInfo.account_number || bankInfo.accountNumber,
+        };
+      };
+
       if (isNewEmployee) {
         endpoint = `/employees`;
         payload = {
-          employeeId: employeeData.employeeId,
           firstName: employeeData.firstName,
-          midName: employeeData.middleName || null,
           lastName: employeeData.lastName,
+          midName: employeeData.middleName || employeeData.midName || null,
           email: employeeData.email,
-          department: employeeData.department,
-          designation: employeeData.designation,
-          status: employeeData.status || "active",
           phone: employeeData.phone,
+          role: employeeData.role || "user",
+          status: employeeData.status || "active",
+          dob: employeeData.dob || null,
+          gender: employeeData.gender || null,
+          department: employeeData.department || null,
+          jobTitle: employeeData.jobTitle || null,
+          designation: employeeData.designation || null,
+          employmentType: employeeData.employmentType || null,
+          address: employeeData.address || null,
+          joiningDate: employeeData.joiningDate || null,
+          bio: employeeData.bio || null,
+          ctc: employeeData.ctc ? employeeData.ctc.toString() : null,
+          currency: employeeData.currency || null,
+          reportTo: employeeData.reportTo ? parseInt(employeeData.reportTo) : null,
           orgId: orgId ? parseInt(orgId) : null,
-          address: employeeData.address,
-          jobTitle: employeeData.jobTitle,
-          gender: employeeData.gender,
-          employmentType: employeeData.employmentType,
-          joiningDate: employeeData.joiningDate,
-          ctc: employeeData.ctc ? parseFloat(employeeData.ctc) : null,
-          reportTo: employeeData.reportTo
-            ? parseInt(employeeData.reportTo)
-            : null,
-          isProbation: Boolean(employeeData.isProbation),
-          probationPeriod: employeeData.probationPeriod,
-          dob: employeeData.dob,
-          bankAccounts: {
-            accountHolderName: employeeData.bank_info?.account_holder_name,
-            bankName: employeeData.bank_info?.bank_name,
-            branchName: employeeData.bank_info?.branch_name,
-            city: employeeData.bank_info?.city,
-            ifscCode: employeeData.bank_info?.ifsc_code,
-            accountNo: employeeData.bank_info?.account_number,
-          },
+          accountHolderName: employeeData.bank_info?.account_holder_name || employeeData.accountHolderName || null,
+          bankName: employeeData.bank_info?.bank_name || employeeData.bankName || null,
+          branchName: employeeData.bank_info?.branch_name || employeeData.branchName || null,
+          city: employeeData.bank_info?.city || employeeData.city || null,
+          ifscCode: employeeData.bank_info?.ifsc_code || employeeData.ifscCode || null,
+          accountNumber: employeeData.bank_info?.account_number || employeeData.accountNumber || null,
+          qid: employeeData.qid || null,
+          qidExpirationDate: employeeData.qidExpirationDate || null,
+          passportNumber: employeeData.passportNumber || null,
+          passportValidTill: employeeData.passportValidTill || null,
         };
       } else {
         endpoint = `/employees/${employeeData.id}`;
-        if (
-          employeeData.reportTo ||
-          employeeData.ctc ||
-          employeeData.currency
-        ) {
-          payload = {
-            reportTo: employeeData.reportTo
-              ? parseInt(employeeData.reportTo)
-              : null,
-            ctc: employeeData.ctc,
-            currency: employeeData.currency,
-          };
-        } else {
-          endpoint = `/personal/${employeeData.id}`;
-          payload = employeeData;
+        payload = {
+          firstName: employeeData.firstName,
+          lastName: employeeData.lastName,
+          midName: employeeData.middleName || employeeData.midName,
+          email: employeeData.email,
+          phone: employeeData.phone,
+          status: employeeData.status,
+          dob: employeeData.dob,
+          gender: employeeData.gender,
+          department: employeeData.department,
+          jobTitle: employeeData.jobTitle,
+          designation: employeeData.designation,
+          employmentType: employeeData.employmentType,
+          address: employeeData.address,
+          joiningDate: employeeData.joiningDate,
+          bio: employeeData.bio,
+        };
+
+        if (employeeData.ctc !== undefined && employeeData.ctc !== null) {
+          payload.ctc = employeeData.ctc.toString();
         }
+        if (employeeData.currency) {
+          payload.currency = employeeData.currency;
+        }
+        if (employeeData.reportTo !== undefined && employeeData.reportTo !== null) {
+          payload.reportTo = parseInt(employeeData.reportTo);
+        }
+
+        const bankPayload = buildBankAccountPayload(employeeData.bank_info || employeeData);
+        if (bankPayload) {
+          Object.assign(payload, bankPayload);
+        }
+
+        if (employeeData.qid) payload.qid = employeeData.qid;
+        if (employeeData.qidExpirationDate) payload.qidExpirationDate = employeeData.qidExpirationDate;
+        if (employeeData.passportNumber) payload.passportNumber = employeeData.passportNumber;
+        if (employeeData.passportValidTill) payload.passportValidTill = employeeData.passportValidTill;
+
+        Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
       }
 
       const method = isNewEmployee ? api.post : api.put;
@@ -512,22 +437,17 @@ const EmployeesView = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data.statusCode !== (isNewEmployee ? 201 : 200))
-        throw new Error(
-          `Failed to ${isNewEmployee ? "create" : "update"} employee`
-        );
+      if (response.data.statusCode !== (isNewEmployee ? 201 : 200)) {
+        throw new Error(`Failed to ${isNewEmployee ? "create" : "update"} employee`);
+      }
 
       await fetchEmployees();
-      await fetchData(
-        API_ENDPOINTS.MANAGERS,
-        setManagers,
-        "Failed to fetch managers data"
-      );
-      setToastMessage(
-        `Employee ${isNewEmployee ? "added" : "updated"} successfully`
-      );
+      await fetchData(API_ENDPOINTS.MANAGERS, setManagers, "Failed to fetch managers data");
+
+      setToastMessage(`Employee ${isNewEmployee ? "added" : "updated"} successfully`);
       setToastOpen(true);
     } catch (err) {
+      console.error("Error saving employee:", err);
       setToastMessage(err.message || "Failed to save employee data");
       setToastOpen(true);
     } finally {
@@ -542,29 +462,73 @@ const EmployeesView = () => {
     setSelectedEmployee(null);
   };
 
-  const handleToggleStatus = async () => {
-    if (!menuEmployee) return;
+  // Updated handleToggleStatus function with reason and remarks parameters
+  const handleToggleStatus = async (reason = null, remarks = null) => {
+    if (!menuEmployee && !employeeToInactivate) return;
+
+    const employee = menuEmployee || employeeToInactivate;
+    const isActivating = employee.status === "inactive";
+
     try {
-      setLoading(true);
-      const newStatus =
-        menuEmployee.status === "active" ? "inactive" : "active";
-      const response = await api.put(
-        `/employees/${menuEmployee.id}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (response.data.statusCode !== 200)
+      setIsUpdatingStatus(true);
+
+      let endpoint = `/employees/${employee.id}/update-status`;
+      let payload;
+
+      if (isActivating) {
+        // Activating employee
+        payload = {
+          status: "ACTIVE",
+        };
+      } else {
+        // Inactivating employee - requires reason
+        payload = {
+          status: "INACTIVE",
+          reason: reason,
+          remarks: remarks,
+        };
+      }
+
+      const response = await api.put(endpoint, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data.statusCode !== 200) {
         throw new Error("Failed to update employee status");
+      }
+
       await fetchEmployees();
-      setToastMessage("Employee status updated successfully");
+      setToastMessage(`Employee ${isActivating ? "activated" : "inactivated"} successfully`);
       setToastOpen(true);
+
+      // Close the inactivation dialog if open
+      if (inactivationDialogOpen) {
+        setInactivationDialogOpen(false);
+        setEmployeeToInactivate(null);
+      }
     } catch (err) {
       setToastMessage(err.message || "Failed to update employee status");
       setToastOpen(true);
     } finally {
-      setLoading(false);
+      setIsUpdatingStatus(false);
       handleMenuClose();
     }
+  };
+
+  // New function to handle status toggle click
+  const handleStatusToggleClick = () => {
+    if (!menuEmployee) return;
+
+    if (menuEmployee.status === "active") {
+      // Show inactivation dialog
+      setEmployeeToInactivate(menuEmployee);
+      setInactivationDialogOpen(true);
+    } else {
+      // Directly activate
+      handleToggleStatus();
+    }
+
+    handleMenuClose();
   };
 
   const handleDeleteEmployee = async () => {
@@ -574,8 +538,7 @@ const EmployeesView = () => {
       const response = await api.delete(`/employees/${employeeToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.data.statusCode !== 200)
-        throw new Error("Failed to delete employee");
+      if (response.data.statusCode !== 200) throw new Error("Failed to delete employee");
       await fetchEmployees();
       setToastMessage("Employee deleted successfully");
       setToastOpen(true);
@@ -620,12 +583,8 @@ const EmployeesView = () => {
 
   // Calculate stats
   const totalEmployees = employees.length;
-  const activeEmployees = employees.filter(
-    (emp) => emp.status === "active"
-  ).length;
-  const departments = [
-    ...new Set(employees.map((emp) => emp.department).filter(Boolean)),
-  ].length;
+  const activeEmployees = employees.filter((emp) => emp.status === "active").length;
+  const departments = [...new Set(employees.map((emp) => emp.department).filter(Boolean))].length;
   const recentJoiners = employees.filter((emp) => {
     const joinDate = new Date(emp.joiningDate);
     const thirtyDaysAgo = new Date();
@@ -634,19 +593,11 @@ const EmployeesView = () => {
   }).length;
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="w-full"
-    >
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full">
       <Card className="w-full">
         <CardContent className="p-0">
           {/* Header Section */}
-          <motion.div
-            variants={headerVariants}
-            className="bg-blue-50 p-4 border-b"
-          >
+          <motion.div variants={headerVariants} className="bg-blue-50 p-4 border-b">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-3">
                 <motion.div variants={iconVariants}>
@@ -666,9 +617,7 @@ const EmployeesView = () => {
                   disabled={isRefreshing}
                   className="p-2 bg-gray-100 text-gray-600 rounded-lg shadow-sm hover:bg-gray-200 disabled:opacity-50 transition-colors duration-200"
                 >
-                  <Refresh
-                    className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
-                  />
+                  <Refresh className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
                 </motion.button>
 
                 <Button
@@ -685,20 +634,10 @@ const EmployeesView = () => {
 
             {/* Stats Cards */}
             {hasLoaded && (
-              <motion.div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
-                variants={containerVariants}
-              >
-                <motion.div
-                  variants={statsCardVariants}
-                  whileHover="hover"
-                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
-                >
+              <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" variants={containerVariants}>
+                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
                   <div className="flex items-center gap-3">
-                    <motion.div
-                      variants={iconVariants}
-                      className="p-3 mt-2 bg-blue-100 rounded-full"
-                    >
+                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-blue-100 rounded-full">
                       <People sx={{ color: "#1976d2", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -708,10 +647,7 @@ const EmployeesView = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 1, delay: 0.5 }}
-                        style={{
-                          marginTop: "-1rem",
-                          marginLeft: "2rem",
-                        }}
+                        style={{ marginTop: "-1rem", marginLeft: "2rem" }}
                       >
                         {totalEmployees}
                       </motion.p>
@@ -719,16 +655,9 @@ const EmployeesView = () => {
                   </div>
                 </motion.div>
 
-                <motion.div
-                  variants={statsCardVariants}
-                  whileHover="hover"
-                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
-                >
+                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
                   <div className="flex items-center gap-3">
-                    <motion.div
-                      variants={iconVariants}
-                      className="p-3 mt-2 bg-orange-100 rounded-full"
-                    >
+                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-orange-100 rounded-full">
                       <PersonAdd sx={{ color: "#f57c00", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -738,10 +667,7 @@ const EmployeesView = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 1, delay: 0.7 }}
-                        style={{
-                          marginTop: "-1rem",
-                          marginLeft: "2rem",
-                        }}
+                        style={{ marginTop: "-1rem", marginLeft: "2rem" }}
                       >
                         {activeEmployees}
                       </motion.p>
@@ -749,16 +675,9 @@ const EmployeesView = () => {
                   </div>
                 </motion.div>
 
-                <motion.div
-                  variants={statsCardVariants}
-                  whileHover="hover"
-                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
-                >
+                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
                   <div className="flex items-center gap-3">
-                    <motion.div
-                      variants={iconVariants}
-                      className="p-3 mt-2 bg-green-100 rounded-full"
-                    >
+                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-green-100 rounded-full">
                       <Business sx={{ color: "#388e3c", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -768,10 +687,7 @@ const EmployeesView = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 1, delay: 0.9 }}
-                        style={{
-                          marginTop: "-1rem",
-                          marginLeft: "2rem",
-                        }}
+                        style={{ marginTop: "-1rem", marginLeft: "2rem" }}
                       >
                         {departments}
                       </motion.p>
@@ -779,16 +695,9 @@ const EmployeesView = () => {
                   </div>
                 </motion.div>
 
-                <motion.div
-                  variants={statsCardVariants}
-                  whileHover="hover"
-                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
-                >
+                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
                   <div className="flex items-center gap-3">
-                    <motion.div
-                      variants={iconVariants}
-                      className="p-3 mt-2 bg-purple-100 rounded-full"
-                    >
+                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-purple-100 rounded-full">
                       <Search sx={{ color: "#7b1fa2", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -798,10 +707,7 @@ const EmployeesView = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 1, delay: 1.1 }}
-                        style={{
-                          marginTop: "-1rem",
-                          marginLeft: "2rem",
-                        }}
+                        style={{ marginTop: "-1rem", marginLeft: "2rem" }}
                       >
                         {recentJoiners}
                       </motion.p>
@@ -814,10 +720,7 @@ const EmployeesView = () => {
 
           <Box className="p-4">
             {/* Search Bar */}
-            <motion.div
-              variants={searchBarVariants}
-              className="mb-4 relative flex gap-2"
-            >
+            <motion.div variants={searchBarVariants} className="mb-4 relative flex gap-2">
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
@@ -838,17 +741,10 @@ const EmployeesView = () => {
                   className="flex justify-center items-center p-8"
                 >
                   <motion.div
-                    animate={{
-                      rotate: 360,
-                      scale: [1, 1.1, 1],
-                    }}
+                    animate={{ rotate: 360, scale: [1, 1.1, 1] }}
                     transition={{
                       rotate: { duration: 2, repeat: Infinity, ease: "linear" },
-                      scale: {
-                        duration: 1,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      },
+                      scale: { duration: 1, repeat: Infinity, ease: "easeInOut" },
                     }}
                     className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
                   />
@@ -860,30 +756,19 @@ const EmployeesView = () => {
             {!loading && (
               <>
                 {error ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center py-8"
-                  >
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8">
                     <Typography color="error" align="center">
                       {error}
                     </Typography>
                   </motion.div>
                 ) : filteredEmployees.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center py-8"
-                  >
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8">
                     <Typography color="textSecondary" align="center">
                       No employees found
                     </Typography>
                   </motion.div>
                 ) : (
-                  <motion.div
-                    className="space-y-2"
-                    variants={containerVariants}
-                  >
+                  <motion.div className="space-y-2" variants={containerVariants}>
                     <AnimatePresence>
                       {filteredEmployees.map((employee, index) => (
                         <motion.div
@@ -900,10 +785,7 @@ const EmployeesView = () => {
                         >
                           <div className="flex items-center space-x-3">
                             <div className="relative">
-                              <motion.div
-                                whileHover={{ scale: 1.1 }}
-                                transition={{ duration: 0.2 }}
-                              >
+                              <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.2 }}>
                                 <Avatar
                                   src={employee.avatar}
                                   alt={`${employee.firstName} ${employee.lastName}`}
@@ -948,14 +830,8 @@ const EmployeesView = () => {
                               <div className="font-medium">Joined on</div>
                               <div>{employee.joiningDate}</div>
                             </motion.div>
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={(e) => handleMenuOpen(e, employee)}
-                              >
+                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                              <IconButton size="small" onClick={(e) => handleMenuOpen(e, employee)}>
                                 <MoreVertical size={16} />
                               </IconButton>
                             </motion.div>
@@ -985,7 +861,7 @@ const EmployeesView = () => {
           <MenuItem onClick={() => handleLeaveManagement(menuEmployee)}>
             <BeachAccess sx={{ mr: 1 }} /> Manage Leave
           </MenuItem>
-          <MenuItem onClick={handleToggleStatus}>
+          <MenuItem onClick={handleStatusToggleClick}>
             {menuEmployee?.status === "active" ? (
               <>
                 <UserX size={16} className="mr-2" />
@@ -1078,13 +954,23 @@ const EmployeesView = () => {
         />
       </AnimatePresence>
 
+      {/* Inactivation Dialog */}
+      <AnimatePresence>
+        <InactivationDialog
+          open={inactivationDialogOpen}
+          onClose={() => {
+            setInactivationDialogOpen(false);
+            setEmployeeToInactivate(null);
+          }}
+          onConfirm={(reason, remarks) => handleToggleStatus(reason, remarks)}
+          loading={isUpdatingStatus}
+          employee={employeeToInactivate}
+        />
+      </AnimatePresence>
+
       {/* Leave Dialog */}
       <AnimatePresence>
-        <EmployeeDialog
-          open={leaveDialogOpen}
-          onClose={handleLeaveDialogClose}
-          employee={selectedEmployee}
-        />
+        <EmployeeDialog open={leaveDialogOpen} onClose={handleLeaveDialogClose} employee={selectedEmployee} />
       </AnimatePresence>
 
       {/* Attendance Dialog */}

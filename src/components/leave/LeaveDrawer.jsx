@@ -22,12 +22,8 @@ import {
   Divider,
   IconButton,
   Tooltip,
-  Fade,
-  Slide,
+  Drawer,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   AttachFile,
   Delete,
@@ -35,234 +31,136 @@ import {
   CheckCircle,
   Error as ErrorIcon,
   Visibility,
-  GetApp,
-  DragIndicator,
   Description,
   Image,
   PictureAsPdf,
+  InsertDriveFile,
+  Download,
+  Close,
 } from "@mui/icons-material";
-import { motion, AnimatePresence } from "framer-motion";
-import CommonDrawer from "../common/Drawer";
 import { leaveAPI } from "../../utils/api";
+import axios from "axios";
 
-// Helper function to extract filename from S3 URL
-const extractFilenameFromS3Url = (url) => {
-  if (!url) return 'Attachment';
+const API_BASE_URL = "http://localhost:3000"; // Update with your backend URL
+
+// Helper to get file extension
+const getFileExtension = (filename) => {
+  return filename?.split('.').pop()?.toLowerCase() || '';
+};
+
+// Helper to get file icon based on type
+const getFileIconByType = (fileName, mimeType) => {
+  const extension = getFileExtension(fileName);
   
-  try {
-    // Handle different S3 URL formats:
-    // https://bucket-name.s3.region.amazonaws.com/path/filename
-    // https://s3.region.amazonaws.com/bucket-name/path/filename
-    // https://bucket-name.s3.amazonaws.com/path/filename
-    
-    const urlObj = new URL(url);
-    const pathname = urlObj.pathname;
-    
-    // Extract filename from path (last segment after the last '/')
-    const segments = pathname.split('/').filter(segment => segment.length > 0);
-    const filename = segments[segments.length - 1];
-    
-    // Decode URI component to handle encoded characters
-    return decodeURIComponent(filename) || 'Attachment';
-  } catch (error) {
-    console.warn('Error extracting filename from S3 URL:', error);
-    // Fallback: try to get filename from the end of the URL string
-    const parts = url.split('/');
-    return parts[parts.length - 1] || 'Attachment';
+  if (mimeType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) {
+    return <Image color="primary" />;
   }
-};
-
-// Helper function to get file type from S3 URL or filename
-const getFileTypeFromUrl = (url, filename = '') => {
-  const name = filename || extractFilenameFromS3Url(url);
-  const extension = name.split('.').pop()?.toLowerCase();
   
-  switch (extension) {
-    case 'pdf':
-      return 'application/pdf';
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'png':
-      return 'image/png';
-    case 'gif':
-      return 'image/gif';
-    case 'doc':
-    case 'docx':
-      return 'application/msword';
-    case 'txt':
-      return 'text/plain';
-    default:
-      return 'application/octet-stream';
+  if (mimeType?.includes('pdf') || extension === 'pdf') {
+    return <PictureAsPdf color="error" />;
   }
+  
+  if (['doc', 'docx', 'txt', 'rtf', 'odt'].includes(extension) || 
+      mimeType?.includes('word') || mimeType?.includes('text')) {
+    return <Description color="info" />;
+  }
+  
+  return <InsertDriveFile color="action" />;
 };
 
-// Helper function to check if S3 URL is accessible
-const validateS3Url = async (url) => {
-  try {
-    const response = await fetch(url, { method: 'HEAD' });
-    return response.ok;
-  } catch (error) {
-    console.warn('S3 URL validation failed:', error);
-    return false;
+// Helper to get file type label
+const getFileTypeLabel = (fileName, mimeType) => {
+  const extension = getFileExtension(fileName).toUpperCase();
+  
+  if (mimeType?.includes('pdf') || extension === 'PDF') {
+    return 'PDF';
   }
+  if (mimeType?.includes('image')) {
+    return 'Image';
+  }
+  if (mimeType?.includes('word') || ['DOC', 'DOCX'].includes(extension)) {
+    return 'Document';
+  }
+  
+  return extension || 'File';
 };
 
-// Enhanced existing attachment component
-const ExistingAttachmentItem = ({ attachment, onRemove, onView, index, canDelete = true }) => {
-  const [isValidating, setIsValidating] = useState(false);
-  const [isValid, setIsValid] = useState(true);
+// Helper to format file size
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 KB';
+  const kb = bytes / 1024;
+  const mb = kb / 1024;
+  return mb > 1 ? `${mb.toFixed(2)} MB` : `${kb.toFixed(2)} KB`;
+};
 
-  // Validate S3 URL on mount
-  useEffect(() => {
-    if (attachment.url) {
-      setIsValidating(true);
-      validateS3Url(attachment.url)
-        .then(setIsValid)
-        .finally(() => setIsValidating(false));
-    }
-  }, [attachment.url]);
-
-  const getFileIcon = (fileType, fileName) => {
-    if (fileType?.includes('pdf') || fileName?.endsWith('.pdf')) {
-      return <PictureAsPdf color="error" />;
-    }
-    if (fileType?.includes('image') || /\.(jpg|jpeg|png|gif)$/i.test(fileName)) {
-      return <Image color="primary" />;
-    }
-    return <Description color="action" />;
-  };
-
-  const getFileTypeChip = (fileType, fileName) => {
-    if (fileType?.includes('pdf') || fileName?.endsWith('.pdf')) {
-      return <Chip label="PDF" size="small" color="error" variant="outlined" />;
-    }
-    if (fileType?.includes('image') || /\.(jpg|jpeg|png|gif)$/i.test(fileName)) {
-      return <Chip label="Image" size="small" color="primary" variant="outlined" />;
-    }
-    return <Chip label="File" size="small" color="default" variant="outlined" />;
+// Component for displaying existing attachments (from backend)
+const ExistingAttachmentItem = ({ document, onRemove, onDownload, canDelete = true }) => {
+  const getFileTypeChip = (fileName, mimeType) => {
+    const label = getFileTypeLabel(fileName, mimeType);
+    const extension = getFileExtension(fileName);
+    
+    let color = "default";
+    if (['pdf'].includes(extension)) color = "error";
+    else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) color = "primary";
+    else if (['doc', 'docx', 'txt'].includes(extension)) color = "info";
+    
+    return <Chip label={label} size="small" color={color} variant="outlined" />;
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ delay: index * 0.1 }}
+    <Card
+      elevation={2}
+      sx={{
+        mb: 2,
+        backgroundColor: "rgba(76, 175, 80, 0.05)",
+        border: "1px solid #4caf50",
+      }}
     >
-      <Card
-        elevation={2}
-        sx={{
-          mb: 2,
-          backgroundColor: isValid ? "rgba(76, 175, 80, 0.05)" : "rgba(255, 152, 0, 0.05)",
-          border: isValid ? "1px solid #4caf50" : "1px solid #ff9800",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {getFileIcon(attachment.type, attachment.name)}
-              {isValidating ? (
-                <CircularProgress size={16} />
-              ) : isValid ? (
-                <CheckCircle color="success" fontSize="small" />
-              ) : (
-                <ErrorIcon color="warning" fontSize="small" />
-              )}
-            </Box>
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
-                {attachment.name || attachment.fileName || "Attachment"}
+      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {getFileIconByType(document.originalName, document.mimeType)}
+            <CheckCircle color="success" fontSize="small" />
+          </Box>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+              {document.originalName}
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
+              {getFileTypeChip(document.originalName, document.mimeType)}
+              <Typography variant="caption" color="text.secondary">
+                {formatFileSize(document.size)}
               </Typography>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
-                {getFileTypeChip(attachment.type, attachment.name)}
-                <Typography 
-                  variant="caption" 
-                  color={isValid ? "success.main" : "warning.main"}
-                  sx={{ fontWeight: 500 }}
-                >
-                  {isValidating ? "Validating..." : isValid ? "S3 File Available" : "S3 File Unavailable"}
-                </Typography>
-              </Stack>
-            </Box>
-            <Stack direction="row" spacing={1}>
-              <Tooltip title={isValid ? "View attachment" : "File unavailable"}>
-                <span>
-                  <IconButton
-                    size="small"
-                    onClick={() => onView(attachment)}
-                    disabled={!isValid || isValidating}
-                    sx={{
-                      color: "primary.main",
-                      "&:hover:not(:disabled)": {
-                        backgroundColor: "primary.light",
-                        color: "white",
-                      },
-                    }}
-                  >
-                    <Visibility fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              {attachment.url && isValid && (
-                <Tooltip title="Download from S3">
-                  <IconButton
-                    size="small"
-                    component="a"
-                    href={attachment.url}
-                    download={attachment.name || "attachment"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      color: "success.main",
-                      "&:hover": {
-                        backgroundColor: "success.light",
-                        color: "white",
-                      },
-                    }}
-                  >
-                    <GetApp fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-              {canDelete && (
-                <Tooltip title="Remove">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => onRemove(attachment)}
-                    sx={{
-                      "&:hover": {
-                        backgroundColor: "error.light",
-                        color: "white",
-                      },
-                    }}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
+              <Typography variant="caption" color="text.secondary">
+                • {new Date(document.createdAt).toLocaleDateString()}
+              </Typography>
             </Stack>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Download">
+              <IconButton size="small" onClick={() => onDownload(document.id)}>
+                <Download fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {canDelete && (
+              <Tooltip title="Remove">
+                <IconButton size="small" color="error" onClick={() => onRemove(document.id)}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
           </Stack>
-        </CardContent>
-      </Card>
-    </motion.div>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 };
 
-// File upload component with drag & drop (unchanged)
+// File upload zone with drag & drop
 const FileUploadZone = ({ onFileDrop, uploading, children }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragEnter = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(true);
@@ -288,63 +186,33 @@ const FileUploadZone = ({ onFileDrop, uploading, children }) => {
   );
 
   return (
-    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-      <Paper
-        elevation={isDragOver ? 8 : 2}
-        sx={{
-          border: `2px dashed ${isDragOver ? "#1976d2" : "#e0e0e0"}`,
-          borderRadius: 2,
-          p: 3,
-          textAlign: "center",
-          cursor: uploading ? "not-allowed" : "pointer",
-          backgroundColor: isDragOver
-            ? "rgba(25, 118, 210, 0.04)"
-            : "transparent",
-          transition: "all 0.3s ease",
-          position: "relative",
-          overflow: "hidden",
-          minHeight: 120,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <AnimatePresence>
-          {isDragOver && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(25, 118, 210, 0.1)",
-                zIndex: 1,
-                borderRadius: 8,
-              }}
-            >
-              <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
-                Drop files here
-              </Typography>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {children}
-      </Paper>
-    </motion.div>
+    <Paper
+      elevation={isDragOver ? 8 : 2}
+      sx={{
+        border: `2px dashed ${isDragOver ? "#1976d2" : "#e0e0e0"}`,
+        borderRadius: 2,
+        p: 3,
+        textAlign: "center",
+        cursor: uploading ? "not-allowed" : "pointer",
+        backgroundColor: isDragOver ? "rgba(25, 118, 210, 0.04)" : "transparent",
+        transition: "all 0.3s ease",
+        minHeight: 120,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {children}
+    </Paper>
   );
 };
 
-// Enhanced file item component (unchanged from your original)
-const FileItem = ({ file, progress, status, onRemove, onPreview, index }) => {
+// File item component for files being uploaded
+const FileItem = ({ file, progress, status, onRemove }) => {
   const getStatusIcon = () => {
     switch (status) {
       case "uploading":
@@ -371,316 +239,220 @@ const FileItem = ({ file, progress, status, onRemove, onPreview, index }) => {
     }
   };
 
-  const getFileIcon = () => {
-    const extension = file.name.split(".").pop().toLowerCase();
-    switch (extension) {
-      case "pdf":
-        return <PictureAsPdf color="error" />;
-      case "jpg":
-      case "jpeg":
-      case "png":
-        return <Image color="primary" />;
-      default:
-        return <AttachFile color="action" />;
-    }
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ delay: index * 0.1 }}
+    <Card
+      elevation={2}
+      sx={{
+        mb: 2,
+        backgroundColor: getStatusColor(),
+        border: `1px solid ${
+          status === "success" ? "#4caf50" : status === "error" ? "#f44336" : "#e0e0e0"
+        }`,
+      }}
     >
-      <Card
-        elevation={2}
-        sx={{
-          mb: 2,
-          backgroundColor: getStatusColor(),
-          position: "relative",
-          overflow: "hidden",
-          border: `1px solid ${
-            status === "success"
-              ? "#4caf50"
-              : status === "error"
-              ? "#f44336"
-              : status === "uploading"
-              ? "#2196f3"
-              : "#e0e0e0"
-          }`,
-        }}
-      >
-        <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {getFileIcon()}
-              {getStatusIcon()}
-            </Box>
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
-                {file.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {(file.size / 1024 / 1024).toFixed(2)} MB
-                {status === "success" && " • Uploaded to S3"}
-                {status === "error" && " • Upload failed"}
-                {status === "uploading" &&
-                  ` • ${Math.round(progress || 0)}% uploaded`}
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={1}>
-              {status === "success" && onPreview && (
-                <Tooltip title="Preview">
-                  <IconButton
-                    size="small"
-                    onClick={() => onPreview(file)}
-                    sx={{
-                      color: "primary.main",
-                      "&:hover": {
-                        backgroundColor: "primary.light",
-                        color: "white",
-                      },
-                    }}
-                  >
-                    <Visibility fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-              {status !== "uploading" && (
-                <Tooltip title="Remove">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={onRemove}
-                    sx={{
-                      "&:hover": {
-                        backgroundColor: "error.light",
-                        color: "white",
-                      },
-                    }}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Stack>
-          </Stack>
-
-          {status === "uploading" && typeof progress === "number" && (
-            <Box sx={{ mt: 2 }}>
-              <LinearProgress
-                variant="determinate"
-                value={progress}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: "rgba(0,0,0,0.1)",
-                  "& .MuiLinearProgress-bar": {
-                    borderRadius: 3,
-                  },
-                }}
-              />
-            </Box>
+      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {getFileIconByType(file.name, file.type)}
+            {getStatusIcon()}
+          </Box>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+              {file.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {formatFileSize(file.size)}
+              {status === "success" && " • Uploaded"}
+              {status === "error" && " • Upload failed"}
+              {status === "uploading" && ` • ${Math.round(progress || 0)}% uploading`}
+            </Typography>
+          </Box>
+          {status !== "uploading" && (
+            <Tooltip title="Remove">
+              <IconButton size="small" color="error" onClick={onRemove}>
+                <Delete fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
-        </CardContent>
-      </Card>
-    </motion.div>
+        </Stack>
+
+        {status === "uploading" && typeof progress === "number" && (
+          <Box sx={{ mt: 2 }}>
+            <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
+          </Box>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
+// Main LeaveDrawer Component
 const LeaveDrawer = ({
   open,
   onClose,
   selectedApplication,
   setSelectedApplication,
   isNewApplication,
-  leaveTypeOptions = [
-    "Annual Leave",
-    "Casual Leave",
-    "Sick Leave",
-    "Emergency Leave",
-    "Maternity Leave",
-    "Loss of Pay",
-  ],
   statusOptions = ["Pending", "Approved", "Rejected"],
   handleDeleteApplication,
   employeeId,
-  employeeLocation = "India",
   onSuccess,
   onError,
 }) => {
-  const [uploadStates, setUploadStates] = useState(new Map());
-  const [uploadedAttachments, setUploadedAttachments] = useState([]);
-  const [existingAttachments, setExistingAttachments] = useState([]);
+  const [uploadingFiles, setUploadingFiles] = useState([]);
+  const [existingDocuments, setExistingDocuments] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [leaveBalances, setLeaveBalances] = useState({});
+  const [leaveBalances, setLeaveBalances] = useState([]);
   const [fetchingBalance, setFetchingBalance] = useState(false);
 
-  // Initialize existing attachments when component mounts or application changes
+  const formData = selectedApplication || {
+    durationType: "full-day",
+    status: "Pending",
+    leaveType: "",
+    startDate: null,
+    endDate: null,
+    reason: "",
+    halfDayType: null,
+    documentId: null,
+  };
+
+  // Format leave type display name
+  const formatLeaveType = (leaveType) => {
+    const typeMap = {
+      'casual': 'Casual Leave',
+      'sick': 'Sick Leave',
+      'annual': 'Annual Leave',
+      'emergency': 'Emergency Leave',
+      'lossOfPay': 'Loss of Pay',
+      'maternity': 'Maternity Leave',
+    };
+    return typeMap[leaveType] || leaveType.charAt(0).toUpperCase() + leaveType.slice(1);
+  };
+
+  // Fetch leave balances
   useEffect(() => {
-    if (selectedApplication && !isNewApplication) {
-      const attachments = [];
+    const fetchLeaveBalance = async () => {
+      if (!employeeId || !open) return;
       
-      // Handle single attachmentUrl (S3 URL)
-      if (selectedApplication.attachmentUrl) {
-        const filename = extractFilenameFromS3Url(selectedApplication.attachmentUrl);
-        const fileType = getFileTypeFromUrl(selectedApplication.attachmentUrl, filename);
-        
-        attachments.push({
-          id: `s3-attachment-${Date.now()}`,
-          name: filename,
-          url: selectedApplication.attachmentUrl,
-          type: fileType,
-          isS3File: true,
-        });
+      setFetchingBalance(true);
+      try {
+        const response = await leaveAPI.getLeaveBalance(employeeId);
+        if (response.statusCode === 200 && response.data && Array.isArray(response.data)) {
+          const transformedBalances = response.data.map(balance => ({
+            id: balance.id,
+            leaveType: balance.leaveType,
+            displayName: formatLeaveType(balance.leaveType),
+            totalDays: parseFloat(balance.totalAllowed) || 0,
+            usedDays: parseFloat(balance.used) || 0,
+            carriedForward: parseFloat(balance.carryForwarded) || 0,
+            year: balance.year,
+            isUnlimited: balance.leaveType === 'lossOfPay' || parseFloat(balance.totalAllowed) >= 365,
+          }));
+          
+          setLeaveBalances(transformedBalances);
+        }
+      } catch (error) {
+        console.error("Error fetching leave balance:", error);
+        onError?.("Failed to fetch leave balances");
+      } finally {
+        setFetchingBalance(false);
       }
+    };
+
+    fetchLeaveBalance();
+  }, [employeeId, open, onError]);
+
+  // Fetch existing document if documentId exists
+  useEffect(() => {
+    const fetchExistingDocument = async () => {
+      if (!formData.documentId || !open) return;
       
-      // Handle multiple attachments array (if exists alongside attachmentUrl)
-      if (Array.isArray(selectedApplication.attachments)) {
-        selectedApplication.attachments.forEach((attachment, index) => {
-          if (typeof attachment === 'string') {
-            // If attachment is a URL string
-            const filename = extractFilenameFromS3Url(attachment);
-            const fileType = getFileTypeFromUrl(attachment, filename);
-            
-            attachments.push({
-              id: `s3-existing-${index}`,
-              name: filename,
-              url: attachment,
-              type: fileType,
-              isS3File: true,
-            });
-          } else {
-            // If attachment is an object
-            const filename = attachment.name || attachment.fileName || extractFilenameFromS3Url(attachment.url);
-            const fileType = attachment.type || attachment.mimeType || getFileTypeFromUrl(attachment.url, filename);
-            
-            attachments.push({
-              id: attachment.id || `s3-existing-obj-${index}`,
-              name: filename,
-              url: attachment.url || attachment.path,
-              type: fileType,
-              isS3File: true,
-              ...attachment,
-            });
-          }
-        });
+      try {
+        const response = await axios.get(`${API_BASE_URL}/documents/${formData.documentId}`);
+        setExistingDocuments([response.data]);
+      } catch (error) {
+        console.error("Error fetching document:", error);
       }
-      
-      setExistingAttachments(attachments);
-    } else {
-      setExistingAttachments([]);
-    }
-  }, [selectedApplication, isNewApplication]);
+    };
 
-  // Handle viewing existing attachments (S3 URLs)
-  const handleViewExistingAttachment = (attachment) => {
-    if (attachment.url) {
-      // For S3 URLs, open in new tab with proper security attributes
-      window.open(attachment.url, '_blank', 'noopener,noreferrer');
-    } else {
-      onError?.('Unable to view attachment: S3 URL not available');
-    }
-  };
+    fetchExistingDocument();
+  }, [formData.documentId, open]);
 
-  // Handle removing existing attachments
-  const handleRemoveExistingAttachment = (attachmentToRemove) => {
-    if (window.confirm('Are you sure you want to remove this attachment? This will remove the reference but the file will remain in S3.')) {
-      setExistingAttachments(prev => 
-        prev.filter(attachment => attachment.id !== attachmentToRemove.id)
-      );
-      
-      // Update the selectedApplication to reflect the change
-      setSelectedApplication(prev => {
-        const updatedAttachments = existingAttachments
-          .filter(attachment => attachment.id !== attachmentToRemove.id)
-          .map(attachment => attachment.url);
-        
-        return {
-          ...prev,
-          attachments: updatedAttachments,
-          // If removing the main attachmentUrl, clear it
-          attachmentUrl: attachmentToRemove.url === prev.attachmentUrl ? null : prev.attachmentUrl,
-        };
-      });
-    }
-  };
-
-  // Default leave balances based on location
-  const getDefaultLeaveBalances = () => {
+  const getLeaveBalance = (leaveType) => {
+    const balance = leaveBalances.find(b => b.leaveType === leaveType);
+    if (!balance) return { total: 0, used: 0, carriedForward: 0, available: 0, isUnlimited: false };
+    
+    const available = balance.totalDays - balance.usedDays + balance.carriedForward;
     return {
-      "Annual Leave": { total: 21, used: 0, carriedForward: 0 },
-      "Casual Leave": { total: 12, used: 0, carriedForward: 0 },
-      "Sick Leave": { total: 12, used: 0, carriedForward: 0 },
-      "Emergency Leave": { total: 5, used: 0, carriedForward: 0 },
-      "Maternity Leave": {
-        total: employeeLocation === "India" ? 182 : 50,
-        used: 0,
-        carriedForward: 0,
-      },
-      "Loss of Pay": { total: 365, used: 0, carriedForward: 0 },
+      total: balance.totalDays,
+      used: balance.usedDays,
+      carriedForward: balance.carriedForward,
+      available: Math.max(0, available),
+      isUnlimited: balance.isUnlimited,
+      displayName: balance.displayName,
     };
   };
 
-  // Fetch leave balances on component mount
-  useEffect(() => {
-    if (employeeId && open) {
-      fetchLeaveBalance();
-    }
-  }, [employeeId, open]);
+  const calculateLeaveDays = () => {
+    if (!formData.startDate || !formData.endDate) return 0;
+    
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
+    
+    if (formData.durationType === "half-day") return 0.5;
+    
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  };
 
-  const fetchLeaveBalance = async () => {
-    if (!employeeId) {
-      setLeaveBalances(getDefaultLeaveBalances());
-      return;
-    }
+  const isDocumentRequired = () => {
+    return formData.leaveType === "emergency";
+  };
 
-    setFetchingBalance(true);
+  const handleFieldChange = (field, value) => {
+    setSelectedApplication(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Upload file to backend
+  const uploadFileToBackend = async (file) => {
+    const formDataToSend = new FormData();
+    formDataToSend.append('file', file);
+
     try {
-      const response = await leaveAPI.getLeaveBalance(employeeId);
-      if (response.success && response.data && response.data.length > 0) {
-        const balances = {};
-        response.data.forEach((balance) => {
-          balances[balance.leaveType] = {
-            total: balance.totalDays || 0,
-            used: balance.usedDays || 0,
-            carriedForward: balance.carriedForward || 0,
-          };
-        });
-        setLeaveBalances({ ...getDefaultLeaveBalances(), ...balances });
-      } else {
-        setLeaveBalances(getDefaultLeaveBalances());
-      }
+      const response = await axios.post(
+        `${API_BASE_URL}/documents/upload`,
+        formDataToSend,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadingFiles(prev => 
+              prev.map(f => f.file.name === file.name ? { ...f, progress } : f)
+            );
+          }
+        }
+      );
+
+      return response.data;
     } catch (error) {
-      console.error("Error fetching leave balance:", error);
-      setLeaveBalances(getDefaultLeaveBalances());
-    } finally {
-      setFetchingBalance(false);
+      console.error("Upload error:", error);
+      throw error;
     }
   };
 
-  // Enhanced file upload with progress tracking (returns S3 URLs)
+  // Handle file upload
   const handleFileUpload = async (files) => {
     if (!files || files.length === 0) return;
 
-    const allowedTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-    ];
-    const maxSize = 5 * 1024 * 1024; // 5MB
-
+    const maxSize = 10 * 1024 * 1024;
     const validFiles = files.filter((file) => {
-      if (!allowedTypes.includes(file.type)) {
-        onError?.(
-          `Invalid file type: ${file.name}. Only PDF, JPG, PNG are allowed.`
-        );
-        return false;
-      }
       if (file.size > maxSize) {
-        onError?.(`File too large: ${file.name}. Maximum size is 5MB.`);
+        alert(`File too large: ${file.name}. Maximum size is 10MB.`);
         return false;
       }
       return true;
@@ -688,1125 +460,417 @@ const LeaveDrawer = ({
 
     if (validFiles.length === 0) return;
 
-    // Initialize upload states
-    const newUploadStates = new Map(uploadStates);
-    validFiles.forEach((file) => {
-      const fileId = `${file.name}-${file.size}-${Date.now()}`;
-      newUploadStates.set(fileId, {
-        file,
-        progress: 0,
-        status: "uploading",
-      });
-    });
-    setUploadStates(newUploadStates);
+    // Add files to uploading state
+    const newUploadingFiles = validFiles.map(file => ({
+      file,
+      progress: 0,
+      status: "uploading",
+      id: `${file.name}-${Date.now()}`
+    }));
+    
+    setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
 
-    // Upload files with progress tracking to S3
-    const uploadPromises = validFiles.map(async (file) => {
-      const fileId = `${file.name}-${file.size}-${Date.now()}`;
-
+    // Upload files one by one
+    for (const file of validFiles) {
       try {
-        // Upload to S3 and get back S3 URL
-        const response = await leaveAPI.uploadAttachment(file, (progress) => {
-          setUploadStates((prev) => {
-            const updated = new Map(prev);
-            const current = updated.get(fileId);
-            if (current) {
-              updated.set(fileId, {
-                ...current,
-                progress: Math.round(progress),
-              });
-            }
-            return updated;
-          });
-        });
+        const uploadedDocument = await uploadFileToBackend(file);
+        
+        // Update status to success
+        setUploadingFiles(prev => 
+          prev.map(f => 
+            f.file.name === file.name 
+              ? { ...f, status: "success", documentId: uploadedDocument.id }
+              : f
+          )
+        );
 
-        // Mark as success
-        setUploadStates((prev) => {
-          const updated = new Map(prev);
-          const current = updated.get(fileId);
-          if (current) {
-            updated.set(fileId, {
-              ...current,
-              status: "success",
-              progress: 100,
-            });
-          }
-          return updated;
-        });
+        // Store document ID in form data (only one document supported)
+        handleFieldChange('documentId', uploadedDocument.id);
+        
+        // Add to existing documents
+        setExistingDocuments([uploadedDocument]);
 
-        // Return S3 URL and metadata
-        return {
-          file,
-          fileId,
-          url: response.data?.url || response.data?.s3Url, // S3 URL
-          name: file.name,
-          type: file.type,
-          isS3File: true,
-        };
       } catch (error) {
-        // Mark as error
-        setUploadStates((prev) => {
-          const updated = new Map(prev);
-          const current = updated.get(fileId);
-          if (current) {
-            updated.set(fileId, { ...current, status: "error", progress: 0 });
-          }
-          return updated;
-        });
-
-        onError?.(`S3 upload failed for ${file.name}: ${error.message}`);
-        return null;
+        setUploadingFiles(prev => 
+          prev.map(f => 
+            f.file.name === file.name 
+              ? { ...f, status: "error" }
+              : f
+          )
+        );
+        onError?.(`Failed to upload ${file.name}`);
       }
-    });
+    }
+  };
 
+  const handleRemoveUploadingFile = (fileId) => {
+    setUploadingFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const handleDownloadDocument = async (documentId) => {
     try {
-      const results = await Promise.allSettled(uploadPromises);
-      const successful = results
-        .filter(
-          (result) => result.status === "fulfilled" && result.value !== null
-        )
-        .map((result) => result.value);
-
-      if (successful.length > 0) {
-        setUploadedAttachments((prev) => [...prev, ...successful]);
-      }
+      window.open(`${API_BASE_URL}/documents/${documentId}/download`, '_blank');
     } catch (error) {
-      console.error("Error during S3 file upload:", error);
+      onError?.("Failed to download document");
     }
   };
 
-  const removeFile = (fileId) => {
-    setUploadStates((prev) => {
-      const updated = new Map(prev);
-      updated.delete(fileId);
-      return updated;
-    });
-
-    setUploadedAttachments((prev) =>
-      prev.filter((attachment) => attachment.fileId !== fileId)
-    );
-  };
-
-  const previewFile = (file) => {
-    // Find the uploaded attachment with this file
-    const attachment = uploadedAttachments.find((att) => att.file === file);
-    if (attachment && attachment.url) {
-      window.open(attachment.url, "_blank", "noopener,noreferrer");
+  const handleRemoveExistingDocument = async (documentId) => {
+    if (!window.confirm('Are you sure you want to remove this document?')) return;
+    
+    try {
+      // Remove document from backend
+      await axios.delete(`${API_BASE_URL}/documents/${documentId}`);
+      
+      // Remove from state
+      setExistingDocuments([]);
+      handleFieldChange('documentId', null);
+      
+      onSuccess?.("Document removed successfully");
+    } catch (error) {
+      onError?.("Failed to remove document");
     }
   };
 
-  // Validation logic
-  const validateLeaveApplication = () => {
+  const handleSubmit = async () => {
+    // Validation
     const errors = {};
+    if (!formData.leaveType) errors.leaveType = "Leave type is required";
+    if (!formData.startDate) errors.startDate = "Start date is required";
+    if (!formData.endDate) errors.endDate = "End date is required";
+    if (!formData.reason?.trim()) errors.reason = "Reason is required";
 
-    if (!selectedApplication.leaveType) {
-      errors.leaveType = "Please select a leave type";
-    }
-
-    if (!selectedApplication.startDate) {
-      errors.startDate = "Please select a start date";
-    }
-
-    if (
-      !selectedApplication.reason ||
-      selectedApplication.reason.trim() === ""
-    ) {
-      errors.reason = "Please provide a reason for leave";
-    }
-
-    // Date validation
-    if (selectedApplication.startDate && selectedApplication.endDate) {
-      const startDate = new Date(selectedApplication.startDate);
-      const endDate = new Date(selectedApplication.endDate);
-
-      if (startDate > endDate) {
-        errors.dateRange = "Start date cannot be after end date.";
-      }
-
-      // Check if CL/SL is being applied beyond current year
-      const currentYear = new Date().getFullYear();
-      if (
-        ["Casual Leave", "Sick Leave"].includes(selectedApplication.leaveType)
-      ) {
-        if (
-          startDate.getFullYear() > currentYear ||
-          endDate.getFullYear() > currentYear
-        ) {
-          errors.dateRange =
-            "Casual Leave and Sick Leave cannot be applied beyond the current leave cycle.";
-        }
-      }
-    }
-
-    // Emergency Leave attachment validation
-    if (
-      selectedApplication.leaveType === "emergency" &&
-      uploadedAttachments.length === 0 &&
-      existingAttachments.length === 0
-    ) {
-      errors.attachment =
-        "Please upload supporting document for Emergency Leave.";
-    }
-
-    // Leave balance validation
-    const leaveType = selectedApplication.leaveType;
-    if (leaveType && leaveBalances[leaveType]) {
+    // Validate leave balance
+    if (formData.leaveType) {
+      const balance = getLeaveBalance(formData.leaveType);
       const requestedDays = calculateLeaveDays();
-      const available =
-        leaveBalances[leaveType].total -
-        leaveBalances[leaveType].used +
-        (leaveBalances[leaveType].carriedForward || 0);
+      
+      if (!balance.isUnlimited && requestedDays > balance.available) {
+        errors.leaveType = `Insufficient balance. Available: ${balance.available} days`;
+      }
 
-      if (requestedDays > available && leaveType !== "Loss of Pay") {
-        errors.balance = `Insufficient leave balance. Available: ${available} days, Requested: ${requestedDays} days`;
+      // Validate document requirement
+      if (isDocumentRequired() && !formData.documentId) {
+        errors.attachments = "Document is required for Emergency Leave";
       }
     }
 
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const calculateLeaveDays = () => {
-    if (!selectedApplication.startDate) return 0;
-
-    if (selectedApplication.durationType === "half-day") {
-      return 0.5;
-    }
-
-    const startDate = new Date(selectedApplication.startDate);
-    const endDate = new Date(
-      selectedApplication.endDate || selectedApplication.startDate
-    );
-
-    const timeDiff = endDate.getTime() - startDate.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-
-    return Math.max(daysDiff, 1);
-  };
-
-  const handleEnhancedSave = async () => {
-    if (!validateLeaveApplication()) {
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
     setLoading(true);
     try {
-      console.log(employeeId);
-
-      // Combine existing and new attachments (all S3 URLs)
-      const allAttachmentUrls = [
-        ...existingAttachments.map(att => att.url),
-        ...uploadedAttachments.map(att => att.url)
-      ].filter(Boolean); // Remove any null/undefined URLs
-
-      // Prepare application data with S3 URLs
-      const applicationData = {
-        ...selectedApplication,
-        employeeId: employeeId,
-        // Set primary attachment URL (first one) for backward compatibility
-        attachmentUrl: allAttachmentUrls[0] || null,
-        // Store all attachments as array
-        attachments: allAttachmentUrls,
-        calculatedDays: calculateLeaveDays(),
-        // Ensure required fields are present
-        status: selectedApplication.status || "Pending",
-        durationType: selectedApplication.durationType || "full-day",
+      const submitData = {
+        employeeId: formData.employeeId || employeeId,
+        leaveType: formData.leaveType,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        appliedDays: calculateLeaveDays(),
+        reason: formData.reason,
+        status: formData.status,
+        isHalfDay: formData.durationType === "half-day",
+        halfDayType: formData.durationType === "half-day" ? formData.halfDayType : null,
+        documentId: formData.documentId, // Send document ID
       };
 
-      let response;
+      // Call your leave creation/update API
       if (isNewApplication) {
-        response = await leaveAPI.createLeave(applicationData);
+        await leaveAPI.createLeave(submitData);
       } else {
-        response = await leaveAPI.updateLeave(
-          selectedApplication.id,
-          applicationData
-        );
+        await leaveAPI.updateLeave(formData.id, submitData);
       }
-
-      if (response.statusCode === 201 || response.statusCode === 200) {
-        onSuccess?.(
-          isNewApplication
-            ? "Leave application created successfully with S3 attachments"
-            : "Leave application updated successfully with S3 attachments"
-        );
-        onClose();
-
-       
-      }
+      
+      onSuccess?.("Leave application submitted successfully!");
+      onClose();
     } catch (error) {
-      console.error("Error saving leave application:", error);
-      onError?.(error.message);
+      console.error("Submit error:", error);
+      onError?.("Failed to submit leave application");
     } finally {
       setLoading(false);
     }
   };
-
-  const handleEnhancedDelete = async () => {
-    if (!selectedApplication.id) return;
-
-    if (
-      !window.confirm("Are you sure you want to delete this leave application? Note: Associated S3 files will remain in storage.")
-    ) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // const response = await leaveAPI.deleteLeave(selectedApplication.id);
-
-      if (handleDeleteApplication) {
-        handleDeleteApplication();
-      }
-    } catch (error) {
-      console.error("Error deleting leave application:", error);
-      onError?.(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Reset form when drawer opens/closes
-  useEffect(() => {
-    if (open) {
-      setUploadStates(new Map());
-      setUploadedAttachments([]);
-      setValidationErrors({});
-    }
-  }, [open]);
-
-  const uploadStatesArray = Array.from(uploadStates.entries());
-  const hasUploading = uploadStatesArray.some(
-    ([_, state]) => state.status === "uploading"
-  );
-
-  // Check if we should show attachments section
-  let shouldShowAttachments;
-  if (selectedApplication !== null) {
-    console.log(selectedApplication);
-    
-    shouldShowAttachments = selectedApplication.leaveType === "emergency" || 
-                                  existingAttachments.length > 0 || 
-                                  uploadStatesArray.length > 0;
-  }
-
-  const drawerContent = (
-    <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 50 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Box className="leave-edit-form">
-        {selectedApplication && (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Typography
-                  variant="h6"
-                  className="form-title"
-                  sx={{
-                    background:
-                      "linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)",
-                    backgroundClip: "text",
-                    textFillColor: "transparent",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    fontWeight: 600,
-                    mb: 1,
-                  }}
-                >
-                  {isNewApplication
-                    ? "Add New Leave Application"
-                    : "Edit Leave Application"}
-                </Typography>
-                {fetchingBalance && (
-                  <Typography variant="caption" color="text.secondary">
-                    Loading leave balances...
-                  </Typography>
-                )}
-              </motion.div>
-            </Grid>
-
-            {/* Leave Type Selection */}
-            <Grid item xs={12}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <TextField
-                  fullWidth
-                  select
-                  label="Leave Type"
-                  value={selectedApplication.leaveType || ""}
-                  onChange={(e) => {
-                    setSelectedApplication({
-                      ...selectedApplication,
-                      leaveType: e.target.value,
-                      durationType: "full-day",
-                    });
-                    setValidationErrors((prev) => ({
-                      ...prev,
-                      leaveType: undefined,
-                    }));
-                  }}
-                  error={!!validationErrors.leaveType}
-                  helperText={validationErrors.leaveType}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      transition: "all 0.3s ease",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                      },
-                    },
-                  }}
-                >
-                  {leaveTypeOptions.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      <Box sx={{ width: "100%" }}>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                          {option}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Available:{" "}
-                          {leaveBalances[option]
-                            ? Math.max(
-                                0,
-                                leaveBalances[option].total -
-                                  leaveBalances[option].used +
-                                  (leaveBalances[option].carriedForward || 0)
-                              )
-                            : 0}{" "}
-                          days
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </motion.div>
-            </Grid>
-
-            {/* Duration Type */}
-            <AnimatePresence>
-              {selectedApplication.leaveType &&
-                selectedApplication.leaveType !== "Loss of Pay" && (
-                  <Grid item xs={12}>
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <FormControl component="fieldset">
-                        <FormLabel component="legend" sx={{ fontWeight: 600 }}>
-                          Duration Type
-                        </FormLabel>
-                        <RadioGroup
-                          row
-                          value={selectedApplication.durationType || "full-day"}
-                          onChange={(e) =>
-                            setSelectedApplication({
-                              ...selectedApplication,
-                              durationType: e.target.value,
-                              endDate:
-                                e.target.value === "half-day"
-                                  ? selectedApplication.startDate
-                                  : selectedApplication.endDate,
-                            })
-                          }
-                          sx={{ mt: 1 }}
-                        >
-                          <FormControlLabel
-                            value="full-day"
-                            control={<Radio />}
-                            label="Full Day"
-                          />
-                          <FormControlLabel
-                            value="half-day"
-                            control={<Radio />}
-                            label="Half Day"
-                          />
-                        </RadioGroup>
-                      </FormControl>
-                    </motion.div>
-                  </Grid>
-                )}
-            </AnimatePresence>
-
-            {/* Half Day Type Selection */}
-            <AnimatePresence>
-              {selectedApplication.durationType === "half-day" && (
-                <Grid item xs={12}>
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <TextField
-                      fullWidth
-                      select
-                      label="Half Day Type"
-                      value={selectedApplication.halfDayType || ""}
-                      onChange={(e) =>
-                        setSelectedApplication({
-                          ...selectedApplication,
-                          halfDayType: e.target.value,
-                        })
-                      }
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          transition: "all 0.3s ease",
-                        },
-                      }}
-                    >
-                      <MenuItem value="first-half">
-                        First Half (Morning)
-                      </MenuItem>
-                      <MenuItem value="second-half">
-                        Second Half (Afternoon)
-                      </MenuItem>
-                    </TextField>
-                  </motion.div>
-                </Grid>
-              )}
-            </AnimatePresence>
-
-            {/* Start Date */}
-            <Grid item xs={12}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    label="Start Date"
-                    value={
-                      selectedApplication.startDate
-                        ? new Date(selectedApplication.startDate)
-                        : null
-                    }
-                    onChange={(newValue) => {
-                      const formattedDate = newValue
-                        ? newValue.toISOString().split("T")[0]
-                        : "";
-                      setSelectedApplication((prev) => ({
-                        ...prev,
-                        startDate: formattedDate,
-                        endDate:
-                          selectedApplication.durationType === "half-day"
-                            ? formattedDate
-                            : prev.endDate,
-                      }));
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        dateRange: undefined,
-                        startDate: undefined,
-                      }));
-                    }}
-                    minDate={new Date()}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        error: !!(
-                          validationErrors.dateRange ||
-                          validationErrors.startDate
-                        ),
-                        helperText:
-                          validationErrors.dateRange ||
-                          validationErrors.startDate ||
-                          "",
-                        InputLabelProps: { shrink: true },
-                        sx: {
-                          "& .MuiOutlinedInput-root": {
-                            transition: "all 0.3s ease",
-                            "&:hover": {
-                              transform: "translateY(-1px)",
-                              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </LocalizationProvider>
-              </motion.div>
-            </Grid>
-
-            {/* End Date */}
-            <AnimatePresence>
-              {selectedApplication.durationType !== "half-day" && (
-                <Grid item xs={12}>
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <LocalizationProvider dateAdapter={AdapterDateFns}>
-                      <DatePicker
-                        label="End Date"
-                        value={
-                          selectedApplication.endDate
-                            ? new Date(selectedApplication.endDate)
-                            : null
-                        }
-                        onChange={(newValue) => {
-                          const formattedDate = newValue
-                            ? newValue.toISOString().split("T")[0]
-                            : "";
-                          setSelectedApplication((prev) => ({
-                            ...prev,
-                            endDate: formattedDate,
-                          }));
-                          setValidationErrors((prev) => ({
-                            ...prev,
-                            dateRange: undefined,
-                          }));
-                        }}
-                        minDate={
-                          selectedApplication.startDate
-                            ? new Date(selectedApplication.startDate)
-                            : new Date()
-                        }
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            error: !!validationErrors.dateRange,
-                            helperText: validationErrors.dateRange || "",
-                            InputLabelProps: { shrink: true },
-                            sx: {
-                              "& .MuiOutlinedInput-root": {
-                                transition: "all 0.3s ease",
-                                "&:hover": {
-                                  transform: "translateY(-1px)",
-                                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                                },
-                              },
-                            },
-                          },
-                        }}
-                      />
-                    </LocalizationProvider>
-                  </motion.div>
-                </Grid>
-              )}
-            </AnimatePresence>
-
-            {/* Calculated Days Display */}
-            <AnimatePresence>
-              {selectedApplication.startDate &&
-                (selectedApplication.endDate ||
-                  selectedApplication.durationType === "half-day") && (
-                  <Grid item xs={12}>
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                    >
-                      <Alert
-                        severity="info"
-                        sx={{
-                          background:
-                            "linear-gradient(45deg, #e3f2fd 30%, #f3e5f5 90%)",
-                          border: "1px solid rgba(25, 118, 210, 0.2)",
-                          borderRadius: 2,
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          Total Leave Days: {calculateLeaveDays()}
-                          {selectedApplication.leaveType &&
-                            leaveBalances[selectedApplication.leaveType] && (
-                              <Typography
-                                component="span"
-                                color="text.secondary"
-                                sx={{ ml: 2, fontSize: "0.875rem" }}
-                              >
-                                (Available:{" "}
-                                {Math.max(
-                                  0,
-                                  leaveBalances[selectedApplication.leaveType]
-                                    .total -
-                                    leaveBalances[selectedApplication.leaveType]
-                                      .used +
-                                    (leaveBalances[
-                                      selectedApplication.leaveType
-                                    ].carriedForward || 0)
-                                )}{" "}
-                                days)
-                              </Typography>
-                            )}
-                        </Typography>
-                      </Alert>
-                    </motion.div>
-                  </Grid>
-                )}
-            </AnimatePresence>
-
-            {/* Reason for Leave */}
-            <Grid item xs={12}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <TextField
-                  fullWidth
-                  label="Reason for Leave"
-                  multiline
-                  rows={4}
-                  value={selectedApplication.reason || ""}
-                  onChange={(e) => {
-                    setSelectedApplication({
-                      ...selectedApplication,
-                      reason: e.target.value,
-                    });
-                    setValidationErrors((prev) => ({
-                      ...prev,
-                      reason: undefined,
-                    }));
-                  }}
-                  error={!!validationErrors.reason}
-                  helperText={validationErrors.reason}
-                  placeholder="Please provide a detailed reason for your leave..."
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      transition: "all 0.3s ease",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                      },
-                    },
-                  }}
-                />
-              </motion.div>
-            </Grid>
-
-            {/* Attachments Section */}
-            <AnimatePresence>
-              {shouldShowAttachments && (
-                <Grid item xs={12}>
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        gutterBottom
-                        sx={{
-                          fontWeight: 600,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mb: 2,
-                        }}
-                      >
-                        Supporting Documents (S3 Storage)
-                        {selectedApplication.leaveType === "emergency" && (
-                          <Chip
-                            label="Required"
-                            size="small"
-                            color="error"
-                            variant="outlined"
-                          />
-                        )}
-                      </Typography>
-
-                      {/* Display existing attachments from S3 */}
-                      <AnimatePresence>
-                        {existingAttachments.length > 0 && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                          >
-                            <Box sx={{ mb: 3 }}>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                gutterBottom
-                                sx={{ fontWeight: 500 }}
-                              >
-                                Existing S3 Attachments ({existingAttachments.length})
-                              </Typography>
-                              <Divider sx={{ mb: 2 }} />
-                              
-                              <AnimatePresence>
-                                {existingAttachments.map((attachment, index) => (
-                                  <ExistingAttachmentItem
-                                    key={attachment.id}
-                                    attachment={attachment}
-                                    onView={handleViewExistingAttachment}
-                                    onRemove={handleRemoveExistingAttachment}
-                                    index={index}
-                                    canDelete={!loading}
-                                  />
-                                ))}
-                              </AnimatePresence>
-                            </Box>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* File Upload Zone for S3 */}
-                      <FileUploadZone
-                        onFileDrop={handleFileUpload}
-                        uploading={hasUploading}
-                      >
-                        <CloudUpload
-                          sx={{
-                            fontSize: 48,
-                            color: "primary.main",
-                            mb: 2,
-                            opacity: hasUploading ? 0.5 : 0.7,
-                          }}
-                        />
-                        <Typography
-                          variant="h6"
-                          gutterBottom
-                          sx={{ fontWeight: 600 }}
-                        >
-                          {hasUploading
-                            ? "Uploading to S3..."
-                            : existingAttachments.length > 0
-                            ? "Add more files to S3"
-                            : "Drag & drop files here to upload to S3"}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          or
-                        </Typography>
-                        <Button
-                          variant="outlined"
-                          component="label"
-                          startIcon={
-                            hasUploading ? (
-                              <CircularProgress size={16} />
-                            ) : (
-                              <AttachFile />
-                            )
-                          }
-                          disabled={hasUploading}
-                          sx={{
-                            borderRadius: 2,
-                            textTransform: "none",
-                            fontWeight: 600,
-                            px: 3,
-                            py: 1,
-                          }}
-                        >
-                          {hasUploading ? "Uploading to S3..." : "Browse Files"}
-                          <input
-                            type="file"
-                            hidden
-                            multiple
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) =>
-                              handleFileUpload(Array.from(e.target.files))
-                            }
-                            disabled={hasUploading}
-                          />
-                        </Button>
-                        <Typography
-                          variant="caption"
-                          display="block"
-                          color="text.secondary"
-                          sx={{ mt: 2, maxWidth: 300 }}
-                        >
-                          Files will be uploaded to S3 • Allowed: PDF, JPG, PNG • Max 5MB per file
-                        </Typography>
-                      </FileUploadZone>
-
-                      {/* Display newly uploaded files to S3 */}
-                      <AnimatePresence>
-                        {uploadStatesArray.length > 0 && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                          >
-                            <Box sx={{ mt: 3 }}>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                gutterBottom
-                                sx={{
-                                  fontWeight: 500,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
-                              >
-                                New S3 Uploads ({uploadStatesArray.length})
-                                {hasUploading && (
-                                  <Chip
-                                    label="Uploading..."
-                                    size="small"
-                                    color="info"
-                                    variant="outlined"
-                                  />
-                                )}
-                              </Typography>
-                              <Divider sx={{ mb: 2 }} />
-
-                              <AnimatePresence>
-                                {uploadStatesArray.map(
-                                  ([fileId, state], index) => (
-                                    <FileItem
-                                      key={fileId}
-                                      file={state.file}
-                                      progress={state.progress}
-                                      status={state.status}
-                                      onRemove={() => removeFile(fileId)}
-                                      onPreview={previewFile}
-                                      index={index}
-                                    />
-                                  )
-                                )}
-                              </AnimatePresence>
-                            </Box>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {validationErrors.attachment && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                        >
-                          <Alert
-                            severity="error"
-                            sx={{ mt: 2, borderRadius: 2 }}
-                          >
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: 500 }}
-                            >
-                              {validationErrors.attachment}
-                            </Typography>
-                          </Alert>
-                        </motion.div>
-                      )}
-                    </Box>
-                  </motion.div>
-                </Grid>
-              )}
-            </AnimatePresence>
-
-            {/* Status */}
-            <Grid item xs={12}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <TextField
-                  fullWidth
-                  select
-                  label="Status"
-                  value={selectedApplication.status || "Pending"}
-                  onChange={(e) =>
-                    setSelectedApplication({
-                      ...selectedApplication,
-                      status: e.target.value,
-                    })
-                  }
-                  disabled={isNewApplication}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      transition: "all 0.3s ease",
-                      "&:hover:not(.Mui-disabled)": {
-                        transform: "translateY(-2px)",
-                        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                      },
-                    },
-                  }}
-                >
-                  {statusOptions.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Typography sx={{ fontWeight: 500 }}>
-                          {option}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </TextField>
-                {isNewApplication && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 1, display: "block" }}
-                  >
-                    New applications are automatically set to Pending status
-                  </Typography>
-                )}
-              </motion.div>
-            </Grid>
-
-            {/* Validation Error Messages */}
-            <AnimatePresence>
-              {validationErrors.balance && (
-                <Grid item xs={12}>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                  >
-                    <Alert
-                      severity="warning"
-                      sx={{
-                        borderRadius: 2,
-                        backgroundColor: "rgba(255, 152, 0, 0.1)",
-                        borderLeft: "4px solid #ff9800",
-                        "& .MuiAlert-message": {
-                          fontWeight: 500,
-                        },
-                      }}
-                    >
-                      <Typography variant="body2">
-                        {validationErrors.balance}
-                      </Typography>
-                    </Alert>
-                  </motion.div>
-                </Grid>
-              )}
-            </AnimatePresence>
-
-            {/* Delete Button */}
-            <AnimatePresence>
-              {!isNewApplication && (
-                <Grid item xs={12}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: 0.7 }}
-                  >
-                    <Divider sx={{ mb: 2 }} />
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      fullWidth
-                      onClick={handleEnhancedDelete}
-                      disabled={loading}
-                      startIcon={
-                        loading ? <CircularProgress size={16} /> : <Delete />
-                      }
-                      sx={{
-                        borderRadius: 2,
-                        py: 1.5,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        transition: "all 0.3s ease",
-                        "&:hover": {
-                          transform: "translateY(-2px)",
-                          boxShadow: "0 4px 12px rgba(244, 67, 54, 0.3)",
-                          backgroundColor: "rgba(244, 67, 54, 0.1)",
-                        },
-                      }}
-                    >
-                      {loading ? "Deleting..." : "Delete Application"}
-                    </Button>
-                  </motion.div>
-                </Grid>
-              )}
-            </AnimatePresence>
-          </Grid>
-        )}
-      </Box>
-    </motion.div>
-  );
 
   return (
-    <CommonDrawer
+    <Drawer
+      anchor="right"
       open={open}
       onClose={onClose}
-      width={520}
-      tabs={[
-        {
-          label: isNewApplication
-            ? "Add Application"
-            : "Edit Application",
-          content: drawerContent,
-        },
-      ]}
-      footerActions={{
-        primaryLabel: loading ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CircularProgress size={16} color="inherit" />
-            <Typography variant="button">
-              {isNewApplication ? "Creating..." : "Saving..."}
-            </Typography>
-          </Box>
-        ) : (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="button" sx={{ fontWeight: 600 }}>
-              {isNewApplication ? "Create Application" : "Save Changes"}
-            </Typography>
-          </Box>
-        ),
-        primaryAction: handleEnhancedSave,
-        secondaryLabel: "Cancel",
-        secondaryAction: onClose,
-        primaryDisabled: loading || hasUploading,
-        primaryButtonProps: {
-          sx: {
-            borderRadius: 2,
-            textTransform: "none",
-            fontWeight: 600,
-            px: 4,
-            py: 1.5,
-            background: loading
-              ? "linear-gradient(45deg, #bbb 30%, #ccc 90%)"
-              : "linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)",
-            color: "white",
-            "&:hover": {
-              background: loading
-                ? "linear-gradient(45deg, #bbb 30%, #ccc 90%)"
-                : "linear-gradient(45deg, #1565c0 30%, #1976d2 90%)",
-              transform: loading ? "none" : "translateY(-2px)",
-              boxShadow: loading
-                ? "none"
-                : "0 6px 16px rgba(25, 118, 210, 0.4)",
-            },
-            transition: "all 0.3s ease",
-            "&:disabled": {
-              background: "linear-gradient(45deg, #bbb 30%, #ccc 90%)",
-              color: "rgba(255, 255, 255, 0.7)",
-            },
-          },
-        },
-        secondaryButtonProps: {
-          sx: {
-            borderRadius: 2,
-            textTransform: "none",
-            fontWeight: 600,
-            px: 4,
-            py: 1.5,
-            transition: "all 0.3s ease",
-            "&:hover": {
-              transform: "translateY(-2px)",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            },
-          },
+      sx={{
+        '& .MuiDrawer-paper': {
+          width: { xs: '100%', sm: 600 },
+          p: 3,
         },
       }}
-    />
+    >
+      <Box>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h5" fontWeight="600">
+            {isNewApplication ? "New Leave Application" : "Edit Leave Application"}
+          </Typography>
+          <IconButton onClick={onClose}>
+            <Close />
+          </IconButton>
+        </Stack>
+
+        <Divider sx={{ mb: 3 }} />
+
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <TextField
+              select
+              fullWidth
+              label="Leave Type"
+              value={formData.leaveType || ""}
+              onChange={(e) => {
+                handleFieldChange("leaveType", e.target.value);
+                setValidationErrors(prev => ({ ...prev, leaveType: null }));
+              }}
+              error={!!validationErrors.leaveType}
+              helperText={validationErrors.leaveType}
+              disabled={fetchingBalance}
+            >
+              {fetchingBalance ? (
+                <MenuItem disabled>Loading leave types...</MenuItem>
+              ) : leaveBalances.length === 0 ? (
+                <MenuItem disabled>No leave types available</MenuItem>
+              ) : (
+                leaveBalances
+                  .filter(balance => {
+                    const available = balance.totalDays - balance.usedDays + balance.carriedForward;
+                    return balance.isUnlimited || available > 0;
+                  })
+                  .map((balance) => {
+                    const available = balance.isUnlimited 
+                      ? "Unlimited" 
+                      : `${(balance.totalDays - balance.usedDays + balance.carriedForward).toFixed(1)} days`;
+                    
+                    return (
+                      <MenuItem key={balance.id} value={balance.leaveType}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <span>{balance.displayName}</span>
+                          <span style={{ fontSize: '0.85em', color: '#666', marginLeft: '12px' }}>
+                            {available}
+                          </span>
+                        </Box>
+                      </MenuItem>
+                    );
+                  })
+              )}
+            </TextField>
+
+            {formData.leaveType && (
+              <Box sx={{ mt: 2, p: 2, backgroundColor: 'rgba(25, 118, 210, 0.08)', borderRadius: 1 }}>
+                <Typography variant="subtitle2" fontWeight="600" mb={1}>
+                  Leave Balance for {getLeaveBalance(formData.leaveType).displayName}
+                </Typography>
+                {(() => {
+                  const balance = getLeaveBalance(formData.leaveType);
+                  const requestedDays = calculateLeaveDays();
+                  
+                  if (balance.isUnlimited) {
+                    return (
+                      <Stack spacing={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          ✓ Unlimited leaves available
+                        </Typography>
+                        {requestedDays > 0 && (
+                          <Typography variant="body2" color="primary.main">
+                            Requesting: <strong>{requestedDays} days</strong>
+                          </Typography>
+                        )}
+                      </Stack>
+                    );
+                  }
+                  
+                  return (
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Available Balance</Typography>
+                        <Typography 
+                          variant="h6" 
+                          fontWeight="700"
+                          color={balance.available > 0 ? "success.main" : "error.main"}
+                        >
+                          {balance.available.toFixed(1)} days
+                        </Typography>
+                      </Grid>
+                      {requestedDays > 0 && (
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="text.secondary">Requesting</Typography>
+                          <Typography variant="body2" fontWeight="600" color="primary.main">
+                            {requestedDays.toFixed(1)} days
+                          </Typography>
+                        </Grid>
+                      )}
+                    </Grid>
+                  );
+                })()}
+              </Box>
+            )}
+          </Grid>
+
+          <Grid item xs={12}>
+            <FormControl component="fieldset">
+              <FormLabel component="legend">Duration Type</FormLabel>
+              <RadioGroup
+                row
+                value={formData.durationType || "full-day"}
+                onChange={(e) => handleFieldChange("durationType", e.target.value)}
+              >
+                <FormControlLabel value="full-day" control={<Radio />} label="Full Day" />
+                <FormControlLabel value="half-day" control={<Radio />} label="Half Day" />
+              </RadioGroup>
+            </FormControl>
+          </Grid>
+
+          {formData.durationType === "half-day" && (
+            <Grid item xs={12}>
+              <FormControl component="fieldset">
+                <FormLabel component="legend">Half Day Type</FormLabel>
+                <RadioGroup
+                  row
+                  value={formData.halfDayType || ""}
+                  onChange={(e) => handleFieldChange("halfDayType", e.target.value)}
+                >
+                  <FormControlLabel value="first-half" control={<Radio />} label="First Half" />
+                  <FormControlLabel value="second-half" control={<Radio />} label="Second Half" />
+                </RadioGroup>
+              </FormControl>
+            </Grid>
+          )}
+
+          <Grid item xs={6}>
+            <TextField
+              fullWidth
+              type="date"
+              label="Start Date"
+              value={formData.startDate || ""}
+              onChange={(e) => handleFieldChange("startDate", e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              error={!!validationErrors.startDate}
+              helperText={validationErrors.startDate}
+            />
+          </Grid>
+
+          <Grid item xs={6}>
+            <TextField
+              fullWidth
+              type="date"
+              label="End Date"
+              value={formData.endDate || ""}
+              onChange={(e) => handleFieldChange("endDate", e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              error={!!validationErrors.endDate}
+              helperText={validationErrors.endDate}
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Reason"
+              value={formData.reason || ""}
+              onChange={(e) => handleFieldChange("reason", e.target.value)}
+              error={!!validationErrors.reason}
+              helperText={validationErrors.reason}
+            />
+          </Grid>
+
+          {(isDocumentRequired() || existingDocuments.length > 0 || uploadingFiles.length > 0) && (
+            <Grid item xs={12}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="subtitle1" fontWeight="600">
+                  Attachments {isDocumentRequired() && <span style={{ color: '#d32f2f' }}>*</span>}
+                </Typography>
+                {isDocumentRequired() && (
+                  <Chip 
+                    label="Required" 
+                    color="error" 
+                    size="small" 
+                    variant="outlined"
+                  />
+                )}
+              </Stack>
+
+              {isDocumentRequired() && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <strong>Document Required:</strong> Supporting documents must be uploaded for Emergency Leave.
+                </Alert>
+              )}
+
+              {validationErrors.attachments && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {validationErrors.attachments}
+                </Alert>
+              )}
+
+              {/* Show existing documents */}
+              {existingDocuments.map((doc) => (
+                <ExistingAttachmentItem
+                  key={doc.id}
+                  document={doc}
+                  onRemove={handleRemoveExistingDocument}
+                  onDownload={handleDownloadDocument}
+                />
+              ))}
+
+              {/* Show files being uploaded */}
+              {uploadingFiles.map((item) => (
+                <FileItem
+                  key={item.id}
+                  file={item.file}
+                  progress={item.progress}
+                  status={item.status}
+                  onRemove={() => handleRemoveUploadingFile(item.id)}
+                />
+              ))}
+
+              {/* Upload zone - only show if no document exists */}
+              {!formData.documentId && (
+                <FileUploadZone onFileDrop={handleFileUpload} uploading={loading}>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    style={{ display: 'none' }}
+                    id="file-upload"
+                    onChange={(e) => handleFileUpload(Array.from(e.target.files))}
+                  />
+                  <label htmlFor="file-upload">
+                    <Box sx={{ cursor: 'pointer' }}>
+                      <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
+                      <Typography variant="body1" color="text.secondary">
+                        Drag and drop file here or click to browse
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Maximum file size: 10MB • Accepted formats: PDF, DOC, DOCX, JPG, PNG
+                      </Typography>
+                    </Box>
+                  </label>
+                </FileUploadZone>
+              )}
+            </Grid>
+          )}
+        </Grid>
+
+        <Stack direction="row" spacing={2} mt={4}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={loading || uploadingFiles.some(f => f.status === "uploading")}
+          >
+            {loading ? <CircularProgress size={24} /> : isNewApplication ? "Submit" : "Update"}
+          </Button>
+          <Button fullWidth variant="outlined" onClick={onClose}>
+            Cancel
+          </Button>
+        </Stack>
+      </Box>
+    </Drawer>
   );
 };
 

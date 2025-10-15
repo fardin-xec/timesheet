@@ -3,7 +3,6 @@ import { Document, Page, pdfjs } from "react-pdf";
 import toast from "react-hot-toast";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
-import { fetchPresignedUrlBackend } from "../../utils/api";
 
 const safeToast = {
   success: (msg) =>
@@ -26,15 +25,11 @@ const safeToast = {
       : console.info(msg),
 };
 
-// We need to maintain version consistency between the API and worker
-// Using the version detection helper to handle this properly
+// Initialize PDF worker
 const initializePdfWorker = () => {
   try {
-    // Detect the version from the loaded pdfjs library
     const detectedVersion = pdfjs.version || "2.16.105";
     console.log("Detected PDF.js version:", detectedVersion);
-
-    // Set worker src using the detected version to ensure they match
     pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${detectedVersion}/build/pdf.worker.min.js`;
     console.log(
       "PDF worker source set to:",
@@ -45,15 +40,53 @@ const initializePdfWorker = () => {
   }
 };
 
-// Initialize PDF worker once
 initializePdfWorker();
 
-const fetchPresignedUrl = async (fileKey, signal) => {
+// Fetch PDF directly from backend
+const fetchPdfFromBackend = async (pdfUrl) => {
   try {
-    const response = await fetchPresignedUrlBackend(fileKey, signal);
-    return response;
+    // Construct the full backend URL
+    // pdfUrl should be in format: /payslips/2025/08/payslip_AT-0001_2025-08.pdf
+    const backendUrl = `http://localhost:3000/${pdfUrl}`;
+    console.log(backendUrl);
+    
+    
+     const response = await fetch(backendUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/pdf',
+        // Add authorization header if needed
+        // 'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      // Remove credentials: 'include' if you don't need cookies
+      // Only use credentials if your backend is properly configured with specific origins
+      mode: 'cors',
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Unauthorized");
+      } else if (response.status === 404) {
+        throw new Error("PDF not found");
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/pdf')) {
+      throw new Error("Invalid PDF content received");
+    }
+
+    const blob = await response.blob();
+    
+    if (blob.size === 0) {
+      throw new Error("Received empty PDF file");
+    }
+
+    return blob;
   } catch (error) {
-    console.error("Error fetching from S3:", error);
+    console.error("Error fetching PDF from backend:", error);
     throw error;
   }
 };
@@ -70,15 +103,10 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
   const maxRetries = 3;
   const dialogRef = useRef(null);
   const abortControllerRef = useRef(null);
-
-  // Track if we've already attempted to fetch for the current payroll
   const fetchAttemptedRef = useRef(false);
-
-  // Store the payroll ID to detect changes
   const payrollIdRef = useRef(null);
 
   useEffect(() => {
-    // Reset the component state when dialog closes
     if (!open) {
       setPageNumber(1);
       setNumPages(null);
@@ -88,7 +116,6 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
       setScale(1.0);
       fetchAttemptedRef.current = false;
 
-      // Clean up any pending requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
@@ -102,10 +129,8 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
     }
   }, [open]);
 
-  // Check if payroll ID has changed
   useEffect(() => {
     if (payroll?.payslip?.id !== payrollIdRef.current) {
-      // ID changed, reset fetch state
       payrollIdRef.current = payroll?.payslip?.id;
       fetchAttemptedRef.current = false;
       setPdfData(null);
@@ -115,37 +140,30 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
   }, [payroll?.payslip?.id]);
 
   const fetchPdfData = useCallback(async () => {
-    // Prevent fetching if:
-    // - already loading
-    // - no payslip ID
-    // - exceeded max retries
-    // - already fetched for this payroll
+    // Get PDF URL from payroll object
+    const pdfUrl = payroll?.payslip?.pdfUrl;
+    
     if (
       loading ||
-      !payroll?.payslip?.id ||
+      !pdfUrl ||
       retryCount > maxRetries ||
       fetchAttemptedRef.current
     ) {
       return;
     }
 
-    // Mark that we've attempted a fetch for this payroll
     fetchAttemptedRef.current = true;
-
     setLoading(true);
 
-    // Clean up any existing controller
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Create new abort controller
     abortControllerRef.current = new AbortController();
 
     try {
-      const blob = await fetchPresignedUrl(
-        payroll.payslip.id,
-        abortControllerRef.current.signal
+      const blob = await fetchPdfFromBackend(
+        pdfUrl,
       );
 
       if (!blob || blob.type !== "application/pdf") {
@@ -161,7 +179,6 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
       setRetryCount(0);
     } catch (error) {
       if (error.name === "AbortError") {
-        // Request was aborted, don't show error
         return;
       }
 
@@ -181,25 +198,24 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
       setPdfError(errorMessage);
       safeToast.error(errorMessage);
       console.error("Fetch error:", error.message, error.stack, {
-        payslipId: payroll.payslip.id,
+        payslipId: payroll?.payslip?.id,
+        pdfUrl,
       });
 
       if (retryCount < maxRetries) {
         const delay = Math.pow(2, retryCount) * 1000;
         setTimeout(() => {
           setRetryCount((prev) => prev + 1);
-          // Allow retry attempt
           fetchAttemptedRef.current = false;
         }, delay);
       }
     } finally {
       setLoading(false);
     }
-  }, [payroll?.payslip?.id, loading, retryCount]);
+  }, [payroll?.payslip?.pdfUrl, payroll?.payslip?.id, loading, retryCount]);
 
-  // Only fetch when dialog is open and we have a payslip ID
   useEffect(() => {
-    if (open && payroll?.payslip?.id && !fetchAttemptedRef.current) {
+    if (open && payroll?.payslip?.pdfUrl && !fetchAttemptedRef.current) {
       fetchPdfData();
     }
 
@@ -208,14 +224,7 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
         abortControllerRef.current.abort();
       }
     };
-  }, [open, payroll?.payslip?.id, fetchPdfData]);
-
-  // Manual retry function
-  // const manualRetry = useCallback(() => {
-  //   fetchAttemptedRef.current = false;
-  //   setRetryCount((prev) => prev + 1);
-  //   fetchPdfData();
-  // }, [fetchPdfData]);
+  }, [open, payroll?.payslip?.pdfUrl, fetchPdfData]);
 
   const handleDownload = () => {
     if (!pdfData) {
@@ -262,7 +271,7 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
       error.message?.includes("Worker")
     ) {
       errorMessage =
-        'PDF worker failed to load. Please click "Try Alternative Loading Method" below.';
+        'PDF worker failed to load. Please try refreshing the page.';
       console.warn("PDF worker loading failed. Manual retry required.");
     }
 
@@ -317,71 +326,7 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
     }
   };
 
-  // const forceRetryLoading = () => {
-  //   console.log("Attempting alternative loading method for PDF");
-
-  //   // Attempt to detect and match versions
-  //   try {
-  //     // Check if we can get the version from the loaded library
-  //     const detectedVersion = pdfjs.version;
-  //     if (detectedVersion) {
-  //       console.log("Found PDF.js version:", detectedVersion);
-  //       pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${detectedVersion}/build/pdf.worker.min.js`;
-  //       console.log(
-  //         "Updated worker source to match API version:",
-  //         detectedVersion
-  //       );
-  //     } else {
-  //       // If we can't detect version, try with the latest compatible version
-  //       console.log(
-  //         "Version detection failed, trying with latest compatible version"
-  //       );
-  //       pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js`;
-  //     }
-  //   } catch (error) {
-  //     console.error("Version adjustment failed:", error);
-  //     // If all else fails, try with the version from the error message
-  //     pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js`;
-  //   }
-
-  //   // Reset state to allow a new fetch
-  //   fetchAttemptedRef.current = false;
-  //   setPdfError(null);
-  //   setLoading(false);
-
-  //   // Clear the PDF data to force a complete reload
-  //   const currentData = pdfData;
-  //   setPdfData(null);
-
-  //   // Slightly delay refetching to ensure state is updated
-  //   setTimeout(() => {
-  //     if (currentData) {
-  //       try {
-  //         // Create a new blob to force reprocessing
-  //         const newPdfData = new Blob([currentData], {
-  //           type: currentData.type,
-  //         });
-  //         setPdfData(newPdfData);
-  //         console.log("Reloading PDF data with new worker configuration");
-  //       } catch (e) {
-  //         console.error("Failed to reload PDF:", e);
-  //         safeToast.error(
-  //           "Failed to reload. Please close and reopen the dialog."
-  //         );
-  //         // Allow another fetch attempt
-  //         fetchAttemptedRef.current = false;
-  //       }
-  //     } else {
-  //       // No data available, try fetching again
-  //       fetchPdfData();
-  //     }
-  //   }, 800);
-
-  //   safeToast.success("Retrying with alternative method");
-  // };
-
   const pdfOptions = useMemo(() => {
-    // Get the version that's actually being used
     const version = pdfjs.version || "4.4.168";
     return {
       cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/cmaps/`,
@@ -393,7 +338,7 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto backdrop-blur-sm  bg-black bg-opacity-50"
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto backdrop-blur-sm bg-black bg-opacity-50"
       role="dialog"
       aria-modal="true"
       aria-labelledby="payroll-dialog-title"
@@ -669,7 +614,6 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
                   </div>
                 ) : pdfData ? (
                   <div className="w-full max-h-[600px] overflow-y-auto p-4">
-                    {/* Scrollable container with fixed max height */}
                     <Document
                       file={pdfData}
                       onLoadSuccess={onDocumentLoadSuccess}
@@ -704,7 +648,6 @@ const PayrollDialog = ({ open, onClose, payroll, month, year }) => {
                       className="flex flex-col items-center"
                       options={pdfOptions}
                     >
-                      {/* Render all pages for scrolling */}
                       {numPages &&
                         Array.from({ length: numPages }, (_, index) => (
                           <Page

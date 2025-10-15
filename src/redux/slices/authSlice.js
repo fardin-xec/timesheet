@@ -31,7 +31,7 @@ export const loginUser = createAsyncThunk(
       console.log(error);
       
       return rejectWithValue(
-        error.response?.data?.message || 'Login failed. Please try again.'
+        error.response?.data?.message || 'Invalid user or password.'
       );
     }
   }

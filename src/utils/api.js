@@ -362,12 +362,11 @@ export const fetchPayroll = async ({ page, limit, month, year, employeeId },orgI
 export const fetchPresignedUrlBackend = async (payslipId,signal) => {
   try {
     
-    const token = getToken();
+    
 
     // Important: responseType must be 'arraybuffer' to handle binary data correctly  13.203.97.195
-    const response = await api.get(`/payroll/presignedUrl/${payslipId}`, {
+    const response = await api.get(`${payslipId}`, {
       headers: { 
-        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
   
        },
@@ -377,11 +376,9 @@ export const fetchPresignedUrlBackend = async (payslipId,signal) => {
     
     
     
-    const { url } = response.data;
-    if (!url) throw new Error('No presigned URL received from backend');
-
-    const responseData = await fetch(url);
-    const reader = responseData.body.getReader();
+    
+    const reader = response.data;
+    console.log(reader)
     const chunks = [];
 
     while (true) {

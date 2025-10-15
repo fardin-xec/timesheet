@@ -10,6 +10,7 @@ const Input = ({
   error = '', 
   placeholder = '',
   disabled,
+  style = {},
 }) => {
   return (
     <div className="input-group">
@@ -24,6 +25,7 @@ const Input = ({
         placeholder={placeholder}
         className={error ? 'input-error' : ''}
         disabled={disabled}
+        style={style}
       />
       {error && <div className="error-text">{error}</div>}
     </div>

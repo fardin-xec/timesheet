@@ -16,7 +16,7 @@ export const useAuth = () => {
       return resultAction.payload;
     } catch (err) {
       console.error('Login Error:', err.message);
-      throw new Error(err.message || 'Login failed. Please try again.');
+      throw new Error(err.message || 'Invalid user or password.');
     }
   }, [dispatch]);
 
