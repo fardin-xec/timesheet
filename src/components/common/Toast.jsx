@@ -16,7 +16,7 @@ const Toast = ({ open, message, severity, onClose }) => {
       <Alert
         onClose={onClose}
         severity={severity}
-        className={`toast-alert toast-${severity}`}
+        className={`toast-${severity}`}
       >
         {message}
       </Alert>

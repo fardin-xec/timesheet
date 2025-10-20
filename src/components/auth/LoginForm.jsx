@@ -41,7 +41,7 @@ const PHONE_LENGTH_BY_COUNTRY = {
 };
 
 const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 5 * 60 * 1000; // 15 minutes in milliseconds
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 const LoginForm = () => {
   const [loginMethod, setLoginMethod] = useState('email');
@@ -355,73 +355,81 @@ const LoginForm = () => {
 
         {/* Mobile Input with Country Code */}
         {loginMethod === 'mobile' && (
-          <div className="mobile-input-group">
-            <label className="input-label">Mobile No.</label>
-            <div className="country-selector-wrapper">
-              {/* Country Dropdown Button */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  type="button"
-                  className="country-dropdown-btn"
-                  onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                  disabled={isAccountLocked}
-                  style={{
-                      height: "43px"
-                  }}
-                >
-                  <span style={{ fontSize: '1rem' }}>
-                    <ReactCountryFlag
-                      countryCode={selectedCountry.code}
-                      svg
-                      style={{ width: '1em', height: '1em' }}
-                    />
-                  </span>
-                  <span>{selectedCountry.dialCode}</span>
-                  <span className="dropdown-arrow">▼</span>
-                </button>
+          <>
+            <div className="mobile-input-group">
+              <label className="input-label">Mobile No.</label>
+              <div className="country-selector-wrapper">
+                {/* Country Dropdown Button */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className="country-dropdown-btn"
+                    onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                    disabled={isAccountLocked}
+                  >
+                    <span style={{ fontSize: '1rem' }}>
+                      <ReactCountryFlag
+                        countryCode={selectedCountry.code}
+                        svg
+                        style={{ width: '1em', height: '1em' }}
+                      />
+                    </span>
+                    <span>{selectedCountry.dialCode}</span>
+                    <span className="dropdown-arrow">▼</span>
+                  </button>
 
-                {/* Country Dropdown Menu */}
-                {showCountryDropdown && (
-                  <div className="country-dropdown-menu">
-                    {COUNTRIES.map((country) => (
-                      <button
-                        key={country.code}
-                        type="button"
-                        className={`country-dropdown-item ${selectedCountry.code === country.code ? 'selected' : ''}`}
-                        onClick={() => handleCountrySelect(country)}
-                      >
-                        <span style={{ fontSize: '1.25rem' }}>
-                          <ReactCountryFlag
-                            countryCode={country.code}
-                            svg
-                            style={{ width: '1.25em', height: '1.25em' }}
-                          />
-                        </span>
-                        <span className="country-name">{country.code}</span>
-                        <span className="country-dial">{country.dialCode}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  {/* Country Dropdown Menu */}
+                  {showCountryDropdown && (
+                    <div className="country-dropdown-menu">
+                      {COUNTRIES.map((country) => (
+                        <button
+                          key={country.code}
+                          type="button"
+                          className={`country-dropdown-item ${selectedCountry.code === country.code ? 'selected' : ''}`}
+                          onClick={() => handleCountrySelect(country)}
+                        >
+                          <span style={{ fontSize: '1.25rem' }}>
+                            <ReactCountryFlag
+                              countryCode={country.code}
+                              svg
+                              style={{ width: '1.25em', height: '1.25em' }}
+                            />
+                          </span>
+                          <span className="country-name">{country.code}</span>
+                          <span className="country-dial">{country.dialCode}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              {/* Mobile Number Input */}
-              <div style={{ flex: 1}}>
-                <Input
-                  type="tel"
-                  name="mobile"
-                  label=""
-                  placeholder="Enter your mobile number"
-                  value={formData.mobile}
-                  onChange={handleChange}
-                  required
-                  disabled={isAccountLocked}
-                  style={{ height: "2.7rem",width: "215px" }}
-                />
+                {/* Mobile Number Input */}
+                <div style={{ flex: 1 }}>
+                  <Input
+                    type="tel"
+                    name="mobile"
+                    label=""
+                    placeholder="Enter mobile number"
+                    value={formData.mobile}
+                    onChange={handleChange}
+                    required
+                    disabled={isAccountLocked}
+                  />
+                </div>
               </div>
             </div>
-            {errors.mobile && <span className="error-message">{errors.mobile}</span>}
-          </div>
+            {errors.mobile && (
+              <span className="error-message" style={{ 
+                display: 'block', 
+                marginTop: '4px',
+                marginBottom: '16px',
+                color: '#d32f2f',
+                fontSize: '0.875rem'
+              }}>
+                {errors.mobile}
+              </span>
+            )}
+          </>
         )}
 
         {/* Password Input with Show/Hide */}

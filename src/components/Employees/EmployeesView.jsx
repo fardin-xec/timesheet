@@ -69,7 +69,7 @@ const EmployeesView = () => {
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
-  
+
   // New state for inactivation dialog
   const [inactivationDialogOpen, setInactivationDialogOpen] = useState(false);
   const [employeeToInactivate, setEmployeeToInactivate] = useState(null);
@@ -78,16 +78,19 @@ const EmployeesView = () => {
   const token = localStorage.getItem("access_token");
   const orgId = localStorage.getItem("orgId");
 
-  const API_ENDPOINTS = useMemo(() => ({
-    EMPLOYEES: `/employees/organization/${orgId}`,
-    DEPARTMENTS: "/dropdowns/types/1",
-    SUB_DEPARTMENTS: "/dropdowns/types/2",
-    POSITIONS: "/dropdowns/types/5",
-    EMPLOYMENT_TYPES: "/dropdowns/types/4",
-    WORK_LOCATIONS: "/dropdowns/types/3",
-    JOB_TITLES: "/dropdowns/types/9",
-    MANAGERS: "/employees/managers",
-  }), [orgId]);
+  const API_ENDPOINTS = useMemo(
+    () => ({
+      EMPLOYEES: `/employees/organization/${orgId}`,
+      DEPARTMENTS: "/dropdowns/types/1",
+      SUB_DEPARTMENTS: "/dropdowns/types/2",
+      POSITIONS: "/dropdowns/types/5",
+      EMPLOYMENT_TYPES: "/dropdowns/types/4",
+      WORK_LOCATIONS: "/dropdowns/types/3",
+      JOB_TITLES: "/dropdowns/types/9",
+      MANAGERS: "/employees/managers",
+    }),
+    [orgId]
+  );
 
   // Animation variants (keeping all existing variants)
   const containerVariants = {
@@ -105,13 +108,23 @@ const EmployeesView = () => {
       opacity: 1,
       x: 0,
       scale: 1,
-      transition: { duration: 0.7, ease: "easeOut", type: "spring", damping: 15 },
+      transition: {
+        duration: 0.7,
+        ease: "easeOut",
+        type: "spring",
+        damping: 15,
+      },
     },
   };
 
   const statsCardVariants = {
     hidden: { opacity: 0, scale: 0.8, y: 30 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" },
+    },
     hover: {
       scale: 1.02,
       y: -5,
@@ -275,13 +288,41 @@ const EmployeesView = () => {
       setLoading(true);
       try {
         await Promise.all([
-          fetchData(API_ENDPOINTS.DEPARTMENTS, setDepartment, "Failed to fetch department data"),
-          fetchData(API_ENDPOINTS.SUB_DEPARTMENTS, setSubDepartment, "Failed to fetch sub department data"),
-          fetchData(API_ENDPOINTS.POSITIONS, setPositions, "Failed to fetch position data"),
-          fetchData(API_ENDPOINTS.EMPLOYMENT_TYPES, setEmploymentType, "Failed to fetch employment type data"),
-          fetchData(API_ENDPOINTS.WORK_LOCATIONS, setWorkLocation, "Failed to fetch work location data"),
-          fetchData(API_ENDPOINTS.JOB_TITLES, setJobTitle, "Failed to fetch job title data"),
-          fetchData(API_ENDPOINTS.MANAGERS, setManagers, "Failed to fetch managers data"),
+          fetchData(
+            API_ENDPOINTS.DEPARTMENTS,
+            setDepartment,
+            "Failed to fetch department data"
+          ),
+          fetchData(
+            API_ENDPOINTS.SUB_DEPARTMENTS,
+            setSubDepartment,
+            "Failed to fetch sub department data"
+          ),
+          fetchData(
+            API_ENDPOINTS.POSITIONS,
+            setPositions,
+            "Failed to fetch position data"
+          ),
+          fetchData(
+            API_ENDPOINTS.EMPLOYMENT_TYPES,
+            setEmploymentType,
+            "Failed to fetch employment type data"
+          ),
+          fetchData(
+            API_ENDPOINTS.WORK_LOCATIONS,
+            setWorkLocation,
+            "Failed to fetch work location data"
+          ),
+          fetchData(
+            API_ENDPOINTS.JOB_TITLES,
+            setJobTitle,
+            "Failed to fetch job title data"
+          ),
+          fetchData(
+            API_ENDPOINTS.MANAGERS,
+            setManagers,
+            "Failed to fetch managers data"
+          ),
           fetchEmployees(),
         ]);
       } catch (err) {
@@ -313,9 +354,13 @@ const EmployeesView = () => {
   const filteredEmployees = useMemo(() => {
     if (!searchTerm) return employees;
     return employees.filter((emp) =>
-      [emp.firstName, emp.lastName, emp.email, emp.department, emp.designation].some(
-        (field) => field?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      [
+        emp.firstName,
+        emp.lastName,
+        emp.email,
+        emp.department,
+        emp.designation,
+      ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [searchTerm, employees]);
 
@@ -346,7 +391,8 @@ const EmployeesView = () => {
       const buildBankAccountPayload = (bankInfo) => {
         if (!bankInfo) return undefined;
         return {
-          accountHolderName: bankInfo.account_holder_name || bankInfo.accountHolderName,
+          accountHolderName:
+            bankInfo.account_holder_name || bankInfo.accountHolderName,
           bankName: bankInfo.bank_name || bankInfo.bankName,
           branchName: bankInfo.branch_name || bankInfo.branchName,
           city: bankInfo.city,
@@ -376,14 +422,27 @@ const EmployeesView = () => {
           bio: employeeData.bio || null,
           ctc: employeeData.ctc ? employeeData.ctc.toString() : null,
           currency: employeeData.currency || null,
-          reportTo: employeeData.reportTo ? parseInt(employeeData.reportTo) : null,
+          reportTo: employeeData.reportTo
+            ? parseInt(employeeData.reportTo)
+            : null,
           orgId: orgId ? parseInt(orgId) : null,
-          accountHolderName: employeeData.bank_info?.account_holder_name || employeeData.accountHolderName || null,
-          bankName: employeeData.bank_info?.bank_name || employeeData.bankName || null,
-          branchName: employeeData.bank_info?.branch_name || employeeData.branchName || null,
+          accountHolderName:
+            employeeData.bank_info?.account_holder_name ||
+            employeeData.accountHolderName ||
+            null,
+          bankName:
+            employeeData.bank_info?.bank_name || employeeData.bankName || null,
+          branchName:
+            employeeData.bank_info?.branch_name ||
+            employeeData.branchName ||
+            null,
           city: employeeData.bank_info?.city || employeeData.city || null,
-          ifscCode: employeeData.bank_info?.ifsc_code || employeeData.ifscCode || null,
-          accountNumber: employeeData.bank_info?.account_number || employeeData.accountNumber || null,
+          ifscCode:
+            employeeData.bank_info?.ifsc_code || employeeData.ifscCode || null,
+          accountNumber:
+            employeeData.bank_info?.account_number ||
+            employeeData.accountNumber ||
+            null,
           qid: employeeData.qid || null,
           qidExpirationDate: employeeData.qidExpirationDate || null,
           passportNumber: employeeData.passportNumber || null,
@@ -415,21 +474,31 @@ const EmployeesView = () => {
         if (employeeData.currency) {
           payload.currency = employeeData.currency;
         }
-        if (employeeData.reportTo !== undefined && employeeData.reportTo !== null) {
+        if (
+          employeeData.reportTo !== undefined &&
+          employeeData.reportTo !== null
+        ) {
           payload.reportTo = parseInt(employeeData.reportTo);
         }
 
-        const bankPayload = buildBankAccountPayload(employeeData.bank_info || employeeData);
+        const bankPayload = buildBankAccountPayload(
+          employeeData.bank_info || employeeData
+        );
         if (bankPayload) {
           Object.assign(payload, bankPayload);
         }
 
         if (employeeData.qid) payload.qid = employeeData.qid;
-        if (employeeData.qidExpirationDate) payload.qidExpirationDate = employeeData.qidExpirationDate;
-        if (employeeData.passportNumber) payload.passportNumber = employeeData.passportNumber;
-        if (employeeData.passportValidTill) payload.passportValidTill = employeeData.passportValidTill;
+        if (employeeData.qidExpirationDate)
+          payload.qidExpirationDate = employeeData.qidExpirationDate;
+        if (employeeData.passportNumber)
+          payload.passportNumber = employeeData.passportNumber;
+        if (employeeData.passportValidTill)
+          payload.passportValidTill = employeeData.passportValidTill;
 
-        Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
+        Object.keys(payload).forEach(
+          (key) => payload[key] === undefined && delete payload[key]
+        );
       }
 
       const method = isNewEmployee ? api.post : api.put;
@@ -438,13 +507,21 @@ const EmployeesView = () => {
       });
 
       if (response.data.statusCode !== (isNewEmployee ? 201 : 200)) {
-        throw new Error(`Failed to ${isNewEmployee ? "create" : "update"} employee`);
+        throw new Error(
+          `Failed to ${isNewEmployee ? "create" : "update"} employee`
+        );
       }
 
       await fetchEmployees();
-      await fetchData(API_ENDPOINTS.MANAGERS, setManagers, "Failed to fetch managers data");
+      await fetchData(
+        API_ENDPOINTS.MANAGERS,
+        setManagers,
+        "Failed to fetch managers data"
+      );
 
-      setToastMessage(`Employee ${isNewEmployee ? "added" : "updated"} successfully`);
+      setToastMessage(
+        `Employee ${isNewEmployee ? "added" : "updated"} successfully`
+      );
       setToastOpen(true);
     } catch (err) {
       console.error("Error saving employee:", err);
@@ -463,11 +540,18 @@ const EmployeesView = () => {
   };
 
   // Updated handleToggleStatus function with reason and remarks parameters
-  const handleToggleStatus = async (reason = null, remarks = null) => {
+  const handleToggleStatus = async (
+    reason = null,
+    remarks = null,
+    inactivationDate = null
+  ) => {
     if (!menuEmployee && !employeeToInactivate) return;
 
     const employee = menuEmployee || employeeToInactivate;
-    const isActivating = employee.status === "inactive";
+    //check if inactivationDate is today then set to inactive else to pending_inactive
+    const isActivating = employee.status === "inactive"|| employee.status === "pending_inactive";
+    console.log(isActivating);
+    
 
     try {
       setIsUpdatingStatus(true);
@@ -481,11 +565,27 @@ const EmployeesView = () => {
           status: "ACTIVE",
         };
       } else {
-        // Inactivating employee - requires reason
+        // Only compare date part, not time
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const selectedDate = new Date(inactivationDate);
+        selectedDate.setHours(0, 0, 0, 0);
+
+        const isToday = selectedDate.getTime() === today.getTime();
+        // const isFuture = selectedDate.getTime() > today.getTime();
+
+        if (selectedDate.getTime() < today.getTime()) {
+          setToastMessage("Inactivation date cannot be in the past");
+          setToastOpen(true);
+          return;
+        }
+
         payload = {
-          status: "INACTIVE",
-          reason: reason,
-          remarks: remarks,
+          status: isToday ? "INACTIVE" : "PENDING_INACTIVE",
+          reason,
+          remarks,
+          inactivationDate,
         };
       }
 
@@ -498,7 +598,9 @@ const EmployeesView = () => {
       }
 
       await fetchEmployees();
-      setToastMessage(`Employee ${isActivating ? "activated" : "inactivated"} successfully`);
+      setToastMessage(
+        `Employee ${isActivating ? "activated" : "inactivated"} successfully`
+      );
       setToastOpen(true);
 
       // Close the inactivation dialog if open
@@ -538,7 +640,8 @@ const EmployeesView = () => {
       const response = await api.delete(`/employees/${employeeToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.data.statusCode !== 200) throw new Error("Failed to delete employee");
+      if (response.data.statusCode !== 200)
+        throw new Error("Failed to delete employee");
       await fetchEmployees();
       setToastMessage("Employee deleted successfully");
       setToastOpen(true);
@@ -583,8 +686,12 @@ const EmployeesView = () => {
 
   // Calculate stats
   const totalEmployees = employees.length;
-  const activeEmployees = employees.filter((emp) => emp.status === "active").length;
-  const departments = [...new Set(employees.map((emp) => emp.department).filter(Boolean))].length;
+  const activeEmployees = employees.filter(
+    (emp) => emp.status === "active"
+  ).length;
+  const departments = [
+    ...new Set(employees.map((emp) => emp.department).filter(Boolean)),
+  ].length;
   const recentJoiners = employees.filter((emp) => {
     const joinDate = new Date(emp.joiningDate);
     const thirtyDaysAgo = new Date();
@@ -593,11 +700,19 @@ const EmployeesView = () => {
   }).length;
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="w-full"
+    >
       <Card className="w-full">
         <CardContent className="p-0">
           {/* Header Section */}
-          <motion.div variants={headerVariants} className="bg-blue-50 p-4 border-b">
+          <motion.div
+            variants={headerVariants}
+            className="bg-blue-50 p-4 border-b"
+          >
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-3">
                 <motion.div variants={iconVariants}>
@@ -617,7 +732,9 @@ const EmployeesView = () => {
                   disabled={isRefreshing}
                   className="p-2 bg-gray-100 text-gray-600 rounded-lg shadow-sm hover:bg-gray-200 disabled:opacity-50 transition-colors duration-200"
                 >
-                  <Refresh className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
+                  <Refresh
+                    className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
                 </motion.button>
 
                 <Button
@@ -634,10 +751,20 @@ const EmployeesView = () => {
 
             {/* Stats Cards */}
             {hasLoaded && (
-              <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" variants={containerVariants}>
-                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+              <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+                variants={containerVariants}
+              >
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
                   <div className="flex items-center gap-3">
-                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-blue-100 rounded-full">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-blue-100 rounded-full"
+                    >
                       <People sx={{ color: "#1976d2", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -655,9 +782,16 @@ const EmployeesView = () => {
                   </div>
                 </motion.div>
 
-                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
                   <div className="flex items-center gap-3">
-                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-orange-100 rounded-full">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-orange-100 rounded-full"
+                    >
                       <PersonAdd sx={{ color: "#f57c00", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -675,9 +809,16 @@ const EmployeesView = () => {
                   </div>
                 </motion.div>
 
-                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
                   <div className="flex items-center gap-3">
-                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-green-100 rounded-full">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-green-100 rounded-full"
+                    >
                       <Business sx={{ color: "#388e3c", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -695,9 +836,16 @@ const EmployeesView = () => {
                   </div>
                 </motion.div>
 
-                <motion.div variants={statsCardVariants} whileHover="hover" className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                <motion.div
+                  variants={statsCardVariants}
+                  whileHover="hover"
+                  className="bg-white rounded-lg p-6 shadow-md border border-gray-200"
+                >
                   <div className="flex items-center gap-3">
-                    <motion.div variants={iconVariants} className="p-3 mt-2 bg-purple-100 rounded-full">
+                    <motion.div
+                      variants={iconVariants}
+                      className="p-3 mt-2 bg-purple-100 rounded-full"
+                    >
                       <Search sx={{ color: "#7b1fa2", fontSize: 24 }} />
                     </motion.div>
                     <div>
@@ -720,7 +868,10 @@ const EmployeesView = () => {
 
           <Box className="p-4">
             {/* Search Bar */}
-            <motion.div variants={searchBarVariants} className="mb-4 relative flex gap-2">
+            <motion.div
+              variants={searchBarVariants}
+              className="mb-4 relative flex gap-2"
+            >
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
@@ -744,7 +895,11 @@ const EmployeesView = () => {
                     animate={{ rotate: 360, scale: [1, 1.1, 1] }}
                     transition={{
                       rotate: { duration: 2, repeat: Infinity, ease: "linear" },
-                      scale: { duration: 1, repeat: Infinity, ease: "easeInOut" },
+                      scale: {
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      },
                     }}
                     className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
                   />
@@ -756,19 +911,30 @@ const EmployeesView = () => {
             {!loading && (
               <>
                 {error ? (
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-8"
+                  >
                     <Typography color="error" align="center">
                       {error}
                     </Typography>
                   </motion.div>
                 ) : filteredEmployees.length === 0 ? (
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-8"
+                  >
                     <Typography color="textSecondary" align="center">
                       No employees found
                     </Typography>
                   </motion.div>
                 ) : (
-                  <motion.div className="space-y-2" variants={containerVariants}>
+                  <motion.div
+                    className="space-y-2"
+                    variants={containerVariants}
+                  >
                     <AnimatePresence>
                       {filteredEmployees.map((employee, index) => (
                         <motion.div
@@ -785,7 +951,10 @@ const EmployeesView = () => {
                         >
                           <div className="flex items-center space-x-3">
                             <div className="relative">
-                              <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.2 }}>
+                              <motion.div
+                                whileHover={{ scale: 1.1 }}
+                                transition={{ duration: 0.2 }}
+                              >
                                 <Avatar
                                   src={employee.avatar}
                                   alt={`${employee.firstName} ${employee.lastName}`}
@@ -798,6 +967,14 @@ const EmployeesView = () => {
                                   animate={{ scale: 1 }}
                                   transition={{ delay: 0.3, type: "spring" }}
                                   className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"
+                                />
+                              )}
+                              {employee.status === "pending_inactive" && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ delay: 0.3, type: "spring" }}
+                                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full border-2 border-white"
                                 />
                               )}
                             </div>
@@ -830,8 +1007,14 @@ const EmployeesView = () => {
                               <div className="font-medium">Joined on</div>
                               <div>{employee.joiningDate}</div>
                             </motion.div>
-                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                              <IconButton size="small" onClick={(e) => handleMenuOpen(e, employee)}>
+                            <motion.div
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleMenuOpen(e, employee)}
+                              >
                                 <MoreVertical size={16} />
                               </IconButton>
                             </motion.div>
@@ -962,7 +1145,9 @@ const EmployeesView = () => {
             setInactivationDialogOpen(false);
             setEmployeeToInactivate(null);
           }}
-          onConfirm={(reason, remarks) => handleToggleStatus(reason, remarks)}
+          onConfirm={(reason, remarks, inactivationDate) =>
+            handleToggleStatus(reason, remarks, inactivationDate)
+          }
           loading={isUpdatingStatus}
           employee={employeeToInactivate}
         />
@@ -970,7 +1155,11 @@ const EmployeesView = () => {
 
       {/* Leave Dialog */}
       <AnimatePresence>
-        <EmployeeDialog open={leaveDialogOpen} onClose={handleLeaveDialogClose} employee={selectedEmployee} />
+        <EmployeeDialog
+          open={leaveDialogOpen}
+          onClose={handleLeaveDialogClose}
+          employee={selectedEmployee}
+        />
       </AnimatePresence>
 
       {/* Attendance Dialog */}
