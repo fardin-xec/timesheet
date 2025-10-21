@@ -9,8 +9,8 @@ import { personalInfoAPI } from "../../utils/api";
 import "../../styles/profile.css";
 import ReactCountryFlag from "react-country-flag";
 import { Dialog, IconButton } from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import DeleteIcon from "@mui/icons-material/Delete";
+
+import { Eye, Trash } from "lucide-react";
 
 const ProfileForm = () => {
   const { user } = useAuth();
@@ -485,17 +485,17 @@ const ProfileForm = () => {
 
       if (selectedAvatarFile) {
         const base64Image = await convertFileToBase64(selectedAvatarFile);
-        const data = await personalInfoAPI.updatePersonalPic(user.employee.id, base64Image);
+        const data = await personalInfoAPI.updatePersonalPic(
+          user.employee.id,
+          base64Image
+        );
         showToast("Profile Pic updated successfully");
-        personalInfo.avatar=data.avatar;
+        personalInfo.avatar = data.avatar;
       } else if (personalInfo.avatar && personalInfo.avatar.trim()) {
         updateData.avatar = personalInfo.avatar.trim();
       } else {
         updateData.avatar = "";
       }
-
-     
-      
 
       await personalInfoAPI.updatePersonalInfo(user.employee.id, updateData);
       showToast("Personal information updated successfully");
@@ -1513,17 +1513,16 @@ const ProfileForm = () => {
                   </div>
                 ) : (
                   documents.map((doc, idx) => (
-                    <div className="pi-document-card" key={doc.id}>
-                      <div className="pi-document-card-header">
-                        <span className="pi-document-type">
-                          {doc.documentType}
+                    // <div className="pi-document-card" key={doc.id}>
+                    <div key={doc.id} className="document-card">
+                      <div className="document-header">
+                        <span className="document-type">
+                          {  (documentTypes.find(dt => dt.value === doc.documentType)?.label)}
                         </span>
                       </div>
-                      <div className="pi-document-card-body">
-                        <div className="pi-document-file-name">
-                          <strong>{doc.originalName || "N/A"}</strong>
-                        </div>
-                        <div className="pi-document-meta">
+                      <div className="document-body">
+                        <strong>{doc.originalName || "N/A"}</strong>
+                        <div className="document-meta">
                           <span>
                             Uploaded:{" "}
                             {new Date(doc.createdAt).toLocaleDateString()}
@@ -1536,23 +1535,17 @@ const ProfileForm = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="pi-document-actions">
+                      <div className="document-actions">
                         <IconButton
-                          className="pi-doc-action-icon pi-doc-preview-icon"
                           onClick={() => handlePreviewDocument(doc.filePath)}
-                          aria-label="Preview"
-                          size="large"
                         >
-                          <VisibilityIcon />
+                          <Eye size={20} />
                         </IconButton>
                         <IconButton
-                          className="pi-doc-action-icon pi-doc-delete-icon"
                           onClick={() => handleDeleteDocument(doc.id)}
-                          aria-label="Delete"
-                          size="large"
                           disabled={loading}
                         >
-                          <DeleteIcon />
+                          <Trash size={20} />
                         </IconButton>
                       </div>
                     </div>

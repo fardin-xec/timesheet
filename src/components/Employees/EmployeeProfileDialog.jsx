@@ -11,10 +11,12 @@ import {
   Paper,
   IconButton,
 } from "@mui/material";
-import api from "../../utils/api_call";
-import "../../styles/employeeDailog.css";
-import { Trash2 } from "lucide-react";
+import { Trash2, Eye, Trash } from "lucide-react";
 import { Facebook, LinkedIn, Twitter } from "@mui/icons-material";
+import ReactCountryFlag from "react-country-flag";
+import api from "../../utils/api_call";
+import { personalInfoAPI } from "../../utils/api";
+import "../../styles/employeeDailog.css";
 
 const EmployeeProfileDialog = ({
   open,
@@ -41,10 +43,32 @@ const EmployeeProfileDialog = ({
     maritalStatus: "",
     currentAddress: "",
     permanentAddress: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    nationality: "",
   });
+  const [bankInfo, setBankInfo] = useState({
+    accountHolderName: "",
+    bankName: "",
+    city: "",
+    branchName: "",
+    ifscCode: "",
+    accountNumber: "",
+  });
+  const [documents, setDocuments] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [documentType, setDocumentType] = useState("AADHAR_CARD");
   const [loading, setLoading] = useState(true);
   const [reportingManager, setReportingManager] = useState([]);
   const [subOrdinates, setSubOrdinates] = useState([]);
+  
+  // Country code states
+  const [selectedCountry, setSelectedCountry] = useState("IN");
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [emergencyCountry, setEmergencyCountry] = useState("IN");
+  const [showEmergencyCountryDropdown, setShowEmergencyCountryDropdown] = useState(false);
+  const [alternateCountry, setAlternateCountry] = useState("IN");
+  const [showAlternateCountryDropdown, setShowAlternateCountryDropdown] = useState(false);
 
   const ManagerList = [
     "Manager",
@@ -68,18 +92,86 @@ const EmployeeProfileDialog = ({
     CNY: "CNY",
     BRL: "BRL",
   };
-  // Memoized fetch functions
+
+  const countryCodes = React.useMemo(
+    () => [
+      { code: "US", dialCode: "+1", flag: "🇺🇸", name: "United States" },
+      { code: "IN", dialCode: "+91", flag: "🇮🇳", name: "India" },
+      { code: "GB", dialCode: "+44", flag: "🇬🇧", name: "United Kingdom" },
+      { code: "CA", dialCode: "+1", flag: "🇨🇦", name: "Canada" },
+      { code: "AU", dialCode: "+61", flag: "🇦🇺", name: "Australia" },
+      { code: "DE", dialCode: "+49", flag: "🇩🇪", name: "Germany" },
+      { code: "FR", dialCode: "+33", flag: "🇫🇷", name: "France" },
+      { code: "JP", dialCode: "+81", flag: "🇯🇵", name: "Japan" },
+      { code: "CN", dialCode: "+86", flag: "🇨🇳", name: "China" },
+      { code: "BR", dialCode: "+55", flag: "🇧🇷", name: "Brazil" },
+    ],
+    []
+  );
+
+  const documentTypes = [
+    { value: "AADHAR_CARD", label: "Aadhar Card" },
+    { value: "PAN_CARD", label: "PAN Card" },
+    { value: "PASSPORT", label: "Passport" },
+    { value: "CERTIFICATE", label: "Certificate" },
+    { value: "OTHER", label: "Others" },
+  ];
+
+  const nationalities = [
+    "Indian",
+    "American",
+    "British",
+    "Canadian",
+    "Australian",
+    "German",
+    "French",
+    "Japanese",
+    "Chinese",
+    "Brazilian",
+    "Other",
+  ];
+
+  const parsePhoneNumber = useCallback((phone) => {
+    if (!phone) return { countryCode: "IN", number: "" };
+    const trimmedPhone = phone.trim();
+    for (const country of countryCodes) {
+      if (trimmedPhone.startsWith(country.dialCode)) {
+        return {
+          countryCode: country.code,
+          number: trimmedPhone.substring(country.dialCode.length).trim(),
+        };
+      }
+    }
+    return { countryCode: "IN", number: trimmedPhone };
+  }, [countryCodes]);
+
   const fetchEmployeePersonalData = useCallback(
     async (employeeId) => {
       try {
         setLoading(true);
-        const response = await api.get(`/personal/employee/${employeeId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.data) {
-          setPersonalData(response.data.data);
-        } else {
-          setPersonalData({ id: employeeId });
+        const response = await personalInfoAPI.getPersonalInfo(employeeId);
+        if (response) {
+          const phoneData = parsePhoneNumber(response.employee?.phone);
+          const emergencyPhoneData = parsePhoneNumber(response.emergencyContactPhone);
+          const alternatePhoneData = parsePhoneNumber(response.alternativePhone);
+          
+          setSelectedCountry(phoneData.countryCode);
+          setEmergencyCountry(emergencyPhoneData.countryCode);
+          setAlternateCountry(alternatePhoneData.countryCode);
+          
+          setPersonalData({
+            id: employeeId,
+            email: response.email || "",
+            alternativePhone: response.alternativePhone || "",
+            bloodGroup: response.bloodGroup || "",
+            weddingAnniversary: response.weddingAnniversary || "",
+            maritalStatus: response.maritalStatus || "",
+            currentAddress: response.currentAddress || "",
+            permanentAddress: response.permanentAddress || "",
+            emergencyContactName: response.emergencyContactName || "",
+            emergencyContactPhone: response.emergencyContactPhone || "",
+            nationality: response.nationality || "",
+          });
         }
         setLoading(false);
       } catch (error) {
@@ -87,7 +179,38 @@ const EmployeeProfileDialog = ({
         setLoading(false);
       }
     },
-    [token]
+    [parsePhoneNumber]
+  );
+
+  const fetchBankInfo = useCallback(
+    async (employeeId) => {
+      try {
+        const data = await personalInfoAPI.getBankInfo(employeeId);
+        setBankInfo({
+          accountHolderName: data.accountHolderName || "",
+          bankName: data.bankName || "",
+          city: data.city || "",
+          branchName: data.branchName || "",
+          ifscCode: data.ifscCode || "",
+          accountNumber: data.accountNo || "",
+        });
+      } catch (error) {
+        console.error("Error fetching bank info:", error);
+      }
+    },
+    []
+  );
+
+  const fetchDocuments = useCallback(
+    async (employeeId) => {
+      try {
+        const docs = await personalInfoAPI.getDocuments(employeeId);
+        setDocuments(docs || []);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+      }
+    },
+    []
   );
 
   const fetchReportingManagerData = useCallback(
@@ -105,7 +228,7 @@ const EmployeeProfileDialog = ({
           setEmployeeData((prev) => ({
             ...prev,
             reportingManagers: response.data.data,
-            reportTo: response.data.data[0]?.id || null, // Set primary manager
+            reportTo: response.data.data[0]?.id || null,
           }));
         }
         setLoading(false);
@@ -127,7 +250,6 @@ const EmployeeProfileDialog = ({
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log("Subordinates response:", response.data.data); // Debug
         if (response.data.data) {
           setSubOrdinates(response.data.data);
         }
@@ -141,23 +263,22 @@ const EmployeeProfileDialog = ({
   );
 
   useEffect(() => {
-    
     if (employee) {
       setEmployeeData((prev) => ({ ...prev, ...employee }));
       fetchEmployeePersonalData(employee.id);
+      fetchBankInfo(employee.id);
+      fetchDocuments(employee.id);
       fetchReportingManagerData(employee.id);
       fetchSubordinatesData(employee.id);
     }
   }, [
     employee,
     fetchEmployeePersonalData,
+    fetchBankInfo,
+    fetchDocuments,
     fetchReportingManagerData,
     fetchSubordinatesData,
   ]);
-
-  useEffect(() => {
-    console.log("PersonalData", personalData);
-  }, [personalData]); // Trigger on designation or subordinates change
 
   const handleRemoveManager = (index) => {
     setEmployeeData((prev) => {
@@ -179,10 +300,10 @@ const EmployeeProfileDialog = ({
   };
 
   const handleManagerSelection = (managerId) => {
-    setEmployeeData((prev) => {
-      const updatedData = { ...prev, reportTo: managerId };
-      return updatedData;
-    });
+    setEmployeeData((prev) => ({
+      ...prev,
+      reportTo: managerId,
+    }));
   };
 
   const handleTabChange = (event, newValue) => {
@@ -195,19 +316,124 @@ const EmployeeProfileDialog = ({
       [field]: value,
     }));
   };
-  
-  useEffect(() => {
-        console.log(employee);
-
-    console.log(employeeData);
-    
-  }, [employeeData,employee]);
 
   const handlePersonalInputChange = (field, value) => {
     setPersonalData((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleBankInputChange = (field, value) => {
+    setBankInfo((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handlePhoneChange = (e, type) => {
+    const value = e.target.value;
+    let countryData;
+    
+    if (type === 'main') {
+      countryData = countryCodes.find(c => c.code === selectedCountry);
+      const fullPhone = countryData.dialCode + " " + value;
+      setEmployeeData(prev => ({ ...prev, phone: fullPhone }));
+    } else if (type === 'emergency') {
+      countryData = countryCodes.find(c => c.code === emergencyCountry);
+      const fullPhone = countryData.dialCode + " " + value;
+      setPersonalData(prev => ({ ...prev, emergencyContactPhone: fullPhone }));
+    } else if (type === 'alternate') {
+      countryData = countryCodes.find(c => c.code === alternateCountry);
+      const fullPhone = countryData.dialCode + " " + value;
+      setPersonalData(prev => ({ ...prev, alternativePhone: fullPhone }));
+    }
+  };
+
+  const handleCountrySelect = (countryCode, type) => {
+    const newCountryData = countryCodes.find(c => c.code === countryCode);
+    
+    if (type === 'main') {
+      setSelectedCountry(countryCode);
+      setShowCountryDropdown(false);
+      const phoneData = parsePhoneNumber(employeeData.phone);
+      const newPhone = newCountryData.dialCode + " " + phoneData.number;
+      setEmployeeData(prev => ({ ...prev, phone: newPhone }));
+    } else if (type === 'emergency') {
+      setEmergencyCountry(countryCode);
+      setShowEmergencyCountryDropdown(false);
+      const phoneData = parsePhoneNumber(personalData.emergencyContactPhone);
+      const newPhone = newCountryData.dialCode + " " + phoneData.number;
+      setPersonalData(prev => ({ ...prev, emergencyContactPhone: newPhone }));
+    } else if (type === 'alternate') {
+      setAlternateCountry(countryCode);
+      setShowAlternateCountryDropdown(false);
+      const phoneData = parsePhoneNumber(personalData.alternativePhone);
+      const newPhone = newCountryData.dialCode + " " + phoneData.number;
+      setPersonalData(prev => ({ ...prev, alternativePhone: newPhone }));
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      setLoading(true);
+      await personalInfoAPI.uploadDocument(employee.id, selectedFile, documentType);
+      await fetchDocuments(employee.id);
+      setSelectedFile(null);
+      setDocumentType("AADHAR_CARD");
+      const fileInput = document.getElementById("documentFile");
+      if (fileInput) fileInput.value = "";
+    } catch (error) {
+      console.error("Error uploading document:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
+    
+    try {
+      setLoading(true);
+      await personalInfoAPI.deleteDocument(employee.id, docId);
+      setDocuments(prev => prev.filter(doc => doc.id !== docId));
+    } catch (error) {
+      console.error("Error deleting document:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      
+      if (activeTab === 0) {
+        await personalInfoAPI.updatePersonalInfo(employee.id, personalData);
+      } else if (activeTab === 3) {
+        await personalInfoAPI.updateCtC(employee.id, employeeData.ctc,employeeData.currency);
+
+        await personalInfoAPI.updateBankInfo(employee.id, bankInfo);
+
+        await personalInfoAPI.updateBankInfo(employee.id, bankInfo);
+      } else if (activeTab === 1) {
+        onSave(employeeData);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error("Error saving data:", error);
+      setLoading(false);
+    }
   };
 
   const getColorForStatus = (status) => {
@@ -244,89 +470,41 @@ const EmployeeProfileDialog = ({
     };
 
     return (
-      <Paper
-        elevation={0}
-        sx={{
-          backgroundColor: "#ffffff",
-          borderRadius: "8px",
-          padding: "16px",
-          mt: 2,
-        }}
-      >
-        <Typography variant="h6" className="font-bold mb-4">
+      <Paper elevation={0} className="work-week-paper">
+        <Typography variant="h6" className="work-week-title">
           Fri & Sat Weekoffs
         </Typography>
-        <div className="mb-4">
-          <div className="mb-2">
-            <Typography variant="subtitle2" className="text-gray-700">
-              Description
-            </Typography>
-            <Typography variant="body2" className="text-gray-500">
-              Custom Rule created
-            </Typography>
+        <div className="work-week-info">
+          <div className="info-item">
+            <Typography variant="subtitle2">Description</Typography>
+            <Typography variant="body2">Custom Rule created</Typography>
           </div>
-          <div className="mb-2">
-            <Typography variant="subtitle2" className="text-gray-700">
-              Effective Date
-            </Typography>
-            <Typography variant="body2" className="text-gray-500">
-              01 Dec, 2024
-            </Typography>
-          </div>
-          <div className="mb-4">
-            <Typography variant="subtitle2" className="text-gray-700">
-              Rule Settings
-            </Typography>
-          </div>
-          <div className="flex justify-end items-center mb-4">
-            <input
-              type="checkbox"
-              id="halfDayEnabled"
-              checked={employeeData.halfDayEnabled || false}
-              onChange={(e) =>
-                handleInputChange("halfDayEnabled", e.target.checked)
-              }
-              className="mr-2"
-            />
-            <label htmlFor="halfDayEnabled" className="text-gray-700">
-              Half Day
-            </label>
+          <div className="info-item">
+            <Typography variant="subtitle2">Effective Date</Typography>
+            <Typography variant="body2">01 Dec, 2024</Typography>
           </div>
         </div>
-        <div className="overflow-x-auto work-week-table-container">
-          <table className="w-full border-collapse">
+        <div className="work-week-table-container">
+          <table className="work-week-table">
             <thead>
               <tr>
-                <th className="border border-gray-200 bg-gray-50 px-4 py-2 text-center sticky-header">
-                  Week
-                </th>
+                <th>Week</th>
                 {days.map((day) => (
-                  <th
-                    key={day}
-                    className="border border-gray-200 bg-gray-50 px-4 py-2 text-center sticky-header"
-                  >
-                    {dayLabels[day]}
-                  </th>
+                  <th key={day}>{dayLabels[day]}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {weeks.map((week) => (
                 <tr key={week}>
-                  <td className="border border-gray-200 px-4 py-2 text-center">
-                    {week}
-                  </td>
+                  <td>{week}</td>
                   {days.map((day) => {
                     const status = getStatusForDay(week, day);
                     return (
-                      <td
-                        key={day}
-                        className="border border-gray-200 px-4 py-2 text-center"
-                      >
+                      <td key={day}>
                         <div
-                          className="w-8 h-8 rounded-sm flex items-center justify-center"
+                          className="status-indicator"
                           style={{ backgroundColor: getColorForStatus(status) }}
-                          aria-label={`${status} - ${dayLabels[day]} week ${week}`}
                         ></div>
                       </td>
                     );
@@ -337,436 +515,371 @@ const EmployeeProfileDialog = ({
           </table>
         </div>
         <div className="color-legend">
-          <div className="flex items-center">
-            <div className="w-5 h-5 bg-green-500 mr-2 rounded-sm"></div>
-            <span className="text-sm">Working Day</span>
+          <div className="legend-item">
+            <div className="legend-color" style={{ backgroundColor: "#22c55e" }}></div>
+            <span>Working Day</span>
           </div>
-          <div className="flex items-center">
-            <div className="w-5 h-5 bg-red-500 mr-2 rounded-sm"></div>
-            <span className="text-sm">Weekly Off</span>
+          <div className="legend-item">
+            <div className="legend-color" style={{ backgroundColor: "#ef4444" }}></div>
+            <span>Weekly Off</span>
           </div>
-          <div className="flex items-center">
-            <div className="w-5 h-5 bg-yellow-500 mr-2 rounded-sm"></div>
-            <span className="text-sm">Half Day</span>
+          <div className="legend-item">
+            <div className="legend-color" style={{ backgroundColor: "#eab308" }}></div>
+            <span>Half Day</span>
           </div>
         </div>
       </Paper>
     );
   };
 
+  const renderPhoneInput = (value, onChange, countryCode, showDropdown, setShowDropdown, onCountrySelect, type) => {
+    const selectedCountryData = countryCodes.find(c => c.code === countryCode);
+    const phoneData = parsePhoneNumber(value);
+    
+    return (
+      <div className="phone-input-group">
+        <div className="country-selector">
+          <button
+            type="button"
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="country-button"
+          >
+            <ReactCountryFlag
+              countryCode={selectedCountryData.code}
+              svg
+              style={{ width: "1.5em", height: "1.5em" }}
+            />
+            <span>{selectedCountryData.dialCode}</span>
+          </button>
+          {showDropdown && (
+            <div className="country-dropdown">
+              {countryCodes.map((country) => (
+                <div
+                  key={country.code}
+                  onClick={() => onCountrySelect(country.code, type)}
+                  className={`country-option ${country.code === countryCode ? 'active' : ''}`}
+                >
+                  <ReactCountryFlag
+                    countryCode={country.code}
+                    svg
+                    style={{ width: "1.5em", height: "1.5em" }}
+                  />
+                  <span>{country.name}</span>
+                  <span>{country.dialCode}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <input
+          type="tel"
+          value={phoneData.number}
+          onChange={(e) => onChange(e, type)}
+          placeholder="Enter phone number"
+          className="phone-input"
+        />
+      </div>
+    );
+  };
+
   if (!employee) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogContent className="p-0">
+    <Dialog open={open} onClose={onClose} maxWidth="md"  fullWidth className="employee-dialog">
+      <DialogContent className="dialog-content">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
+          <div className="loading-container">
             <CircularProgress />
           </div>
         ) : (
           <>
-            <div className="flex items-center p-4 border-b sticky-header employee-header">
+            <div className="employee-header">
               <Avatar
-                src={employeeData.avatar || "/default-avatar.png"}
+                src={"http://localhost:3000"+employeeData.avatar}
                 alt={`${employeeData.firstName} ${employeeData.lastName}`}
-                className="w-16 h-16 mr-4"
+                className="employee-avatar"
               />
-              <div>
-                <Typography variant="h5" className="font-medium">
+              <div className="employee-info">
+                <Typography variant="h5">
                   {employeeData.firstName} {employeeData.lastName || "Unknown"}
                 </Typography>
-                <Typography variant="body2" className="text-gray-500">
-                  {employeeData.jobTitle || "N/A"} •{" "}
-                  {employeeData.department || "N/A"}
+                <Typography variant="body2" className="employee-subtitle">
+                  {employeeData.jobTitle || "N/A"} • {employeeData.department || "N/A"}
                 </Typography>
               </div>
             </div>
+            
             <Tabs
               value={activeTab}
               onChange={handleTabChange}
-              className="tabs-container sticky-tabs"
+              className="employee-tabs"
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab
-                className={`tab ${activeTab === 0 ? "active" : ""}`}
-                label="Personal"
-              />
-              <Tab
-                className={`tab ${activeTab === 1 ? "active" : ""}`}
-                label="Team"
-              />
-              <Tab
-                className={`tab ${activeTab === 2 ? "active" : ""}`}
-                label="Work Week"
-              />
-              <Tab
-                className={`tab ${activeTab === 3 ? "active" : ""}`}
-                label="CTC"
-              />
-              <Tab
-                className={`tab ${activeTab === 4 ? "active" : ""}`}
-                label="Documents"
-              />
-              <Tab
-                className={`tab ${activeTab === 5 ? "active" : ""}`}
-                label="Education"
-              />
-              <Tab
-                className={`tab ${activeTab === 6 ? "active" : ""}`}
-                label="Family"
-              />
+              <Tab label="Personal" />
+              <Tab label="Team" />
+              <Tab label="Work Week" />
+              <Tab label="Bank Details" />
+              <Tab label="Documents" />
+              {/* <Tab label="Education" />
+              <Tab label="Family" /> */}
             </Tabs>
-            <div className="tab-content p-4">
+            
+            <div className="tab-content">
               {activeTab === 0 && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <Typography variant="h6" className="font-medium">
+                <div className="personal-tab">
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
                       PERSONAL INFO
                     </Typography>
-                    <button
-                      className="text-blue-500"
-                      onClick={() => console.log("Edit clicked")}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Typography
-                        variant="subtitle2"
-                        className="text-gray-500 mb-1"
-                      >
-                        Name
-                      </Typography>
-                      <input
-                        type="text"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={`${employeeData.firstName || ""} ${
-                          employeeData.middleName || ""
-                        } ${employeeData.lastName || ""}`}
-                        readOnly
-                      />
-                    </div>
-                    <div>
-                      <Typography
-                        variant="subtitle2"
-                        className="text-gray-500 mb-1"
-                      >
-                        Date of Birth
-                      </Typography>
-                      <input
-                        type="date"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={employeeData.dob || ""}
-                        readOnly
-                      />
-                    </div>
-                    <div>
-                      <Typography
-                        variant="subtitle2"
-                        className="text-gray-500 mb-1"
-                      >
-                        Gender
-                      </Typography>
-                      <input
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={employeeData.gender || ""}
-                        readOnly
-                      />
-                    </div>
-                    <div>
-                      <Typography
-                        variant="subtitle2"
-                        className="text-gray-500 mb-1"
-                      >
-                        Blood Group
-                      </Typography>
-                      <select
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={personalData?.bloodGroup}
-                        onChange={(e) =>
-                          handlePersonalInputChange(
-                            "bloodGroup",
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value="">Select Blood Group</option>
-                        <option value="A+">A+</option>
-                        <option value="A-">A-</option>
-                        <option value="B+">B+</option>
-                        <option value="B-">B-</option>
-                        <option value="AB+">AB+</option>
-                        <option value="AB-">AB-</option>
-                        <option value="O+">O+</option>
-                        <option value="O-">O-</option>
-                      </select>
-                    </div>
-                    <div>
-                      <Typography
-                        variant="subtitle2"
-                        className="text-gray-500 mb-1"
-                      >
-                        Marital Status
-                      </Typography>
-                      <select
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={personalData?.maritalStatus}
-                        onChange={(e) =>
-                          handlePersonalInputChange(
-                            "maritalStatus",
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value="">Select Status</option>
-                        <option value="single">Single</option>
-                        <option value="married">Married</option>
-                        <option value="divorced">Divorced</option>
-                        <option value="widowed">Widowed</option>
-                      </select>
-                    </div>
-                    {personalData?.maritalStatus === "married" && (
-                      <div>
-                        <Typography
-                          variant="subtitle2"
-                          className="text-gray-500 mb-1"
-                        >
-                          Marriage Anniversary
-                        </Typography>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label>Name</label>
+                        <input
+                          type="text"
+                          value={`${employeeData.firstName || ""} ${employeeData.middleName || ""} ${employeeData.lastName || ""}`}
+                          readOnly
+                          className="input-field"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>Date of Birth</label>
                         <input
                           type="date"
-                          className="w-full p-2 border border-gray-300 rounded-md"
-                          value={personalData?.weddingAnniversary}
-                          onChange={(e) =>
-                            handlePersonalInputChange(
-                              "weddingAnniversary",
-                              e.target.value
-                            )
-                          }
+                          value={employeeData.dob || ""}
+                          readOnly
+                          className="input-field"
                         />
                       </div>
-                    )}
-                  </div>
-                  <div className="mt-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <Typography variant="h6" className="font-medium">
-                        CONTACT INFO
-                      </Typography>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <Typography
-                          variant="subtitle2"
-                          className="text-gray-500 mb-1"
+                      <div className="form-field">
+                        <label>Gender</label>
+                        <input
+                          value={employeeData.gender || ""}
+                          readOnly
+                          className="input-field"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>Blood Group</label>
+                        <select
+                          value={personalData?.bloodGroup}
+                          onChange={(e) => handlePersonalInputChange("bloodGroup", e.target.value)}
+                          className="input-field"
                         >
-                          Official Email ID
-                        </Typography>
+                          <option value="">Select Blood Group</option>
+                          <option value="A+">A+</option>
+                          <option value="A-">A-</option>
+                          <option value="B+">B+</option>
+                          <option value="B-">B-</option>
+                          <option value="AB+">AB+</option>
+                          <option value="AB-">AB-</option>
+                          <option value="O+">O+</option>
+                          <option value="O-">O-</option>
+                        </select>
+                      </div>
+                      <div className="form-field">
+                        <label>Marital Status</label>
+                        <select
+                          value={personalData?.maritalStatus}
+                          onChange={(e) => handlePersonalInputChange("maritalStatus", e.target.value)}
+                          className="input-field"
+                        >
+                          <option value="">Select Status</option>
+                          <option value="single">Single</option>
+                          <option value="married">Married</option>
+                          <option value="divorced">Divorced</option>
+                          <option value="widowed">Widowed</option>
+                        </select>
+                      </div>
+                      {personalData?.maritalStatus === "married" && (
+                        <div className="form-field">
+                          <label>Marriage Anniversary</label>
+                          <input
+                            type="date"
+                            value={personalData?.weddingAnniversary}
+                            onChange={(e) => handlePersonalInputChange("weddingAnniversary", e.target.value)}
+                            className="input-field"
+                          />
+                        </div>
+                      )}
+                      <div className="form-field">
+                        <label>Nationality</label>
+                        <select
+                          value={personalData?.nationality}
+                          onChange={(e) => handlePersonalInputChange("nationality", e.target.value)}
+                          className="input-field"
+                        >
+                          <option value="">Select Nationality</option>
+                          {nationalities.map((nat) => (
+                            <option key={nat} value={nat}>{nat}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      CONTACT INFO
+                    </Typography>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label>Official Email ID</label>
                         <input
                           type="email"
-                          className="w-full p-2 border border-gray-300 rounded-md"
                           value={employeeData.email || ""}
                           readOnly
+                          className="input-field"
                         />
                       </div>
-                      <div>
-                        <Typography
-                          variant="subtitle2"
-                          className="text-gray-500 mb-1"
-                        >
-                          Personal Email ID
-                        </Typography>
+                      <div className="form-field">
+                        <label>Personal Email ID</label>
                         <input
                           type="email"
-                          className="w-full p-2 border border-gray-300 rounded-md"
                           value={personalData?.email}
-                          onChange={(e) =>
-                            handlePersonalInputChange("email", e.target.value)
-                          }
+                          onChange={(e) => handlePersonalInputChange("email", e.target.value)}
+                          className="input-field"
                         />
                       </div>
-                      <div>
-                        <Typography
-                          variant="subtitle2"
-                          className="text-gray-500 mb-1"
-                        >
-                          Phone Number
-                        </Typography>
-                        <input
-                          type="tel"
-                          className="w-full p-2 border border-gray-300 rounded-md"
-                          value={employeeData.phone || ""}
-                          readOnly
-                        />
+                      <div className="form-field">
+                        <label>Phone Number</label>
+                        {renderPhoneInput(
+                          employeeData.phone || "",
+                          handlePhoneChange,
+                          selectedCountry,
+                          showCountryDropdown,
+                          setShowCountryDropdown,
+                          handleCountrySelect,
+                          'main'
+                        )}
                       </div>
-                      <div>
-                        <Typography
-                          variant="subtitle2"
-                          className="text-gray-500 mb-1"
-                        >
-                          Alternate Phone Number
-                        </Typography>
-                        <input
-                          type="tel"
-                          className="w-full p-2 border border-gray-300 rounded-md"
-                          value={personalData?.alternativePhone}
-                          onChange={(e) =>
-                            handlePersonalInputChange(
-                              "alternativePhone",
-                              e.target.value
-                            )
-                          }
-                        />
+                      <div className="form-field">
+                        <label>Alternate Phone Number</label>
+                        {renderPhoneInput(
+                          personalData?.alternativePhone || "",
+                          handlePhoneChange,
+                          alternateCountry,
+                          showAlternateCountryDropdown,
+                          setShowAlternateCountryDropdown,
+                          handleCountrySelect,
+                          'alternate'
+                        )}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <Typography variant="h6" className="font-medium">
-                        ADDRESSES
-                      </Typography>
+
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      EMERGENCY CONTACT
+                    </Typography>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label>Emergency Contact Name</label>
+                        <input
+                          type="text"
+                          value={personalData?.emergencyContactName}
+                          onChange={(e) => handlePersonalInputChange("emergencyContactName", e.target.value)}
+                          className="input-field"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>Emergency Contact Phone</label>
+                        {renderPhoneInput(
+                          personalData?.emergencyContactPhone || "",
+                          handlePhoneChange,
+                          emergencyCountry,
+                          showEmergencyCountryDropdown,
+                          setShowEmergencyCountryDropdown,
+                          handleCountrySelect,
+                          'emergency'
+                        )}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <Typography
-                          variant="subtitle2"
-                          className="text-gray-500 mb-1"
-                        >
-                          Current Address
-                        </Typography>
+                  </div>
+
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      ADDRESSES
+                    </Typography>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label>Current Address</label>
                         <textarea
-                          className="w-full p-2 border border-gray-300 rounded-md"
                           rows="3"
                           value={personalData?.currentAddress}
-                          onChange={(e) =>
-                            handlePersonalInputChange(
-                              "currentAddress",
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => handlePersonalInputChange("currentAddress", e.target.value)}
+                          className="input-field"
                         />
                       </div>
-                      <div>
-                        <Typography
-                          variant="subtitle2"
-                          className="text-gray-500 mb-1"
-                        >
-                          Permanent Address
-                        </Typography>
+                      <div className="form-field">
+                        <label>Permanent Address</label>
                         <textarea
-                          className="w-full p-2 border border-gray-300 rounded-md"
                           rows="3"
                           value={personalData?.permanentAddress}
-                          onChange={(e) =>
-                            handlePersonalInputChange(
-                              "permanentAddress",
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => handlePersonalInputChange("permanentAddress", e.target.value)}
+                          className="input-field"
                         />
                       </div>
                     </div>
                   </div>
-                  <div className="mt-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <Typography variant="h6" className="font-medium">
-                        SOCIAL PROFILE
-                      </Typography>
-                    </div>
-                    <div className="flex space-x-4">
-                      {/* LinkedIn Button */}
-                      <button
-                        className="bg-blue-600 text-white p-2 rounded-full"
-                        onClick={() =>
-                          window.open("https://www.linkedin.com", "_blank")
-                        }
-                      >
-                        <LinkedIn className="w-5 h-5" />
-                      </button>
 
-                      {/* Facebook Button */}
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      SOCIAL PROFILE
+                    </Typography>
+                    <div className="social-buttons">
                       <button
-                        className="bg-blue-800 text-white p-2 rounded-full"
-                        onClick={() =>
-                          window.open("https://www.facebook.com", "_blank")
-                        }
+                        className="social-button linkedin"
+                        onClick={() => window.open("https://www.linkedin.com", "_blank")}
                       >
-                        <Facebook className="w-5 h-5" />
+                        <LinkedIn />
                       </button>
-
-                      {/* Twitter/X Button */}
                       <button
-                        className="bg-blue-400 text-white p-2 rounded-full"
-                        onClick={() =>
-                          window.open("https://www.twitter.com", "_blank")
-                        }
+                        className="social-button facebook"
+                        onClick={() => window.open("https://www.facebook.com", "_blank")}
                       >
-                        <Twitter className="w-5 h-5" />
+                        <Facebook />
+                      </button>
+                      <button
+                        className="social-button twitter"
+                        onClick={() => window.open("https://www.twitter.com", "_blank")}
+                      >
+                        <Twitter />
                       </button>
                     </div>
                   </div>
                 </div>
               )}
+
               {activeTab === 1 && (
-                <div className="space-y-4">
-                  <div>
-                    <Typography
-                      variant="subtitle2"
-                      className="text-gray-500 mb-1"
-                    >
+                <div className="team-tab">
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
                       Reporting Manager
                     </Typography>
                     {reportingManager && reportingManager.length > 0 ? (
-                      <div className="border rounded-md">
-                        <table className="w-full text-left">
+                      <div className="table-container">
+                        <table className="data-table">
                           <thead>
-                            <tr className="bg-gray-50 border-b">
-                              <th className="p-2">Name</th>
-                              <th className="p-2">Type</th>
-                              <th className="p-2">Department</th>
-                              <th className="p-2">Designation</th>
-                              <th className="p-2">Action</th>
+                            <tr>
+                              <th>Name</th>
+                              <th>Type</th>
+                              <th>Department</th>
+                              <th>Designation</th>
+                              <th>Action</th>
                             </tr>
                           </thead>
                           <tbody>
                             {reportingManager.map((manager, index) => (
-                              <tr key={index} className="border-b">
-                                <td className="p-2">
-                                  {manager.firstName} {manager.midName || ""}{" "}
-                                  {manager.lastName || ""}
+                              <tr key={index}>
+                                <td>
+                                  {manager.firstName} {manager.midName || ""} {manager.lastName || ""}
                                 </td>
-                                <td className="p-2">
-                                  <input
-                                    className="w-full p-1 border border-gray-300 rounded-md"
-                                    value={manager.type || "Primary"}
-                                    readOnly
-                                  />
-                                </td>
-                                <td className="p-2">
-                                  {manager.department || "N/A"}
-                                </td>
-                                <td className="p-2">
-                                  {manager.designation || "N/A"}
-                                </td>
-                                <td className="p-2">
-                                  <IconButton
-                                    aria-label="delete"
-                                    sx={{
-                                      color: "gray.500",
-                                      "&:hover": {
-                                        color: "red.500",
-                                      },
-                                    }}
-                                    onClick={() => handleRemoveManager(index)}
-                                  >
+                                <td>{manager.type || "Primary"}</td>
+                                <td>{manager.department || "N/A"}</td>
+                                <td>{manager.designation || "N/A"}</td>
+                                <td>
+                                  <IconButton onClick={() => handleRemoveManager(index)}>
                                     <Trash2 size={20} />
                                   </IconButton>
                                 </td>
@@ -774,233 +887,319 @@ const EmployeeProfileDialog = ({
                             ))}
                           </tbody>
                         </table>
-                        <p className="text-gray-500 p-2">
-                          No Secondary managers assigned.
-                        </p>
-                        {ManagerList.includes(employeeData.designation) && (
-                          <>
-                            <Typography
-                              variant="subtitle2"
-                              className="text-gray-500 mb-1"
-                            >
-                              Subordinates
-                            </Typography>
-                            {subOrdinates && subOrdinates.length > 0 ? (
-                              <table className="w-full text-left">
-                                <thead>
-                                  <tr className="bg-gray-50 border-b">
-                                    <th className="p-2">Name</th>
-                                    <th className="p-2">Type</th>
-                                    <th className="p-2">Department</th>
-                                    <th className="p-2">Designation</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {subOrdinates.map((subordinate, index) => (
-                                    <tr key={index} className="border-b">
-                                      <td className="p-2">
-                                        {subordinate.firstName || ""}{" "}
-                                        {subordinate.midName || ""}{" "}
-                                        {subordinate.lastName || ""}
-                                      </td>
-                                      <td className="p-2">
-                                        <input
-                                          className="w-full p-1 border border-gray-300 rounded-md"
-                                          value={
-                                            subordinate.type || "Subordinate"
-                                          }
-                                          readOnly
-                                        />
-                                      </td>
-                                      <td className="p-2">
-                                        {subordinate.department || "N/A"}
-                                      </td>
-                                      <td className="p-2">
-                                        {subordinate.designation || "N/A"}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            ) : (
-                              <p className="text-gray-500 p-2">
-                                No subordinates assigned.
-                              </p>
-                            )}
-                          </>
-                        )}
                       </div>
                     ) : (
-                      <div>
-                        <select
-                          className="w-full p-2 border border-gray-300 rounded-md mb-2"
-                          value={employeeData.reportTo}
-                          onChange={(e) =>
-                            handleManagerSelection(e.target.value)
-                          }
-                        >
-                          <option value="">Select Manager</option>
-                          {managers
-                            .filter((manager) => manager.id !== employeeData.id)
-                            .map((manager) => (
-                              <option key={manager.id} value={manager.id}>
-                                {`${manager.firstName || ""} ${
-                                  manager.midName || ""
-                                } ${manager.lastName || ""} - ${
-                                  manager.department || "N/A"
-                                }`}
-                              </option>
-                            ))}
-                        </select>
-                        {ManagerList.includes(employeeData.designation) && (
-                          <>
-                            <Typography
-                              variant="subtitle2"
-                              className="text-gray-500 mb-1"
-                            >
-                              Subordinates
-                            </Typography>
-                            {subOrdinates && subOrdinates.length > 0 ? (
-                              <table className="w-full text-left">
-                                <thead>
-                                  <tr className="bg-gray-50 border-b">
-                                    <th className="p-2">Name</th>
-                                    <th className="p-2">Type</th>
-                                    <th className="p-2">Department</th>
-                                    <th className="p-2">Designation</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {subOrdinates.map((subordinate, index) => (
-                                    <tr key={index} className="border-b">
-                                      <td className="p-2">
-                                        {subordinate.firstName || ""}{" "}
-                                        {subordinate.midName || ""}{" "}
-                                        {subordinate.lastName || ""}
-                                      </td>
-                                      <td className="p-2">
-                                        <input
-                                          className="w-full p-1 border border-gray-300 rounded-md"
-                                          value={
-                                            subordinate.type || "Subordinate"
-                                          }
-                                          readOnly
-                                        />
-                                      </td>
-                                      <td className="p-2">
-                                        {subordinate.department || "N/A"}
-                                      </td>
-                                      <td className="p-2">
-                                        {subordinate.designation || "N/A"}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            ) : (
-                              <p className="text-gray-500 p-2">
-                                No subordinates assigned.
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div>
+                      <select
+                        value={employeeData.reportTo}
+                        onChange={(e) => handleManagerSelection(e.target.value)}
+                        className="input-field"
+                      >
+                        <option value="">Select Manager</option>
+                        {managers
+                          .filter((manager) => manager.id !== employeeData.id)
+                          .map((manager) => (
+                            <option key={manager.id} value={manager.id}>
+                              {`${manager.firstName || ""} ${manager.midName || ""} ${manager.lastName || ""} - ${manager.department || "N/A"}`}
+                            </option>
+                          ))}
+                      </select>
                     )}
                   </div>
+
+                  {ManagerList.includes(employeeData.designation) && (
+                    <div className="section-tabs">
+                      <Typography variant="h6" className="section-title">
+                        Subordinates
+                      </Typography>
+                      {subOrdinates && subOrdinates.length > 0 ? (
+                        <div className="table-container">
+                          <table className="data-table">
+                            <thead>
+                              <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {subOrdinates.map((subordinate, index) => (
+                                <tr key={index}>
+                                  <td>
+                                    {subordinate.firstName || ""} {subordinate.midName || ""} {subordinate.lastName || ""}
+                                  </td>
+                                  <td>{subordinate.type || "Subordinate"}</td>
+                                  <td>{subordinate.department || "N/A"}</td>
+                                  <td>{subordinate.designation || "N/A"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="no-data">No subordinates assigned.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
+
               {activeTab === 2 && renderWorkWeekTable()}
+
               {activeTab === 3 && (
-                <div className="space-y-4">
-                  <div>
-                    <Typography
-                      variant="subtitle2"
-                      className="text-gray-500 mb-1"
-                    >
-                      CTC
+                <div className="ctc-tab">
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      COMPENSATION (CTC)
                     </Typography>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="input-field"
-                      value={employeeData?.ctc}
-                      onChange={(e) => handleInputChange("ctc", e.target.value)}
-                    />
+                    <div className="ctc-card">
+                      <div className="ctc-display">
+                        <div className="ctc-amount">
+                          <span className="ctc-label">Annual CTC</span>
+                          <div className="ctc-value">
+                            <span className="currency-symbol">
+                              {employeeData?.currency || 'INR'}
+                            </span>
+                            <span className="amount">
+                              {employeeData?.ctc ? parseFloat(employeeData.ctc).toLocaleString() : '0.00'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-field">
+                          <label>CTC Amount (Annual) *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={employeeData?.ctc || ''}
+                            onChange={(e) => handleInputChange("ctc", e.target.value)}
+                            className="input-field"
+                            placeholder="Enter annual CTC"
+                          />
+                        </div>
+                        <div className="form-field">
+                          <label>Currency *</label>
+                          <select
+                            value={employeeData?.currency || ''}
+                            onChange={(e) => handleInputChange("currency", e.target.value)}
+                            className="input-field"
+                          >
+                            <option value="">Select Currency</option>
+                            <option value={Currency.INR}>Indian Rupee (INR)</option>
+                            <option value={Currency.USD}>United States Dollar (USD)</option>
+                            <option value={Currency.EUR}>Euro (EUR)</option>
+                            <option value={Currency.GBP}>British Pound (GBP)</option>
+                            <option value={Currency.QAR}>Qatari Riyal (QAR)</option>
+                            <option value={Currency.AUD}>Australian Dollar (AUD)</option>
+                            <option value={Currency.CAD}>Canadian Dollar (CAD)</option>
+                            <option value={Currency.JPY}>Japanese Yen (JPY)</option>
+                            <option value={Currency.CNY}>Chinese Yuan (CNY)</option>
+                            <option value={Currency.BRL}>Brazilian Real (BRL)</option>
+                            <option value={Currency.CHF}>Swiss Franc (CHF)</option>
+                          </select>
+                        </div>
+                      </div>
+                      {employeeData?.ctc && employeeData?.currency && (
+                        <div className="ctc-breakdown">
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Monthly CTC</span>
+                            <span className="breakdown-value">
+                              {employeeData.currency} {(parseFloat(employeeData.ctc) / 12).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Daily CTC (approx)</span>
+                            <span className="breakdown-value">
+                              {employeeData.currency} {(parseFloat(employeeData.ctc) / 365).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <Typography
-                      variant="subtitle2"
-                      className="text-gray-500 mb-1"
-                    >
-                      Currency
+
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      BANK ACCOUNT DETAILS
                     </Typography>
-                    <select
-                      value={employeeData?.currency}
-                      onChange={(e) =>
-                        handleInputChange("currency", e.target.value)
-                      }
-                      className="w-full p-2 border rounded-md border-gray-300"
-                    >
-                      <option value={""}></option>
-                      <option value={Currency.QAR}>Qatari Riyal (QAR)</option>
-                      <option value={Currency.INR}>Indian Rupee (INR)</option>
-                      <option value={Currency.USD}>
-                        United States Dollar (USD)
-                      </option>
-                      <option value={Currency.EUR}>Euro (EUR)</option>
-                      <option value={Currency.GBP}>British Pound (GBP)</option>
-                      <option value={Currency.AUD}>
-                        'Australian Dollar (AUD)
-                      </option>
-                      <option value={Currency.CAD}>
-                        Canadian Dollar (CAD)
-                      </option>
-                      <option value={Currency.JPY}>Japanese Yen (JPY)</option>
-                      <option value={Currency.CNY}>Chinese Yuan (CNY)</option>
-                      <option value={Currency.BRL}>Brazilian Real (BRL)</option>
-                    </select>
+                    <div className="bank-info-notice">
+                      <span className="notice-icon">ℹ️</span>
+                      <span>Please ensure all bank details are accurate for salary processing</span>
+                    </div>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label>Account Holder Name *</label>
+                        <input
+                          type="text"
+                          value={bankInfo?.accountHolderName || ''}
+                          onChange={(e) => handleBankInputChange("accountHolderName", e.target.value)}
+                          className="input-field"
+                          placeholder="Enter account holder name"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>Bank Name *</label>
+                        <input
+                          type="text"
+                          value={bankInfo?.bankName || ''}
+                          onChange={(e) => handleBankInputChange("bankName", e.target.value)}
+                          className="input-field"
+                          placeholder="Enter bank name"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>Branch Name *</label>
+                        <input
+                          type="text"
+                          value={bankInfo?.branchName || ''}
+                          onChange={(e) => handleBankInputChange("branchName", e.target.value)}
+                          className="input-field"
+                          placeholder="Enter branch name"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>City *</label>
+                        <input
+                          type="text"
+                          value={bankInfo?.city || ''}
+                          onChange={(e) => handleBankInputChange("city", e.target.value)}
+                          className="input-field"
+                          placeholder="Enter city"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label>IFSC Code *</label>
+                        <input
+                          type="text"
+                          value={bankInfo?.ifscCode || ''}
+                          onChange={(e) => handleBankInputChange("ifscCode", e.target.value.toUpperCase())}
+                          className="input-field"
+                          placeholder="e.g., SBIN0001234"
+                          maxLength="11"
+                        />
+                        <span className="field-hint">11-character IFSC code</span>
+                      </div>
+                      <div className="form-field">
+                        <label>Account Number *</label>
+                        <input
+                          type="text"
+                          value={bankInfo?.accountNumber || ''}
+                          onChange={(e) => handleBankInputChange("accountNumber", e.target.value)}
+                          className="input-field"
+                          placeholder="Enter account number"
+                        />
+                        <span className="field-hint">9-18 digit account number</span>
+                      </div>
+                    </div>
                   </div>
-                  {/* <div>
-                    <Typography
-                      variant="subtitle2"
-                      className="text-gray-500 mb-1"
-                    >
-                      Account Holder Name
-                    </Typography>
-                    <input
-                      type="text"
-                      className="input-field bg-highlight"
-                      value={employeeData.bank_info.account_holder_name}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "bank_info.account_holder_name",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div> */}
                 </div>
               )}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  marginTop: "1.5rem",
-                  gap: "16px",
-                }}
-              >
+
+              {activeTab === 4 && (
+                <div className="documents-tab">
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      Upload Documents
+                    </Typography>
+                    <div className="upload-form">
+                      <div className="form-grid">
+                        <div className="form-field">
+                          <label>Document Type</label>
+                          <select
+                            value={documentType}
+                            onChange={(e) => setDocumentType(e.target.value)}
+                            className="input-field"
+                          >
+                            {documentTypes.map((type) => (
+                              <option key={type.value} value={type.value}>
+                                {type.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-field">
+                          <label>Choose File</label>
+                          <input
+                            id="documentFile"
+                            type="file"
+                            onChange={handleFileChange}
+                            accept=".pdf,.jpg,.jpeg,.png,.docx"
+                            className="file-input"
+                          />
+                          {selectedFile && (
+                            <span className="file-name">{selectedFile.name}</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="contained"
+                        onClick={handleUploadDocument}
+                        disabled={loading || !selectedFile}
+                        className="upload-btn"
+                        style={{
+                          marginTop: "20px"
+                        }}
+                      >
+                        Upload Document
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="section-tabs">
+                    <Typography variant="h6" className="section-title">
+                      Uploaded Documents
+                    </Typography>
+                    <div className="documents-grid">
+                      {documents.length === 0 ? (
+                        <p className="no-data">No documents uploaded yet</p>
+                      ) : (
+                        documents.map((doc) => (
+                          <div key={doc.id} className="document-card">
+                            <div className="document-header">
+                              <span className="document-type">{ (documentTypes.find(dt => dt.value === doc.documentType)?.label)}</span>
+                            </div>
+                            <div className="document-body">
+                              <strong>{doc.originalName || "N/A"}</strong>
+                              <div className="document-meta">
+                                <span>Uploaded: {new Date(doc.createdAt).toLocaleDateString()}</span>
+                                <span>Size: {doc.size ? (doc.size / 1024).toFixed(1) + " KB" : "N/A"}</span>
+                              </div>
+                            </div>
+                            <div className="document-actions">
+                              <IconButton
+                                onClick={() => window.open(`http://localhost:3000/${doc.filePath}`, '_blank')}
+                              >
+                                <Eye size={20} />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                disabled={loading}
+                              >
+                                <Trash size={20} />
+                              </IconButton>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="action-buttons">
                 <Button variant="outlined" onClick={onClose}>
                   Cancel
                 </Button>
-                {activeTab !== 2 && (
+                {activeTab !== 2 && activeTab !== 4 && activeTab !== 5 && activeTab !== 6 && (
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={() =>
-                      onSave(activeTab === 1 || activeTab === 3  ? employeeData : personalData)
-                    }
+                    onClick={handleSave}
+                    disabled={loading}
                   >
-                    Save Changes
+                    {loading ? <CircularProgress size={20} /> : "Save Changes"}
                   </Button>
                 )}
               </div>

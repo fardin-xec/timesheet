@@ -532,7 +532,7 @@
   .pi-textarea,
   .pi-select,
   .pi-file-input {
-    padding: 0.7rem;
+    padding: 0.75rem;
     border-radius: 7px;
     font-size: 0.9rem;
   }
@@ -581,7 +581,7 @@
 }
 
 .pi-file-input {
-  padding: 0.5rem;
+  padding: 0.75rem;
   cursor: pointer;
 }
 
@@ -1483,7 +1483,7 @@ button, input, select, textarea {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  min-width: 120px;
+  min-width: 70px;
 }
 
 .pi-value {
@@ -1607,7 +1607,7 @@ button, input, select, textarea {
 }
 
 .pi-file-input {
-  padding: 0.5rem;
+  padding: 0.75rem;
   cursor: pointer;
 }
 
@@ -2166,4 +2166,17 @@ button, input, select, textarea {
 .pi-doc-delete-icon:hover {
   color: #e63946;
   background: rgba(255, 107, 107, 0.08);
+}
+
+.document-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.document-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }

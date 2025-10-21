@@ -790,6 +790,45 @@ export const personalInfoAPI = {
   },
 
   // ============ BANK INFORMATION ============
+ updateCtC: async (employeeId, ctc,currency) => {
+    const token = getToken();
+    try {
+     if(ctc!==''||currency!==''){
+       const payload = {
+        ctc,
+        currency
+
+      }
+      // Using PUT with /personal/:id route
+      const response = await api.put(`/employees/${employeeId}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (
+        response.status !== 200 &&
+        response.status !== 201
+      ) {
+        throw new Error(
+          response.data.message || "Failed to update ctc of employee"
+        );
+      }
+      return response.data.data;
+
+     }
+     
+
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update personal information"
+      );
+    }
+  },
+
 
   /**
    * Fetch bank account information

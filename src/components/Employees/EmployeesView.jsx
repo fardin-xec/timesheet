@@ -956,7 +956,7 @@ const EmployeesView = () => {
                                 transition={{ duration: 0.2 }}
                               >
                                 <Avatar
-                                  src={employee.avatar}
+                                  src={"http://localhost:3000"+employee.avatar}
                                   alt={`${employee.firstName} ${employee.lastName}`}
                                   className="w-12 h-12"
                                 />
