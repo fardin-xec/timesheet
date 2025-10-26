@@ -259,70 +259,47 @@ headers: {
   return response.data.data;
 };
 
-export const fetchAttendance = async ({
-  page,
-  limit,
-  employeeId,
-  startDate,
-  endDate,
-}) => {
-  const token = getToken();
-  let url = `/attendances?page=${page}&limit=${limit}`;
-  if (employeeId) url += `&employeeId=${employeeId}`;
-  if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
-  if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
 
-  const response = await api.get(url, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
 
-     },  });
-  if (response.status !== 200 && response.status !== 201) {
-    throw new Error(response.data.message);
-  }
-  return {
-    data: response.data.data,
-    total: response.data.total || response.data.data.length, // Adjust based on API response structure
-  };
-};
-
-export const updateAttendance = async (employeeId,data) => {
+export const checkIn = async () => {
   const token = getToken();
 
 
-  const response = await api.put(`/attendances/employees/${employeeId}`,data, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+ const response = await api.post('/attendances/start', null, {
+  headers: { 
+    Authorization: `Bearer ${token}`,
+  },
 
-     },  });
-    if (response.status !== 200 && response.status !== 201){
-      throw new Error(response.data.message);
-  } 
-  
-  
-  return response.data.data;
-};
+});
 
 
-export const updateAttendanceTask = async (id,data) => {
+if (response.status !== 200 && response.status !== 201) {
+  throw new Error(JSON.stringify(response.data));
+} 
+
+return response.data.data;
+}
+
+export const checkOut = async () => {
   const token = getToken();
 
 
-  const response = await api.put(`/attendances/${id}`,data, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+ const response = await api.post('/attendances/stop', null, {
+  headers: { 
+    Authorization: `Bearer ${token}`,
+  },
 
-     },  });
-    if (response.status !== 200 && response.status !== 201){
-      throw new Error(response.data.message);
-  } 
-  
-  
-  return response.data.data;
-};
+});
+
+
+if (response.status !== 200 && response.status !== 201) {
+  throw new Error(JSON.stringify(response.data));
+} 
+
+return response.data.data;
+}
+
+
 
 
 export const fetchPayroll = async ({ page, limit, month, year, employeeId },orgId) => {
@@ -1145,3 +1122,301 @@ export const personalInfoAPI = {
 };
 
 export default personalInfoAPI;
+
+
+/**
+ * Fetch today's attendance task entries
+ * @returns {Promise<Array>} Array of task entries for today
+ */
+export const fetchTodayTasks = async () => {
+  const token = getToken();
+  
+  const response = await api.get('/attendances/today', {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch today\'s tasks');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Fetch attendance task entries for a specific date
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @returns {Promise<Array>} Array of task entries for the specified date
+ */
+export const fetchTasksByDate = async (date,employeeId) => {
+  const token = getToken();
+  
+  const response = await api.get('/attendances/tasks', {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    params: {
+      employeeId: employeeId,
+      date: date
+    }
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch tasks for the specified date');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Fetch attendance task entries for a date range
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise<Array>} Array of task entries for the date range
+ */
+export const fetchTasksByDateRange = async (startDate, endDate) => {
+  const token = getToken();
+  
+  const response = await api.get('/attendances/tasks', {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    params: {
+      start: startDate,
+      end: endDate
+    }
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch tasks for the date range');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Update attendance task details
+ * @param {number} taskId - Task ID to update
+ * @param {Object} data - Task data to update (taskDescription, project, etc.)
+ * @returns {Promise<Object>} Updated task data
+ */
+export const updateAttendanceTask = async (taskId, data) => {
+  const token = getToken();
+
+  const response = await api.put(`/attendances/${taskId}/tasks`, data, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to update task');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Start attendance timer (check-in)
+ * @returns {Promise<Object>} Check-in data
+ */
+export const startAttendanceTimer = async () => {
+  const token = getToken();
+
+  const response = await api.post('/attendances/start', null, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to start timer');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Stop attendance timer (check-out)
+ * @param {Object} taskData - Task details (taskDescription, project, etc.)
+ * @returns {Promise<Object>} Check-out data
+ */
+export const stopAttendanceTimer = async (taskData) => {
+  const token = getToken();
+
+  const response = await api.post('/attendances/stop', taskData, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to stop timer');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Fetch attendance analytics for a specific date
+ * This is a mock implementation - adjust according to your actual backend endpoint
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @returns {Promise<Object>} Analytics data (present, absent, onLeave, total)
+ */
+export const fetchAttendanceAnalytics = async (date) => {
+  const token = getToken();
+  
+  try {
+    // If you have a dedicated analytics endpoint, use it:
+    // const response = await api.get('/attendances/analytics', {
+    //   headers: { 
+    //     Authorization: `Bearer ${token}`,
+    //     'Content-Type': 'application/json'
+    //   },
+    //   params: { date }
+    // });
+
+    // For now, we'll calculate analytics from attendance data
+    // You should replace this with your actual analytics endpoint
+    const response = await api.get('/attendances/tasks', {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      params: { date }
+    });
+
+    if (response.status !== 200 && response.status !== 201) {
+      throw new Error(response.data.message || 'Failed to fetch analytics');
+    }
+
+    // Mock analytics calculation - replace with actual backend data
+    const tasks = response.data.data || [];
+    const uniqueEmployees = new Set(tasks.map(task => task.employeeId));
+    
+    // These values should come from your backend
+    // This is just a placeholder calculation
+    return {
+      present: uniqueEmployees.size,
+      absent: Math.max(0, 10 - uniqueEmployees.size), // Replace with actual logic
+      onLeave: 2, // Replace with actual leave data
+      total: 12 // Replace with actual total employees
+    };
+
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to fetch attendance analytics'
+    );
+  }
+};
+
+/**
+ * Fetch attendance records with pagination and filters
+ * @param {Object} params - Query parameters
+ * @param {number} params.page - Page number
+ * @param {number} params.limit - Items per page
+ * @param {string} params.employeeId - Filter by employee ID
+ * @param {string} params.startDate - Start date filter
+ * @param {string} params.endDate - End date filter
+ * @returns {Promise<Object>} Paginated attendance data
+ */
+export const fetchAttendance = async ({
+  page = 1,
+  limit = 10,
+  employeeId,
+  startDate,
+  endDate,
+}) => {
+  const token = getToken();
+  let url = `/attendances?page=${page}&limit=${limit}`;
+  
+  if (employeeId) url += `&employeeId=${employeeId}`;
+  if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
+  if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
+
+  const response = await api.get(url, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch attendance records');
+  }
+
+  return {
+    data: response.data.data,
+    total: response.data.total || response.data.data.length,
+  };
+};
+
+// GET dashboard analytics for today (used on top)
+export async function getDashboard(date) {
+  const params = date ? { date } : {};
+  const token = getToken();
+  const res = await api.get("/attendances/dashboard", { params, headers: { 
+      Authorization: `Bearer ${token}`,
+    }});
+  return res.data.data;
+}
+
+// GET employees list for org
+export async function getEmployees(orgId) {
+  const token = getToken();
+  const res = await api.get("/employees", { params: { orgId }, headers: { 
+      Authorization: `Bearer ${token}`,
+    }});
+  return res.data;
+}
+
+// GET attendance export as Excel
+export async function getExport(start, end) {
+  const res = await api.get("/attendances/export", {
+    params: {
+      start: start.toISOString().substring(0, 10),
+      end: end.toISOString().substring(0, 10)
+    },
+    responseType: "blob", // downloading Excel file
+  });
+  // Download file as Excel (using a blob)
+  const url = window.URL.createObjectURL(res.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "attendance_export.xlsx";
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+// GET employee logs (by date)
+export async function getTaskLogs(employeeId, date) {
+  const res = await api.get("/attendances/tasks", {
+    params: {
+      date: date.toISOString().substring(0, 10)
+    },
+    headers: {
+      "x-employee-id": employeeId,
+    },
+  });
+  return res.data.data;
+}
+
+export async function fetchEmployeesAttendance(orgId, date) {
+  const formattedDate = date.toISOString().substring(0, 10);
+    const token = getToken();
+
+  const res = await api.get("/attendances/employees", {
+    params: { orgId, date: formattedDate },headers: { 
+      Authorization: `Bearer ${token}`,
+    }
+  });
+  return res.data.data;
+}

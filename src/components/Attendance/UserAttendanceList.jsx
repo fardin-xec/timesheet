@@ -1,476 +1,547 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import DataTable from "../common/DataTable";
-import UserAttendanceDialog from "./UserAttendanceDialog";
-import { fetchAttendance } from "../../utils/api";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  fetchTodayTasks, 
+  fetchTasksByDate, 
+  updateAttendanceTask,
+} from '../../utils/api';
+import '../../styles/userAttendanceList.css';
 
-// Using react-chartjs-2 (requires: npm install react-chartjs-2 chart.js)
-import {
-  Chart as ChartJS,
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
-
-// Register Chart.js components
-ChartJS.register(
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-const UserAttendanceList = ({ user }) => {
-  const [attendanceData, setAttendanceData] = useState([]);
+const UserAttendanceList = () => {
+  const [activeTab, setActiveTab] = useState('tasks');
+  const [timeEntries, setTimeEntries] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [selectedAttendance, setSelectedAttendance] = useState(null);
-  const [tabValue, setTabValue] = useState(0);
-  const [chartType, setChartType] = useState("pie");
-  
-  // Get timezone from localStorage or fallback to browser timezone
-  const localTimezone = useRef(
-    (() => {
-      try {
-        return localStorage.getItem("timezone") || Intl.DateTimeFormat().resolvedOptions().timeZone;
-      } catch (e) {
-        return Intl.DateTimeFormat().resolvedOptions().timeZone;
-      }
-    })()
-  ).current;
+  const [error, setError] = useState('');
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [editForm, setEditForm] = useState({ 
+    taskDescription: '', 
+    projectName: '', 
+    taskCategory: '',
+    notes: '' 
+  });
 
-  // Memoize fetchAttendanceData to avoid re-creation
-  const fetchAttendanceData = useCallback(async () => {
-    if (!user) return;
-
+  const loadTasks = useCallback(async () => {
     setLoading(true);
-    setError(null);
-    
+    setError('');
     try {
-      const employeeId = user.employee?.id || user.id;
-      if (!employeeId) {
-        throw new Error("No employee ID available");
-      }
-
-      const lastDay = new Date(year, month, 0).getDate();
-      
-      const response = await fetchAttendance({
-        page: 1,
-        limit: 100,
-        employeeId,
-        startDate: `${year}-${month.toString().padStart(2, "0")}-01`,
-        endDate: `${year}-${month.toString().padStart(2, "0")}-${lastDay.toString().padStart(2, "0")}`,
-      });
-
-      if (!response?.data?.data) {
-        throw new Error("Invalid response format");
-      }
-
-      const formattedData = response.data.data
-        .map((item) => {
-          try {
-            return {
-              ...item,
-              attendanceDateLocal: item.attendanceDate || "N/A",
-              checkInTimeLocal: item.checkInTime
-                ? new Date(`1970-01-01T${item.checkInTime}Z`).toLocaleString(
-                    undefined,
-                    {
-                      timeZone: localTimezone,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )
-                : "N/A",
-              checkOutTimeLocal: item.checkOutTime
-                ? new Date(`1970-01-01T${item.checkOutTime}Z`).toLocaleString(
-                    undefined,
-                    {
-                      timeZone: localTimezone,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )
-                : "N/A",
-              startTimeLocal: item.startTime
-                ? new Date(`1970-01-01T${item.startTime}Z`).toLocaleString(
-                    undefined,
-                    {
-                      timeZone: localTimezone,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )
-                : "N/A",
-              totalWorkingHoursLocal: item.totalWorkingHours
-                ? `${item.totalWorkingHours} hrs`
-                : "N/A",
-              attendanceDateUTC: item.attendanceDate,
-              checkInTimeUTC: item.checkInTime,
-              checkOutTimeUTC: item.checkOutTime,
-              startTimeUTC: item.startTime,
-              totalWorkingHoursUTC: item.totalWorkingHours,
-            };
-          } catch (timeError) {
-            console.warn("Error formatting time for item:", item, timeError);
-            return {
-              ...item,
-              attendanceDateLocal: item.attendanceDate || "N/A",
-              checkInTimeLocal: "N/A",
-              checkOutTimeLocal: "N/A",
-              startTimeLocal: "N/A",
-              totalWorkingHoursLocal: "N/A",
-              attendanceDateUTC: item.attendanceDate,
-              checkInTimeUTC: item.checkInTime,
-              checkOutTimeUTC: item.checkOutTime,
-              startTimeUTC: item.startTime,
-              totalWorkingHoursUTC: item.totalWorkingHours,
-            };
-          }
-        })
-        .sort((a, b) => {
-          const dateA = new Date(a.attendanceDateUTC || 0);
-          const dateB = new Date(b.attendanceDateUTC || 0);
-          return dateB - dateA;
-        });
-
-      setAttendanceData(formattedData);
-      
-      const userName = user.employee?.firstName || user.firstName || "User";
-      const userLastName = user.employee?.lastName || user.lastName || "";
-      toast.success(
-        `Successfully loaded attendance for ${userName} ${userLastName}`.trim()
-      );
+      const data = selectedDate === new Date().toISOString().split('T')[0]
+        ? await fetchTodayTasks()
+        : await fetchTasksByDate(selectedDate);
+      setTimeEntries(data || []);
     } catch (err) {
-      const errorMessage = err.message || "Failed to load attendance data";
-      setError(errorMessage);
-      toast.error(`Error loading attendance: ${errorMessage}`);
-      console.error("Fetch attendance error:", err);
+      setError(err.message || 'Failed to load tasks');
+      setTimeEntries([]);
     } finally {
       setLoading(false);
     }
-  }, [user, month, year, localTimezone]);
+  }, [selectedDate]);
 
   useEffect(() => {
-    fetchAttendanceData();
-  }, [fetchAttendanceData]);
+    if (activeTab === 'tasks') {
+      loadTasks();
+    } 
+  }, [activeTab, loadTasks]);
 
-  const columns = [
-    {
-      field: "attendanceDateLocal",
-      headerName: "Date",
-      sortable: true,
-      valueGetter: (params) => params.row.attendanceDateLocal || "N/A",
-    },
-    { field: "status", headerName: "Status", sortable: true },
-    {
-      field: "checkInTimeLocal",
-      headerName: "Check In",
-      sortable: true,
-      valueGetter: (params) => params.row.checkInTimeLocal || "N/A",
-    },
-    {
-      field: "checkOutTimeLocal",
-      headerName: "Check Out",
-      sortable: true,
-      valueGetter: (params) => params.row.checkOutTimeLocal || "N/A",
-    },
-    {
-      field: "totalWorkingHoursLocal",
-      headerName: "Total Hours",
-      sortable: true,
-      valueGetter: (params) => params.row.totalWorkingHoursLocal || "N/A",
-    },
-    { field: "tasksPerformed", headerName: "Tasks", sortable: true },
-  ];
-
-  const AttendanceStatus = {
-    PRESENT: "present",
-    ABSENT: "absent",
-    ON_LEAVE: "on_leave",
-    HALF_DAY: "half_day",
-  };
-
-  const statusColorMap = {
-    [AttendanceStatus.PRESENT]: "#10B981",
-    [AttendanceStatus.ABSENT]: "#EF4444",
-    [AttendanceStatus.ON_LEAVE]: "#F59E0B",
-    [AttendanceStatus.HALF_DAY]: "#8B5CF6",
-    "absent": "#EF4444", // Additional mapping for "absent" string
-  };
-
-  const handleTabChange = (newValue) => setTabValue(newValue);
-
-  const handleOnClose = () => {
-    setSelectedAttendance(null);
-    fetchAttendanceData();
-  };
-
-  // Fixed analysisData reducer to properly handle null values
-  const analysisData = attendanceData.reduce((acc, record) => {
-    let status = record.status;
+  const handleRefresh = async () => {
+    if (loading || isRefreshing) return;
     
-    // Handle null, undefined, or empty status values
-    if (status === null || status === undefined || status === '') {
-      status = 'absent'; // Default null values to 'absent'
+    setIsRefreshing(true);
+    try {
+      await loadTasks();
+    } catch (err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      // Add a minimum delay to show the animation
+      setTimeout(() => setIsRefreshing(false), 600);
     }
-    
-    // Normalize status to lowercase for consistency
-    status = status.toString().toLowerCase();
-    
-    // Map common variations to standard status names
-    const statusMapping = {
-      'present': 'Present',
-      'absent': 'Absent', 
-      'on_leave': 'On Leave',
-      'half_day': 'Half Day',
-      'leave': 'On Leave', // Alternative for on_leave
-      'halfday': 'Half Day', // Alternative for half_day
-    };
-    
-    const normalizedStatus = statusMapping[status] || status.charAt(0).toUpperCase() + status.slice(1);
-    acc[normalizedStatus] = (acc[normalizedStatus] || 0) + 1;
-    
-    return acc;
-  }, {});
-
-  // Chart data configuration with dynamic colors
-  const getStatusColor = (status) => {
-    const colorMap = {
-      'Present': "#10B981",
-      'Absent': "#EF4444", 
-      'On Leave': "#F59E0B",
-      'Half Day': "#8B5CF6",
-    };
-    return colorMap[status] || "#6B7280"; // Default gray for unknown status
   };
 
-  const chartData = {
-    labels: Object.keys(analysisData),
-    datasets: [
-      {
-        label: "Attendance Count",
-        data: Object.values(analysisData),
-        backgroundColor: Object.keys(analysisData).map(getStatusColor),
-        borderColor: Object.keys(analysisData).map(getStatusColor),
-        borderWidth: 1,
-      },
-    ],
+  const handleDateChange = (e) => {
+    setSelectedDate(e.target.value);
   };
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "top",
-        display: true,
-      },
-      title: {
-        display: true,
-        text: "Attendance Status Distribution",
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            const percentage = ((context.parsed / total) * 100).toFixed(1);
-            return `${context.label}: ${context.parsed} (${percentage}%)`;
-          }
-        }
+  const handleEditClick = (entry) => {
+    setEditingEntry(entry.id);
+    setEditForm({
+      taskDescription: entry.taskDescription || '',
+      projectName: entry.projectName || '',
+      taskCategory: entry.taskCategory || '',
+      notes: entry.notes || ''
+    });
+  };
+
+  const handleEditCancel = () => {
+    setEditingEntry(null);
+    setEditForm({ 
+      taskDescription: '', 
+      projectName: '', 
+      taskCategory: '',
+      notes: '' 
+    });
+  };
+
+  const handleEditSave = async (entryId) => {
+    try {
+      await updateAttendanceTask(entryId, editForm);
+      setEditingEntry(null);
+      loadTasks();
+    } catch (err) {
+      setError(err.message || 'Failed to update task');
+    }
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatDuration = (minutes) => {
+    if (!minutes && minutes !== 0) return 'In Progress';
+    if (minutes === 0) return '0m';
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+  };
+
+  const calculateTotalHours = () => {
+    const total = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
+    return formatDuration(total);
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      active: { label: 'Active', class: 'status-active' },
+      completed: { label: 'Completed', class: 'status-completed' },
+      auto_stopped: { label: 'Auto-stopped', class: 'status-auto-stopped' }
+    };
+    return statusConfig[status] || { label: status, class: 'status-default' };
+  };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { scale: 0.95, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
       }
     },
-    ...(chartType === "bar" && {
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1,
-          },
-        },
-      },
-    }),
-  };
-
-  const handleChartTypeChange = (type) => {
-    setChartType(type);
+    exit: {
+      scale: 0.95,
+      opacity: 0,
+      transition: {
+        duration: 0.2
+      }
+    }
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">My Attendance</h2>
-      
-      {/* Month/Year Selector */}
-      <div className="mb-4 flex gap-4">
-        <select
-          value={month}
-          onChange={(e) => setMonth(Number(e.target.value))}
-          className="border rounded-md p-2"
-          aria-label="Select month"
-          disabled={loading}
-        >
-          {Array.from({ length: 12 }, (_, i) => (
-            <option key={i + 1} value={i + 1}>
-              {new Date(0, i).toLocaleString("default", { month: "long" })}
-            </option>
-          ))}
-        </select>
-        <select
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="border rounded-md p-2"
-          aria-label="Select year"
-          disabled={loading}
-        >
-          {Array.from(
-            { length: 5 },
-            (_, i) => new Date().getFullYear() - i
-          ).map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex border-b mb-4">
-        <button
-          onClick={() => handleTabChange(0)}
-          className={`flex-1 p-4 text-center text-sm transition-colors ${
-            tabValue === 0 ? "bg-blue-100 text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-gray-800"
-          }`}
-          disabled={loading}
-        >
-          View
-        </button>
-        <button
-          onClick={() => handleTabChange(1)}
-          className={`flex-1 p-4 text-center text-sm transition-colors ${
-            tabValue === 1 ? "bg-blue-100 text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-gray-800"
-          }`}
-          disabled={loading}
-        >
-          Analysis
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="p-6">
-        {tabValue === 0 && (
-          <div>
-            <DataTable
-              columns={columns}
-              data={attendanceData}
-              loading={loading}
-              error={error}
-              pagination
-              pageSize={5}
-              sortable
-              searchable
-              statusColorMap={statusColorMap}
-              onRowClick={(row) => setSelectedAttendance(row)}
-              emptyStateMessage={error || "No attendance records found"}
+    <motion.div 
+      className="attendance-container"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <motion.div 
+        className="attendance-header"
+        variants={itemVariants}
+      >
+        <h1>Attendance & Task Management</h1>
+        <div className="header-controls">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              max={new Date().toISOString().split('T')[0]}
+              className="date-picker"
             />
-          </div>
+          </motion.div>
+          <motion.button
+            className="btn-refresh"
+            onClick={handleRefresh}
+            disabled={loading || isRefreshing}
+            whileHover={{ scale: loading || isRefreshing ? 1 : 1.05 }}
+            whileTap={{ scale: loading || isRefreshing ? 1 : 0.95 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <motion.svg 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none"
+              animate={{ rotate: isRefreshing ? 360 : 0 }}
+              transition={{ 
+                duration: 0.6,
+                repeat: isRefreshing ? Infinity : 0,
+                ease: "linear"
+              }}
+            >
+              <path d="M21.5 2V8M21.5 8H15.5M21.5 8L18.5 5C17.3214 3.82143 15.8025 3.03677 14.1608 2.75973C12.519 2.48269 10.8336 2.72779 9.33212 3.46213C7.83062 4.19648 6.58674 5.38605 5.76341 6.86833C4.94009 8.35061 4.57873 10.0547 4.73 11.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2.5 22V16M2.5 16H8.5M2.5 16L5.5 19C6.67858 20.1786 8.19752 20.9632 9.83924 21.2403C11.481 21.5173 13.1664 21.2722 14.6679 20.5379C16.1694 19.8035 17.4133 18.614 18.2366 17.1317C19.0599 15.6494 19.4213 13.9453 19.27 12.25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </motion.svg>
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </motion.button>
+        </div>
+      </motion.div>
+
+      <motion.div 
+        className="tabs"
+        variants={itemVariants}
+      >
+        <motion.button
+          className={`tab-button ${activeTab === 'tasks' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tasks')}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          Task Logs
+        </motion.button>
+      </motion.div>
+
+      <AnimatePresence mode="wait">
+        {error && (
+          <motion.div 
+            className="error-message"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            {error}
+          </motion.div>
         )}
-        
-        {tabValue === 1 && (
-          <div>
-            {/* Chart Type Selector */}
-            <div className="mb-4">
-              <button
-                onClick={() => handleChartTypeChange("pie")}
-                className={`mr-2 px-3 py-1 rounded transition-colors ${
-                  chartType === "pie" 
-                    ? "bg-blue-500 text-white" 
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-                disabled={loading}
-              >
-                Pie Chart
-              </button>
-              <button
-                onClick={() => handleChartTypeChange("bar")}
-                className={`px-3 py-1 rounded transition-colors ${
-                  chartType === "bar" 
-                    ? "bg-blue-500 text-white" 
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-                disabled={loading}
-              >
-                Bar Chart
-              </button>
-            </div>
-            
-            {/* Chart Container */}
-            {Object.keys(analysisData).length > 0 ? (
-              <div style={{ width: "100%", maxWidth: "600px", height: "400px", margin: "0 auto" }}>
-                {chartType === "pie" ? (
-                  <Pie data={chartData} options={chartOptions} />
-                ) : (
-                  <Bar data={chartData} options={chartOptions} />
-                )}
-              </div>
-            ) : (
-              <div className="text-center text-gray-500 py-8">
-                {loading ? "Loading..." : "No data available for analysis."}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div 
+            className="loading-spinner"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            key="loading"
+          >
+            <motion.div 
+              className="spinner"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <p>Loading...</p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {activeTab === 'tasks' && (
+              <div className="tasks-section">
+                <motion.div 
+                  className="tasks-summary"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.div className="summary-card" variants={itemVariants}>
+                    <span className="summary-label">Total Entries</span>
+                    <motion.span 
+                      className="summary-value"
+                      key={timeEntries.length}
+                      initial={{ scale: 1.2, color: "#667eea" }}
+                      animate={{ scale: 1, color: "#ffffff" }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {timeEntries.length}
+                    </motion.span>
+                  </motion.div>
+                  <motion.div className="summary-card" variants={itemVariants}>
+                    <span className="summary-label">Total Hours</span>
+                    <motion.span 
+                      className="summary-value"
+                      key={calculateTotalHours()}
+                      initial={{ scale: 1.2, color: "#667eea" }}
+                      animate={{ scale: 1, color: "#ffffff" }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {calculateTotalHours()}
+                    </motion.span>
+                  </motion.div>
+                  <motion.div className="summary-card" variants={itemVariants}>
+                    <span className="summary-label">Date</span>
+                    <span className="summary-value">
+                      {new Date(selectedDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </motion.div>
+                </motion.div>
+
+                <AnimatePresence mode="wait">
+                  {timeEntries.length === 0 ? (
+                    <motion.div 
+                      className="no-data"
+                      key="no-data"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <motion.svg 
+                        width="64" 
+                        height="64" 
+                        viewBox="0 0 24 24" 
+                        fill="none"
+                        initial={{ rotate: -10 }}
+                        animate={{ rotate: 0 }}
+                        transition={{ type: "spring", stiffness: 100 }}
+                      >
+                        <path d="M9 11L12 14L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </motion.svg>
+                      <p>No time entries found for this date</p>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      className="tasks-list"
+                      key="tasks-list"
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <AnimatePresence>
+                        {timeEntries.map((entry, index) => (
+                          <motion.div 
+                            key={entry.id} 
+                            className="task-card"
+                            variants={cardVariants}
+                            custom={index}
+                            layout
+                            whileHover={{ 
+                              y: -4,
+                              boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)"
+                            }}
+                          >
+                            <div className="task-header">
+                              <div className="task-time">
+                                <motion.span 
+                                  className="time-badge start"
+                                  whileHover={{ scale: 1.05 }}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                                    <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                  </svg>
+                                  {formatTime(entry.startTime)}
+                                </motion.span>
+                                <span className="time-separator">→</span>
+                                <motion.span 
+                                  className="time-badge end"
+                                  whileHover={{ scale: 1.05 }}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                                    <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                  </svg>
+                                  {formatTime(entry.endTime)}
+                                </motion.span>
+                              </div>
+                              <div className="task-meta">
+                                <motion.span 
+                                  className={`status-badge ${getStatusBadge(entry.status).class}`}
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+                                >
+                                  {getStatusBadge(entry.status).label}
+                                </motion.span>
+                                <motion.span 
+                                  className="duration-badge"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+                                >
+                                  {formatDuration(entry.durationMinutes)}
+                                </motion.span>
+                              </div>
+                            </div>
+
+                            <AnimatePresence mode="wait">
+                              {editingEntry === entry.id ? (
+                                <motion.div 
+                                  className="task-edit-form"
+                                  key="edit-form"
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  <div className="form-group">
+                                    <label>Task Description</label>
+                                    <textarea
+                                      value={editForm.taskDescription}
+                                      onChange={(e) => setEditForm({ ...editForm, taskDescription: e.target.value })}
+                                      placeholder="Enter task description"
+                                      rows="3"
+                                    />
+                                  </div>
+                                  <div className="form-row">
+                                    <div className="form-group">
+                                      <label>Project Name</label>
+                                      <input
+                                        type="text"
+                                        value={editForm.projectName}
+                                        onChange={(e) => setEditForm({ ...editForm, projectName: e.target.value })}
+                                        placeholder="Enter project name"
+                                      />
+                                    </div>
+                                    <div className="form-group">
+                                      <label>Category</label>
+                                      <input
+                                        type="text"
+                                        value={editForm.taskCategory}
+                                        onChange={(e) => setEditForm({ ...editForm, taskCategory: e.target.value })}
+                                        placeholder="e.g., Development, Meeting"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="form-group">
+                                    <label>Notes</label>
+                                    <textarea
+                                      value={editForm.notes}
+                                      onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                                      placeholder="Additional notes"
+                                      rows="2"
+                                    />
+                                  </div>
+                                  <div className="form-actions">
+                                    <motion.button 
+                                      className="btn-save" 
+                                      onClick={() => handleEditSave(entry.id)}
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      Save Changes
+                                    </motion.button>
+                                    <motion.button 
+                                      className="btn-cancel" 
+                                      onClick={handleEditCancel}
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      Cancel
+                                    </motion.button>
+                                  </div>
+                                </motion.div>
+                              ) : (
+                                <motion.div 
+                                  className="task-details"
+                                  key="task-details"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <div className="task-info">
+                                    {entry.taskCategory && (
+                                      <div className="info-row">
+                                        <span className="info-label">Category:</span>
+                                        <span className="category-tag">{entry.taskCategory}</span>
+                                      </div>
+                                    )}
+                                    {entry.projectName && (
+                                      <div className="info-row">
+                                        <span className="info-label">Project:</span>
+                                        <span className="info-value">{entry.projectName}</span>
+                                      </div>
+                                    )}
+                                    <div className="info-row">
+                                      <span className="info-label">Description:</span>
+                                      <span className="info-value">
+                                        {entry.taskDescription || 'No description provided'}
+                                      </span>
+                                    </div>
+                                    {entry.notes && (
+                                      <div className="info-row">
+                                        <span className="info-label">Notes:</span>
+                                        <span className="info-value notes-text">{entry.notes}</span>
+                                      </div>
+                                    )}
+                                    {entry.estimatedTimeMinutes && (
+                                      <div className="info-row">
+                                        <span className="info-label">Estimated:</span>
+                                        <span className="info-value">{formatDuration(entry.estimatedTimeMinutes)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {entry.status !== 'active' && (
+                                    <motion.button 
+                                      className="btn-edit" 
+                                      onClick={() => handleEditClick(entry)}
+                                      whileHover={{ scale: 1.05, y: -2 }}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                        <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                      </svg>
+                                      Edit
+                                    </motion.button>
+                                  )}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
-            
-            {/* Summary Statistics */}
-            {Object.keys(analysisData).length > 0 && (
-              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(analysisData).map(([status, count]) => (
-                  <div key={status} className="bg-white p-4 rounded-lg shadow border">
-                    <div className="text-2xl font-bold text-gray-800">{count}</div>
-                    <div className="text-sm text-gray-600">{status}</div>
-                    <div 
-                      className="w-full h-2 rounded mt-2"
-                      style={{ backgroundColor: getStatusColor(status) }}
-                    ></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </motion.div>
         )}
-      </div>
-
-      {/* Attendance Dialog */}
-      {selectedAttendance && selectedAttendance.status !== "on_leave" && (
-        <UserAttendanceDialog
-          open={!!selectedAttendance}
-          onClose={handleOnClose}
-          attendance={selectedAttendance}
-          user={user}
-        />
-      )}
-
-      {/* Toast Container */}
-      <ToastContainer 
-        position="bottom-right" 
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
-    </div>
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

@@ -19,6 +19,7 @@
     "axios": "^1.8.4",
     "chart.js": "^4.4.9",
     "date-fns": "^2.30.0",
+    "file-saver": "^2.0.5",
     "framer-motion": "^12.11.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.482.0",
@@ -26,6 +27,7 @@
     "react": "^19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-country-flag": "^3.1.0",
+    "react-datepicker": "^8.8.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "react-pdf": "^7.7.3",
@@ -35,7 +37,8 @@
     "react-toastify": "^11.0.5",
     "recharts": "^2.15.1",
     "timesheet": "file:",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",

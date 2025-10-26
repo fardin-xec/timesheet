@@ -18,8 +18,7 @@ const Attendance = () => {
   return (
     <>
       <Breadcrumb items={breadcrumbItems} />
-      <h1 className="text-2xl font-bold mb-4">Attendance</h1>
-      <p className="mb-4">View your attendance records.</p>
+     
       <Card>
         {isSuperAdmin ? (
           <SuperAdminAttendanceList orgId={user?.orgId} />

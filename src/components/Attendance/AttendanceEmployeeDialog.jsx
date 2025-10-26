@@ -1,314 +1,298 @@
-import React, { useState, useEffect } from "react";
-import DataTable from "../common/DataTable";
-import { fetchAttendance } from "../../utils/api";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import Chart from "chart.js/auto";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Clock, Calendar, FileText, Tag, AlignLeft, CheckCircle, PlayCircle, AlertCircle, X } from "lucide-react";
+import { fetchTasksByDate } from "../../utils/api";
 
-const AttendanceEmployeeDialog = ({ open, onClose, employee }) => {
-  const [tabValue, setTabValue] = useState(0);
-  const [attendanceData, setAttendanceData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
-  const [year, setYear] = useState(new Date().getFullYear());
-  const localTimezone =
-    localStorage.getItem("timezone") ||
-    Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const [chartType, setChartType] = useState("pie");
+const backdropVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+};
 
-  useEffect(() => {
-    const fetchAttendanceData = async () => {
-      if (open && employee) {
-        setLoading(true);
-        setError(null);
-        try {
-          const response = await fetchAttendance({
-            page: 1,
-            limit: 100,
-            employeeId: employee.id,
-            startDate: `${year}-${month.toString().padStart(2, "0")}-01`,
-            endDate: `${year}-${month.toString().padStart(2, "0")}-${new Date(
-              year,
-              month,
-              0
-            ).getDate()}`,
-          });
+const dialogVariants = {
+  hidden: { y: 50, opacity: 0, scale: 0.95 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    scale: 1,
+    transition: { type: "spring", stiffness: 300, damping: 25 },
+  },
+  exit: { y: 50, opacity: 0, scale: 0.95, transition: { duration: 0.2 } },
+};
 
-          const formattedData = response.data.data
-            .map((item) => ({
-              ...item,
-              attendanceDateLocal: item.attendanceDate ? item.attendanceDate : "N/A",
-              checkInTimeLocal: item.checkInTime
-                ? new Date(`1970-01-01T${item.checkInTime}Z`).toLocaleString(
-                    undefined,
-                    {
-                      timeZone: localTimezone,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )
-                : "N/A",
-              checkOutTimeLocal: item.checkOutTime
-                ? new Date(`1970-01-01T${item.checkOutTime}Z`).toLocaleString(
-                    undefined,
-                    {
-                      timeZone: localTimezone,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )
-                : "N/A",
-              startTimeLocal: item.startTime
-                ? new Date(`1970-01-01T${item.startTime}Z`).toLocaleString(
-                    undefined,
-                    {
-                      timeZone: localTimezone,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )
-                : "N/A",
-              attendanceDateUTC: item.attendanceDate,
-              checkInTimeUTC: item.checkInTime,
-              checkOutTimeUTC: item.checkOutTime,
-            }))
-            .sort(
-              (a, b) =>
-                new Date(b.attendanceDateUTC) - new Date(a.attendanceDateUTC)
-            );
-
-          setAttendanceData(formattedData);
-          toast.success(
-            `Successfully loaded attendance for ${employee.firstName} ${employee.lastName}`
-          );
-        } catch (err) {
-          setError(err.message || "Failed to load attendance data");
-          toast.error(`Error loading attendance: ${err.message || "Unknown error"}`);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchAttendanceData();
-  }, [open, employee, month, year, localTimezone]);
-
-  const handleTabChange = (newValue) => setTabValue(newValue);
-
-  const attendanceColumns = [
-    { field: "attendanceDateLocal", headerName: "Date", sortable: true, valueGetter: (params) => params.row.attendanceDateLocal || "N/A" },
-    { field: "status", headerName: "Status", sortable: true },
-    { field: "checkInTimeLocal", headerName: "Check In", sortable: true, valueGetter: (params) => params.row.checkInTimeLocal || "N/A" },
-    { field: "checkOutTimeLocal", headerName: "Check Out", sortable: true, valueGetter: (params) => params.row.checkOutTimeLocal || "N/A" },
-    { field: "tasksPerformed", headerName: "Tasks", sortable: true },
-  ];
-
-  const AttendanceStatus = {
-    PRESENT: "present",
-    ABSENT: "absent",
-    ON_LEAVE: "on_leave",
-    HALF_DAY: "half_day",
-  };
-
-  const statusColorMap = {
-    [AttendanceStatus.PRESENT]: "#10B981",
-    [AttendanceStatus.ABSENT]: "#EF4444",
-    [AttendanceStatus.ON_LEAVE]: "#F59E0B",
-    [AttendanceStatus.HALF_DAY]: "#8B5CF6",
-  };
-
-  const analysisData = attendanceData.reduce((acc, record) => {
-    acc[record.status] = (acc[record.status] || 0) + 1;
-    return acc;
-  }, {});
-
-  useEffect(() => {
-    if (tabValue === 1 && Object.keys(analysisData).length > 0) {
-      const ctx = document.getElementById("analysisChart").getContext("2d");
-      if (window.myChart) window.myChart.destroy();
-
-      window.myChart = new Chart(ctx, {
-        type: chartType,
-        data: {
-          labels: Object.keys(analysisData),
-          datasets: [
-            {
-              label: "Attendance Count",
-              data: Object.values(analysisData),
-              backgroundColor: ["#10B981", "#EF4444", "#F59E0B", "#8B5CF6"],
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: "top" },
-            title: { display: true, text: "Attendance Status Distribution" },
-          },
-          scales: chartType === "bar" ? {
-            y: {
-              beginAtZero: true,
-              ticks: { stepSize: 1 },
-            },
-            x: { grid: { display: false } },
-          } : {},
-          layout: {
-            padding: 10,
-          },
-        },
-      });
-
-      const handleResize = () => {
-        if (window.myChart) {
-          window.myChart.resize();
-        }
-      };
-      window.addEventListener("resize", handleResize);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-        if (window.myChart) {
-          window.myChart.destroy();
-        }
-      };
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.1,
+      type: "spring",
+      stiffness: 300,
+      damping: 25
     }
-  }, [tabValue, analysisData, chartType]);
+  })
+};
+
+const statusConfig = {
+  active: {
+    bg: "bg-gradient-to-r from-blue-500 to-blue-600",
+    icon: PlayCircle,
+    text: "Active"
+  },
+  completed: {
+    bg: "bg-gradient-to-r from-green-500 to-green-600",
+    icon: CheckCircle,
+    text: "Completed"
+  },
+  auto_stopped: {
+    bg: "bg-gradient-to-r from-amber-500 to-amber-600",
+    icon: AlertCircle,
+    text: "Auto Stopped"
+  }
+};
+
+const AttendanceEmployeeDialog = ({ open = true, onClose = () => {}, employee = { firstName: "John", lastName: "Doe", id: 1 }, date = new Date() }) => {
+  const [selectedDate, setSelectedDate] = useState(
+    date instanceof Date
+      ? date.toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0]
+  );
+  const [taskLogs, setTaskLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadTaskLogs = useCallback(async () => {
+    if (!employee || !selectedDate) return;
+    setLoading(true);
+    setError("");
+    try {
+      const data = await fetchTasksByDate(selectedDate, employee.id);
+      setTaskLogs(data || []);
+    } catch (err) {
+      setError(err.message || "Failed to load task logs");
+      setTaskLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [employee, selectedDate]);
+
+  useEffect(() => {
+    if (open) {
+      loadTaskLogs();
+    }
+  }, [open, loadTaskLogs]);
+
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    const today = new Date().toISOString().split("T")[0];
+    if (newDate <= today) setSelectedDate(newDate);
+  };
+
+  const calculateDuration = (start, end) => {
+    if (!start) return "—";
+    const startTime = new Date(start);
+    const endTime = end ? new Date(end) : new Date();
+    const diff = Math.abs(endTime - startTime);
+    const hours = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    return `${hours}h ${minutes}m`;
+  };
 
   if (!open || !employee) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto  bg-black bg-opacity-50 backdrop-blur-sm"
-
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto z-50"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6 border-b flex justify-between items-center">
-          <h2 className="text-xl font-semibold">{`${employee.firstName} ${employee.lastName}`}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/60 backdrop-blur-md p-4"
+          onClick={onClose}
+          variants={backdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          <motion.div
+            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+            variants={dialogVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-        <div className="flex border-b">
-          <button
-            onClick={() => handleTabChange(0)}
-            className={`flex-1 p-4 text-center text-sm ${
-              tabValue === 0 ? "bg-blue-100 text-blue-600" : "text-gray-600"
-            }`}
-          >
-            Attendance Log
-          </button>
-          <button
-            onClick={() => handleTabChange(1)}
-            className={`flex-1 p-4 text-center text-sm ${
-              tabValue === 1 ? "bg-blue-100 text-blue-600" : "text-gray-600"
-            }`}
-          >
-            Analysis
-          </button>
-        </div>
-        <div className="p-6 max-h-[calc(90vh-150px)] overflow-y-auto">
-          {tabValue === 0 && (
-            <div>
-              <div className="mb-4 flex gap-4">
-                <select
-                  value={month}
-                  onChange={(e) => setMonth(Number(e.target.value))}
-                  className="border rounded-md p-2"
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-8 py-6 text-white relative overflow-hidden">
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold mb-1">
+                    {employee.firstName} {employee.lastName}
+                  </h2>
+                  <p className="text-sm" style={{color: "white"}}>Task Activity Dashboard</p>
+                </div>
+                <motion.button
+                  onClick={onClose}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-200"
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  aria-label="Close dialog"
                 >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {new Date(0, i).toLocaleString("default", { month: "long" })}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  className="border rounded-md p-2"
-                >
-                  {Array.from(
-                    { length: 5 },
-                    (_, i) => new Date().getFullYear() - i
-                  ).map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                  <X className="w-6 h-6" />
+                </motion.button>
               </div>
-              <DataTable
-                columns={attendanceColumns}
-                data={attendanceData}
-                loading={loading}
-                error={error}
-                pagination
-                pageSize={5}
-                sortable
-                statusColorMap={statusColorMap}
-                emptyStateMessage={error || "No attendance records found"}
-              />
             </div>
-          )}
-          {tabValue === 1 && (
-            <div>
-              <div className="mb-4">
-                <button
-                  onClick={() => setChartType("pie")}
-                  className={`mr-2 px-3 py-1 rounded ${
-                    chartType === "pie" ? "bg-blue-500 text-white" : "bg-gray-200"
-                  }`}
-                >
-                  Pie Chart
-                </button>
-                <button
-                  onClick={() => setChartType("bar")}
-                  className={`px-3 py-1 rounded ${
-                    chartType === "bar" ? "bg-blue-500 text-white" : "bg-gray-200"
-                  }`}
-                >
-                  Bar Chart
-                </button>
+
+            {/* Date selector */}
+            <div className="px-8 py-6 bg-white border-b border-gray-200">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-indigo-600" />
+                  <label htmlFor="taskDate" className="font-semibold text-gray-700">
+                    Select Date:
+                  </label>
+                </div>
+                <input
+                  id="taskDate"
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  className="border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 bg-white shadow-sm"
+                />
               </div>
-              {Object.keys(analysisData).length > 0 ? (
-                <div className="w-full flex justify-center">
-                  <canvas
-                    id="analysisChart"
-                    className="w-full max-w-[448px] h-[300px]"
-                  ></canvas>
+            </div>
+
+            {/* Content area */}
+            <div className="p-8 overflow-y-auto max-h-[calc(90vh-220px)]">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <motion.div
+                    className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  <p className="mt-4 text-gray-600 font-medium">Loading task logs...</p>
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="bg-red-100 rounded-full p-4 mb-4">
+                    <AlertCircle className="w-12 h-12 text-red-600" />
+                  </div>
+                  <p className="text-red-600 font-medium">{error}</p>
+                </div>
+              ) : taskLogs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="bg-gray-100 rounded-full p-4 mb-4">
+                    <FileText className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600 font-medium">No task logs found for this date.</p>
+                  <p className="text-gray-400 text-sm mt-2">Try selecting a different date</p>
                 </div>
               ) : (
-                <p className="text-center text-gray-500">
-                  No data available for analysis.
-                </p>
+                <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+                  {taskLogs.map((log, index) => {
+                    const status = statusConfig[log.status?.toLowerCase()] || statusConfig.completed;
+                    const StatusIcon = status.icon;
+                    
+                    return (
+                      <motion.div
+                        key={log.id}
+                        custom={index}
+                        className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 group"
+                        variants={cardVariants}
+                        initial="hidden"
+                        animate="visible"
+                        whileHover={{ y: -4 }}
+                      >
+                        {/* Status bar */}
+                        <div className={`h-1.5 ${status.bg}`}></div>
+                        
+                        <div className="p-5">
+                          {/* Time section */}
+                          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-indigo-600" />
+                              <span className="text-sm font-semibold text-gray-700">
+                                {log.startTime
+                                  ? new Date(log.startTime).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : "N/A"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-pink-600" />
+                              <span className="text-sm font-semibold text-gray-700">
+                                {log.endTime
+                                  ? new Date(log.endTime).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : "Ongoing"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Duration badge */}
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="text-xs font-medium text-gray-500">Duration:</span>
+                            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-semibold">
+                              <Clock className="w-3 h-3" />
+                              {calculateDuration(log.startTime, log.endTime)}
+                            </span>
+                          </div>
+
+                          {/* Task description */}
+                          <h3 className="font-bold text-gray-800 mb-3 text-lg leading-tight group-hover:text-indigo-600 transition-colors">
+                            {log.taskDescription || "No description"}
+                          </h3>
+
+                          {/* Details */}
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-start gap-2">
+                              <FileText className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-semibold text-gray-500 block">Project</span>
+                                <span className="text-sm text-gray-700 block truncate">{log.projectName || "—"}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <Tag className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-semibold text-gray-500 block">Category</span>
+                                <span className="text-sm text-gray-700 block truncate">{log.taskCategory || "—"}</span>
+                              </div>
+                            </div>
+                            {log.notes && (
+                              <div className="flex items-start gap-2">
+                                <AlignLeft className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs font-semibold text-gray-500 block">Notes</span>
+                                  <span className="text-sm text-gray-600 block line-clamp-2">{log.notes}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Status badge */}
+                          <div className="flex justify-end">
+                            <div className={`inline-flex items-center gap-1.5 ${status.bg} text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase shadow-md`}>
+                              <StatusIcon className="w-3.5 h-3.5" />
+                              {status.text}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               )}
             </div>
-          )}
-        </div>
-        <ToastContainer position="bottom-right" autoClose={3000} />
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

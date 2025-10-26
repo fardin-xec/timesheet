@@ -13,8 +13,7 @@ const Profile = () => {
   return (
     <>
       <Breadcrumb items={breadcrumbItems} />
-      <h1>Profile</h1>
-      <p>View and update your profile information.</p>
+      
 
       <div className="profile-page-container">
         <Card>

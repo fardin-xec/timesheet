@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import '../../styles/dataTable.css';
+import React, { useState, useEffect } from "react";
+import "../../styles/dataTable.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { exportToExcel } from '../../utils/exportTable';
 
 const DataTable = ({
   columns = [],
@@ -26,23 +29,34 @@ const DataTable = ({
   bulkActions = [],
   onBulkAction = () => {},
   selectedRows: externalSelectedRows = null, // Allow external control of selection
-  maxSelectable = null, // Limit number of selectable items
+  maxSelectable = null,
+  onDateChange = () => {},
+  selectedDate = null, 
 }) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
-  const [sortField, setSortField] = useState('');
-  const [sortDirection, setSortDirection] = useState('asc');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [searchTerm, setSearchTerm] = useState("");
   const [displayData, setDisplayData] = useState([]);
   const [loadingRows, setLoadingRows] = useState([]);
 
+  const handleDateChange = (date) => {
+    onDateChange(date);
+  };
+  const handleExportClick = () => {
+  exportToExcel(displayData, columns, `attendance-${selectedDate}.xlsx`);
+};
   // Use external selection state if provided
-  const currentSelectedRows = externalSelectedRows !== null ? externalSelectedRows : selectedRows;
+  const currentSelectedRows =
+    externalSelectedRows !== null ? externalSelectedRows : selectedRows;
 
   useEffect(() => {
     if (loading) {
-      const skeletonRows = Array.from({ length: 5 }, (_, i) => ({ id: `skeleton-${i}` }));
+      const skeletonRows = Array.from({ length: 5 }, (_, i) => ({
+        id: `skeleton-${i}`,
+      }));
       setLoadingRows(skeletonRows);
     }
   }, [loading]);
@@ -51,8 +65,8 @@ const DataTable = ({
     let processedData = [...data];
 
     if (searchable && searchTerm) {
-      processedData = processedData.filter(row => {
-        return columns.some(column => {
+      processedData = processedData.filter((row) => {
+        return columns.some((column) => {
           const value = row[column.field];
           if (value === null || value === undefined) return false;
           return String(value).toLowerCase().includes(searchTerm.toLowerCase());
@@ -64,35 +78,41 @@ const DataTable = ({
       processedData.sort((a, b) => {
         const aValue = a[sortField];
         const bValue = b[sortField];
-        if (aValue === null || aValue === undefined) return sortDirection === 'asc' ? -1 : 1;
-        if (bValue === null || bValue === undefined) return sortDirection === 'asc' ? 1 : -1;
+        if (aValue === null || aValue === undefined)
+          return sortDirection === "asc" ? -1 : 1;
+        if (bValue === null || bValue === undefined)
+          return sortDirection === "asc" ? 1 : -1;
 
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortDirection === 'asc'
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          return sortDirection === "asc"
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         } else if (aValue instanceof Date && bValue instanceof Date) {
-          return sortDirection === 'asc'
-            ? aValue - bValue
-            : bValue - aValue;
+          return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
         } else {
-          return sortDirection === 'asc'
-            ? aValue - bValue
-            : bValue - aValue;
+          return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
         }
       });
     }
 
     setDisplayData(processedData);
-  }, [data, searchTerm, sortField, sortDirection, columns, searchable, sortable]);
+  }, [
+    data,
+    searchTerm,
+    sortField,
+    sortDirection,
+    columns,
+    searchable,
+    sortable,
+  ]);
 
   const currentPageData = pagination
     ? displayData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
     : displayData;
 
   const handleRequestSort = (field) => {
-    const isAsc = sortField === field && sortDirection === 'asc';
-    const newDirection = isAsc ? 'desc' : 'asc';
+    const isAsc = sortField === field && sortDirection === "asc";
+    const newDirection = isAsc ? "desc" : "asc";
     setSortDirection(newDirection);
     setSortField(field);
     onSort(field, newDirection);
@@ -109,13 +129,13 @@ const DataTable = ({
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      let newSelected = displayData.map(row => row.id);
-      
+      let newSelected = displayData.map((row) => row.id);
+
       // Apply max selectable limit
       if (maxSelectable && newSelected.length > maxSelectable) {
         newSelected = newSelected.slice(0, maxSelectable);
       }
-      
+
       if (externalSelectedRows === null) {
         setSelectedRows(newSelected);
       }
@@ -139,7 +159,7 @@ const DataTable = ({
       }
       newSelected = [...currentSelectedRows, id];
     } else {
-      newSelected = currentSelectedRows.filter(rowId => rowId !== id);
+      newSelected = currentSelectedRows.filter((rowId) => rowId !== id);
     }
 
     if (externalSelectedRows === null) {
@@ -155,11 +175,13 @@ const DataTable = ({
 
   const handleBulkActionClick = (action) => {
     if (currentSelectedRows.length === 0) {
-      alert('Please select at least one item');
+      alert("Please select at least one item");
       return;
     }
-    
-    const selectedItems = data.filter(row => currentSelectedRows.includes(row.id));
+
+    const selectedItems = data.filter((row) =>
+      currentSelectedRows.includes(row.id)
+    );
     onBulkAction(action, selectedItems, currentSelectedRows);
   };
 
@@ -171,15 +193,24 @@ const DataTable = ({
   };
 
   const isSelected = (id) => currentSelectedRows.indexOf(id) !== -1;
-  const isAllSelected = displayData.length > 0 && currentSelectedRows.length === displayData.length;
-  const isIndeterminate = currentSelectedRows.length > 0 && currentSelectedRows.length < displayData.length;
+  const isAllSelected =
+    displayData.length > 0 && currentSelectedRows.length === displayData.length;
+  const isIndeterminate =
+    currentSelectedRows.length > 0 &&
+    currentSelectedRows.length < displayData.length;
 
   const renderCellContent = (column, row) => {
-    if (loading && row.id?.toString().includes('skeleton')) {
-      return <div className="w-3/4 h-4 bg-gray-200 animate-pulse rounded"></div>;
+    if (loading && row.id?.toString().includes("skeleton")) {
+      return (
+        <div className="w-3/4 h-4 bg-gray-200 animate-pulse rounded"></div>
+      );
     }
 
-    if (column.field === 'status' && statusColorMap[row[column.field]]) {
+    if (column.field === "status" && statusColorMap[row[column.field]]) {
+      console.log(statusColorMap);
+      console.log(row[column.field]);
+
+      
       return (
         <span
           className={`inline-flex items-center px-2 py-1 rounded text-sm font-medium`}
@@ -207,7 +238,10 @@ const DataTable = ({
   return (
     <div className="data-table-container relative z-10">
       {error && (
-        <div className="error-alert bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+        <div
+          className="error-alert bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -218,7 +252,8 @@ const DataTable = ({
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-blue-800">
-                {currentSelectedRows.length} item{currentSelectedRows.length !== 1 ? 's' : ''} selected
+                {currentSelectedRows.length} item
+                {currentSelectedRows.length !== 1 ? "s" : ""} selected
                 {maxSelectable && ` (max ${maxSelectable})`}
               </span>
               <button
@@ -235,11 +270,11 @@ const DataTable = ({
                     key={index}
                     onClick={() => handleBulkActionClick(action)}
                     className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      action.variant === 'danger'
-                        ? 'bg-red-600 text-white hover:bg-red-700'
-                        : action.variant === 'success'
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                      action.variant === "danger"
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : action.variant === "success"
+                        ? "bg-green-600 text-white hover:bg-green-700"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
                     }`}
                     disabled={loading}
                   >
@@ -253,25 +288,32 @@ const DataTable = ({
         </div>
       )}
 
-      {(searchable || toolbarContent || onRefresh || onExport) && (
-        <div className="table-toolbar">
+      {(searchable || onRefresh || onExport || selectedDate !== null) && (
+        <div className="table-toolbar flex flex-wrap items-center gap-2 mb-2">
+          {/* Date picker to the left */}
+          {selectedDate !== null && (
+            <DatePicker
+              selected={selectedDate}
+              onChange={handleDateChange}
+              maxDate={new Date()}
+              className="date-picker-input p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              dateFormat="yyyy-MM-dd"
+              placeholderText="Select date"
+            />
+          )}
+
+          {/* Search input */}
           {searchable && (
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={handleSearchChange}
-              className="search-field w-full md:w-1/3 mb-2 md:mb-0 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="search-field w-full md:w-1/3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           )}
 
-          {toolbarContent && (
-            <div className="toolbar-content flex-1 px-4">
-              {toolbarContent}
-            </div>
-          )}
-
-          <div className="toolbar-actions flex space-x-2">
+          <div className="toolbar-actions flex space-x-2 ml-auto">
             {onRefresh && (
               <button
                 onClick={onRefresh}
@@ -279,49 +321,54 @@ const DataTable = ({
                 className="p-2 text-gray-500 hover:text-gray-700 disabled:text-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                 aria-label="Refresh data"
               >
-                <svg className={`w-4 h-4 ${loading ? 'spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8 8 0 006.858 16m0 0l-2.5-2.5M6.858 16l2.5-2.5" />
+                <svg
+                  className={`w-4 h-4 ${loading ? "spin" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 4v5h.582m15.356 2A8 8 0 006.858 16m0 0l-2.5-2.5M6.858 16l2.5-2.5"
+                  />
                 </svg>
               </button>
             )}
 
             {onExport && (
               <button
-                onClick={onExport}
+                onClick={handleExportClick}
                 disabled={loading}
                 className="p-2 text-gray-500 hover:text-gray-700 disabled:text-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label="Export data"
+                aria-label="Export to Excel"
+                title="Export to Excel"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
                 </svg>
               </button>
             )}
-
-            <button
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Filter list"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-            </button>
-
-            <button
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="More options"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01" />
-              </svg>
-            </button>
           </div>
         </div>
       )}
 
       <div className="table-container overflow-x-auto">
         <table
-          className={`w-full ${stickyHeader ? 'sticky-header' : ''} ${dense ? 'dense' : ''} ${loading ? 'loading-table' : ''}`}
+          className={`w-full ${stickyHeader ? "sticky-header" : ""} ${
+            dense ? "dense" : ""
+          } ${loading ? "loading-table" : ""}`}
         >
           <thead>
             <tr>
@@ -330,11 +377,14 @@ const DataTable = ({
                   <input
                     type="checkbox"
                     checked={isAllSelected}
-                    ref={input => {
+                    ref={(input) => {
                       if (input) input.indeterminate = isIndeterminate;
                     }}
                     onChange={handleSelectAllClick}
-                    disabled={loading || (maxSelectable && displayData.length > maxSelectable)}
+                    disabled={
+                      loading ||
+                      (maxSelectable && displayData.length > maxSelectable)
+                    }
                     className="form-checkbox text-blue-600 focus:ring-blue-500"
                   />
                 </th>
@@ -342,17 +392,41 @@ const DataTable = ({
               {columns.map((column) => (
                 <th
                   key={column.field}
-                  className={`p-2 border-b fw-bold ${sortable && column.sortable !== false ? 'cursor-pointer hover:bg-gray-100' : ''}`}
-                  onClick={sortable && column.sortable !== false ? () => handleRequestSort(column.field) : null}
+                  className={`p-2 border-b fw-bold ${
+                    sortable && column.sortable !== false
+                      ? "cursor-pointer hover:bg-gray-100"
+                      : ""
+                  }`}
+                  onClick={
+                    sortable && column.sortable !== false
+                      ? () => handleRequestSort(column.field)
+                      : null
+                  }
                 >
                   {column.headerName}
-                  {sortable && column.sortable !== false && sortField === column.field && (
-                    <span className={`ml-1 ${sortDirection === 'asc' ? 'rotate-180' : ''}`}>
-                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </span>
-                  )}
+                  {sortable &&
+                    column.sortable !== false &&
+                    sortField === column.field && (
+                      <span
+                        className={`ml-1 ${
+                          sortDirection === "asc" ? "rotate-180" : ""
+                        }`}
+                      >
+                        <svg
+                          className="w-4 h-4 inline"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </span>
+                    )}
                 </th>
               ))}
             </tr>
@@ -360,7 +434,10 @@ const DataTable = ({
           <tbody>
             {loading ? (
               loadingRows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-100 transition-colors">
+                <tr
+                  key={row.id}
+                  className="hover:bg-gray-100 transition-colors"
+                >
                   {selectable && (
                     <td className="p-2 border-b">
                       <div className="w-5 h-5 bg-gray-200 animate-pulse rounded"></div>
@@ -376,16 +453,19 @@ const DataTable = ({
             ) : currentPageData.length > 0 ? (
               currentPageData.map((row) => {
                 const isItemSelected = selectable && isSelected(row.id);
-                const isRowDisabled = maxSelectable && !isItemSelected && currentSelectedRows.length >= maxSelectable;
-                
+                const isRowDisabled =
+                  maxSelectable &&
+                  !isItemSelected &&
+                  currentSelectedRows.length >= maxSelectable;
+
                 return (
                   <tr
                     key={row.id}
                     onClick={onRowClick ? () => onRowClick(row) : null}
                     className={`hover:bg-gray-100 transition-colors ${
-                      isItemSelected ? 'bg-blue-50' : ''
-                    } ${onRowClick ? 'cursor-pointer' : ''} ${
-                      isRowDisabled ? 'opacity-50' : ''
+                      isItemSelected ? "bg-blue-50" : ""
+                    } ${onRowClick ? "cursor-pointer" : ""} ${
+                      isRowDisabled ? "opacity-50" : ""
                     }`}
                   >
                     {selectable && (
@@ -404,7 +484,7 @@ const DataTable = ({
                       <td
                         key={column.field}
                         className="p-2 border-b"
-                        align={column.align || 'left'}
+                        align={column.align || "left"}
                       >
                         {renderCellContent(column, row)}
                       </td>
@@ -429,7 +509,9 @@ const DataTable = ({
       {pagination && displayData.length > 0 && !loading && (
         <div className="flex flex-col md:flex-row justify-between items-center px-4 py-3 bg-gray-50 border-t gap-4">
           <span className="text-sm text-gray-700">
-            Showing {(page * rowsPerPage) + 1} to {Math.min((page + 1) * rowsPerPage, displayData.length)} of {displayData.length} entries
+            Showing {page * rowsPerPage + 1} to{" "}
+            {Math.min((page + 1) * rowsPerPage, displayData.length)} of{" "}
+            {displayData.length} entries
           </span>
           <div className="flex items-center gap-2">
             <select
@@ -454,8 +536,18 @@ const DataTable = ({
               className="px-3 py-1 bg-gray-200 rounded-md text-sm hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-1"
               aria-label="Previous page"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Previous
             </button>
@@ -482,8 +574,18 @@ const DataTable = ({
               aria-label="Next page"
             >
               Next
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>

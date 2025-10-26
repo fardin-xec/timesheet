@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Button from "../common/Button";
-import { updateAttendance } from "../../utils/api";
+import { checkOut,checkIn } from "../../utils/api";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -229,7 +229,7 @@ const DashboardHeader = ({ user, onLogout }) => {
 
     try {
       const data = { checkInTime: utcTime, status: "present" };
-      await updateAttendance(user?.employee?.id, data);
+      await checkIn(user?.employee?.id, data);
       toast.success("Successfully checked in!");
       console.log("Checked in at:", utcTime);
     } catch (err) {
@@ -266,7 +266,7 @@ const DashboardHeader = ({ user, onLogout }) => {
 
     try {
       const data = { checkOutTime: utcTime };
-      await updateAttendance(user?.employee?.id, data);
+      await checkOut(user?.employee?.id, data);
       toast.success("Successfully checked out!");
       console.log("Checked out at:", utcTime);
     } catch (err) {
