@@ -1420,3 +1420,27 @@ export async function fetchEmployeesAttendance(orgId, date) {
   });
   return res.data.data;
 }
+
+export const fetchMonthlyLogs = async (startDate, endDate) => {
+  try {
+        const token = getToken();
+
+    const response = await api.get(
+      `/attendances/monthly-logs?startDate=${startDate}&endDate=${endDate}`,{
+         headers: { 
+      Authorization: `Bearer ${token}`,
+    }
+      }
+    );
+    console.log(response)
+    if (response.status!==200) {
+      const error = await response.data.json();
+      throw new Error(error.message || 'Failed to fetch monthly logs');
+    }
+
+    return  response.data;
+  } catch (error) {
+    console.error('Error fetching monthly logs:', error);
+    throw error;
+  }
+};

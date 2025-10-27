@@ -1,235 +1,1265 @@
-/* Smooth backdrop animation */
+/* ============================================
+   ATTENDANCE DIALOG STYLES
+   ============================================ */
+
+/* ============================================
+   BASE STYLES & RESET
+   ============================================ */
+:root {
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --secondary-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --success-gradient: linear-gradient(135deg, #10b981, #059669);
+  --danger-gradient: linear-gradient(135deg, #ef4444, #dc2626);
+  --warning-gradient: linear-gradient(135deg, #f59e0b, #d97706);
+  --info-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  --shadow-primary: 0 4px 12px rgba(102, 126, 234, 0.3);
+  
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   DIALOG CONTAINER
+   ============================================ */
 .dialog-backdrop {
-  animation: fadeIn 0.3s ease-out;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  padding: 16px;
+  overflow-y: auto;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Dialog entrance animation */
 .dialog-container {
-  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(to bottom right, #ffffff, #f9fafb);
+  border-radius: 16px;
+  max-width: 1600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(229, 231, 235, 0.5);
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Smooth close button animation */
-.close-button {
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: center;
-}
-
-.close-button:hover {
-  transform: scale(1.1) rotate(90deg);
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.close-button:active {
-  transform: scale(0.95) rotate(90deg);
-  transition: all 0.1s ease;
-}
-
-.close-button::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.close-button:hover::before {
-  opacity: 1;
-}
-
-/* Card hover effect enhancement */
-.task-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.task-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Status badge pulse animation */
-.status-badge {
-  animation: subtlePulse 2s ease-in-out infinite;
-}
-
-@keyframes subtlePulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-
-/* Loading spinner smooth rotation */
-.loading-spinner {
-  animation: smoothSpin 1s linear infinite;
-}
-
-@keyframes smoothSpin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Date input focus animation */
-.date-input {
-  transition: all 0.2s ease;
-}
-
-.date-input:focus {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1), 0 2px 4px -1px rgba(99, 102, 241, 0.06);
-}
-
-/* Card stagger animation */
-.task-card {
-  animation: fadeInUp 0.5s ease-out backwards;
-}
-
-.task-card:nth-child(1) { animation-delay: 0.05s; }
-.task-card:nth-child(2) { animation-delay: 0.1s; }
-.task-card:nth-child(3) { animation-delay: 0.15s; }
-.task-card:nth-child(4) { animation-delay: 0.2s; }
-.task-card:nth-child(5) { animation-delay: 0.25s; }
-.task-card:nth-child(6) { animation-delay: 0.3s; }
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Header gradient animation */
-.header-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  background-size: 200% 200%;
-  animation: gradientShift 10s ease infinite;
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* Duration badge shimmer */
-.duration-badge {
+/* ============================================
+   DIALOG HEADER
+   ============================================ */
+.dialog-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
+  padding: 32px;
+  color: white;
   position: relative;
   overflow: hidden;
 }
 
-.duration-badge::after {
+.dialog-header::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 0;
+}
+
+.dialog-header-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialog-header h2 {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: white;
+}
+
+.dialog-header p {
+  font-size: 14px;
+  color: white;
+  opacity: 0.95;
+  margin: 0;
+}
+
+.dialog-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  color: white;
+}
+
+.dialog-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg) scale(1.1);
+}
+
+.dialog-close-btn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* ============================================
+   TABS SECTION
+   ============================================ */
+.dialog-tabs {
+  display: flex;
+  border-bottom: 2px solid #e5e7eb;
+  background: white;
+  padding: 0 32px;
+}
+
+.dialog-tab-button {
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: -2px;
+}
+
+.dialog-tab-button:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.dialog-tab-button.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+/* ============================================
+   DATE SELECTOR SECTION
+   ============================================ */
+.dialog-date-selector {
+  padding: 24px 32px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dialog-date-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dialog-date-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.dialog-date-input {
+  border: 2px solid #d1d5db;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background: white;
+  cursor: pointer;
+  transition: var(--transition);
+  outline: none;
+  min-width: 160px;
+}
+
+.dialog-date-input:hover {
+  border-color: #667eea;
+}
+
+.dialog-date-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.dialog-btn-apply {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.dialog-btn-apply:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.dialog-btn-apply:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   DIALOG CONTENT AREA
+   ============================================ */
+.dialog-content {
+  padding: 32px;
+  overflow-y: auto;
+  max-height: calc(90vh - 280px);
+}
+
+/* ============================================
+   LOADING & ERROR STATES
+   ============================================ */
+.dialog-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+}
+
+.dialog-spinner {
+  width: 64px;
+  height: 64px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+}
+
+.dialog-loading p {
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.dialog-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+}
+
+.dialog-error-icon {
+  background: #fee2e2;
+  border-radius: 50%;
+  padding: 16px;
+  color: #dc2626;
+}
+
+.dialog-error p {
+  color: #dc2626;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.dialog-no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+}
+
+.dialog-no-data-icon {
+  background: #f3f4f6;
+  border-radius: 50%;
+  padding: 16px;
+  color: #9ca3af;
+}
+
+.dialog-no-data p {
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.dialog-no-data p.subtitle {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 14px;
+}
+
+/* ============================================
+   TASK CARDS GRID
+   ============================================ */
+.dialog-tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.dialog-task-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.dialog-task-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.dialog-task-status-bar {
+  height: 6px;
+}
+
+.dialog-task-card-content {
+  padding: 20px;
+}
+
+.dialog-task-time-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dialog-time-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.dialog-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
+  color: #667eea;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.dialog-task-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 18px;
+  line-height: 1.4;
+  margin-bottom: 16px;
+  transition: var(--transition);
+}
+
+.dialog-task-card:hover .dialog-task-title {
+  color: #667eea;
+}
+
+.dialog-task-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dialog-task-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.dialog-task-detail-icon {
+  color: #9ca3af;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dialog-task-detail-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog-task-detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.dialog-task-detail-value {
+  font-size: 14px;
+  color: #1f2937;
+  word-wrap: break-word;
+  display: block;
+}
+
+.dialog-task-detail-value.truncate {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dialog-task-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   MONTHLY LOGS SUMMARY CARDS
+   ============================================ */
+.dialog-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.dialog-summary-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e5e7eb;
+  transition: var(--transition);
+}
+
+.dialog-summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.dialog-summary-card.highlight {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: var(--shadow-primary);
+  border: none;
+}
+
+.dialog-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.dialog-summary-card.highlight .dialog-summary-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dialog-summary-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  display: block;
+}
+
+.dialog-summary-card.highlight .dialog-summary-value {
+  color: white;
+}
+
+/* Status Colors for Summary Values */
+.dialog-summary-value.status-present {
+  color: #10b981;
+}
+
+.dialog-summary-value.status-absent {
+  color: #ef4444;
+}
+
+.dialog-summary-value.status-on-leave {
+  color: #8b5cf6;
+}
+
+.dialog-summary-value.status-half-day {
+  color: #f59e0b;
+}
+
+/* ============================================
+   MONTHLY TABLE
+   ============================================ */
+.dialog-table-container {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.dialog-table-wrapper {
+  overflow-x: auto;
+}
+
+.dialog-table {
   width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  animation: shimmer 3s infinite;
+  border-collapse: collapse;
+  font-size: 14px;
 }
 
-@keyframes shimmer {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
+.dialog-table thead {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
 }
 
-/* Smooth scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
+.dialog-table thead th {
+  padding: 16px 16px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 11px;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.dialog-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.dialog-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.dialog-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.dialog-table tbody td {
+  padding: 16px 16px;
+  vertical-align: middle;
+}
+
+.dialog-table-date-cell {
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.dialog-table-day-cell {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dialog-table-time-cell {
+  font-family: 'Courier New', monospace;
+  color: #4b5563;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dialog-table-hours-cell {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 15px;
+}
+
+.dialog-table-tasks-cell {
+  text-align: center;
+}
+
+.dialog-view-tasks-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #667eea;
+  background: transparent;
+  border: none;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.dialog-view-tasks-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #5568d3;
+}
+
+.dialog-view-tasks-btn:active {
+  transform: scale(0.95);
+}
+
+/* ============================================
+   EXPANDED ROW - NESTED TASKS
+   ============================================ */
+.dialog-expanded-row {
+  background: linear-gradient(to bottom right, #f9fafb, rgba(102, 126, 234, 0.05));
+}
+
+.dialog-expanded-row td {
+  padding: 0 !important;
+}
+
+.dialog-nested-content {
+  padding: 32px;
+}
+
+.dialog-nested-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 20px 0;
+}
+
+.dialog-nested-table-wrapper {
+  overflow-x: auto;
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.dialog-nested-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dialog-nested-table thead {
+  background: #f9fafb;
+}
+
+.dialog-nested-table thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dialog-nested-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.dialog-nested-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.dialog-nested-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.dialog-nested-table tbody td {
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.dialog-nested-duration {
+  font-weight: 700;
+  color: #667eea;
+}
+
+.dialog-nested-category {
+  display: inline-block;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.dialog-nested-project {
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.dialog-nested-description {
+  color: #6b7280;
+  max-width: 400px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dialog-nested-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   STATUS BADGES - MATCHING USER ATTENDANCE LIST
+   ============================================ */
+.status-badge,
+.status-badge-small {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid transparent;
+  transition: var(--transition);
+}
+
+.status-badge-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.status-badge::before,
+.status-badge-small::before {
+  content: '';
   width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 2s ease-in-out infinite;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
+.status-badge-small::before {
+  width: 6px;
+  height: 6px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #667eea, #764ba2);
-  border-radius: 10px;
-  transition: background 0.3s ease;
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #764ba2, #667eea);
+/* Active Status */
+.status-badge.status-active,
+.status-badge-small.status-active {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
 }
 
-/* Icon hover effects */
-.icon-hover {
-  transition: all 0.2s ease;
+.status-badge.status-active::before,
+.status-badge-small.status-active::before {
+  background: #3b82f6;
 }
 
-.icon-hover:hover {
-  transform: scale(1.1);
-  filter: brightness(1.2);
+.status-badge.status-active:hover,
+.status-badge-small.status-active:hover {
+  background: #bfdbfe;
+  border-color: #93c5fd;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-/* Empty state animation */
-.empty-state {
-  animation: floatIn 0.6s ease-out;
+/* Completed Status */
+.status-badge.status-completed,
+.status-badge-small.status-completed {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
 }
 
-@keyframes floatIn {
+.status-badge.status-completed::before,
+.status-badge-small.status-completed::before {
+  background: #10b981;
+}
+
+.status-badge.status-completed:hover,
+.status-badge-small.status-completed:hover {
+  background: #a7f3d0;
+  border-color: #6ee7b7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Auto-stopped Status */
+.status-badge.status-auto-stopped,
+.status-badge-small.status-auto-stopped {
+  background: #fed7aa;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.status-badge.status-auto-stopped::before,
+.status-badge-small.status-auto-stopped::before {
+  background: #f59e0b;
+}
+
+.status-badge.status-auto-stopped:hover,
+.status-badge-small.status-auto-stopped:hover {
+  background: #fde68a;
+  border-color: #fcd34d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Present Status */
+.status-badge.status-present,
+.status-badge-small.status-present {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.status-badge.status-present::before,
+.status-badge-small.status-present::before {
+  background: #10b981;
+}
+
+.status-badge.status-present:hover,
+.status-badge-small.status-present:hover {
+  background: #a7f3d0;
+  border-color: #6ee7b7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Absent Status */
+.status-badge.status-absent,
+.status-badge-small.status-absent {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.status-badge.status-absent::before,
+.status-badge-small.status-absent::before {
+  background: #ef4444;
+}
+
+.status-badge.status-absent:hover,
+.status-badge-small.status-absent:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* On Leave Status */
+.status-badge.status-on-leave,
+.status-badge-small.status-on-leave {
+  background: #e9d5ff;
+  color: #6b21a8;
+  border-color: #d8b4fe;
+}
+
+.status-badge.status-on-leave::before,
+.status-badge-small.status-on-leave::before {
+  background: #a855f7;
+}
+
+.status-badge.status-on-leave:hover,
+.status-badge-small.status-on-leave:hover {
+  background: #d8b4fe;
+  border-color: #c084fc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+}
+
+/* Half Day Status */
+.status-badge.status-half-day,
+.status-badge-small.status-half-day {
+  background: #fed7aa;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.status-badge.status-half-day::before,
+.status-badge-small.status-half-day::before {
+  background: #f59e0b;
+}
+
+.status-badge.status-half-day:hover,
+.status-badge-small.status-half-day:hover {
+  background: #fde68a;
+  border-color: #fcd34d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Week Off Status */
+.status-badge.status-week-off,
+.status-badge-small.status-week-off {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.status-badge.status-week-off::before,
+.status-badge-small.status-week-off::before {
+  background: #6b7280;
+}
+
+.status-badge.status-week-off:hover,
+.status-badge-small.status-week-off:hover {
+  background: #d1d5db;
+  border-color: #9ca3af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+/* Default Status */
+.status-badge.status-default,
+.status-badge-small.status-default {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.status-badge.status-default::before,
+.status-badge-small.status-default::before {
+  background: #9ca3af;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablets (1024px and below) */
+@media (max-width: 1024px) {
+  .dialog-container {
+    max-width: 95vw;
+  }
+
+  .dialog-header {
+    padding: 24px;
+  }
+
+  .dialog-header h2 {
+    font-size: 28px;
+  }
+
+  .dialog-content {
+    padding: 24px;
+  }
+
+  .dialog-tasks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .dialog-summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+}
+
+/* Mobile (768px and below) */
+@media (max-width: 768px) {
+  .dialog-backdrop {
+    padding: 8px;
+  }
+
+  .dialog-container {
+    max-width: 100%;
+    max-height: 95vh;
+  }
+
+  .dialog-header {
+    padding: 20px;
+  }
+
+  .dialog-header h2 {
+    font-size: 24px;
+  }
+
+  .dialog-tabs {
+    padding: 0 20px;
+  }
+
+  .dialog-tab-button {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+
+  .dialog-date-selector {
+    padding: 20px;
+  }
+
+  .dialog-date-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dialog-date-input,
+  .dialog-btn-apply {
+    width: 100%;
+  }
+
+  .dialog-content {
+    padding: 20px;
+    max-height: calc(95vh - 280px);
+  }
+
+  .dialog-tasks-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .dialog-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dialog-task-card-content {
+    padding: 16px;
+  }
+
+  .dialog-task-title {
+    font-size: 16px;
+  }
+
+  .dialog-nested-content {
+    padding: 20px;
+  }
+
+  .dialog-nested-title {
+    font-size: 16px;
+  }
+
+  .dialog-table-wrapper,
+  .dialog-nested-table-wrapper {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dialog-table,
+  .dialog-nested-table {
+    min-width: 800px;
+  }
+}
+
+/* Small Mobile (480px and below) */
+@media (max-width: 480px) {
+  .dialog-header {
+    padding: 16px;
+  }
+
+  .dialog-header h2 {
+    font-size: 20px;
+  }
+
+  .dialog-close-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .dialog-tabs {
+    padding: 0 16px;
+  }
+
+  .dialog-date-selector {
+    padding: 16px;
+  }
+
+  .dialog-content {
+    padding: 16px;
+  }
+
+  .dialog-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-summary-card {
+    padding: 16px;
+  }
+
+  .dialog-summary-value {
+    font-size: 24px;
+  }
+
+  .dialog-task-card-content {
+    padding: 12px;
+  }
+
+  .dialog-task-title {
+    font-size: 15px;
+  }
+
+  .dialog-nested-content {
+    padding: 16px;
+  }
+
+  .dialog-table,
+  .dialog-nested-table {
+    min-width: 700px;
+    font-size: 12px;
+  }
+
+  .dialog-table thead th,
+  .dialog-table tbody td {
+    padding: 12px 10px;
+  }
+
+  .dialog-nested-table thead th,
+  .dialog-nested-table tbody td {
+    padding: 10px 12px;
+  }
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+.dialog-content::-webkit-scrollbar,
+.dialog-table-wrapper::-webkit-scrollbar,
+.dialog-nested-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dialog-content::-webkit-scrollbar-track,
+.dialog-table-wrapper::-webkit-scrollbar-track,
+.dialog-nested-table-wrapper::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb,
+.dialog-table-wrapper::-webkit-scrollbar-thumb,
+.dialog-nested-table-wrapper::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover,
+.dialog-table-wrapper::-webkit-scrollbar-thumb:hover,
+.dialog-nested-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #5568d3;
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+.dialog-close-btn:focus-visible,
+.dialog-tab-button:focus-visible,
+.dialog-date-input:focus-visible,
+.dialog-btn-apply:focus-visible,
+.dialog-view-tasks-btn:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes dialogSlideIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: scale(0.95) translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
 
-/* Backdrop blur effect */
-.backdrop-blur-custom {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+@keyframes expandRow {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
 }
 
-/* Smooth transitions for all interactive elements */
-button, input, .task-card, .close-button {
-  -webkit-tap-highlight-color: transparent;
-  backface-visibility: hidden;
-  -webkit-font-smoothing: antialiased;
+.dialog-container {
+  animation: dialogSlideIn 0.3s ease-out;
+}
+
+.dialog-expanded-row {
+  animation: expandRow 0.3s ease-out;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+  .dialog-backdrop {
+    background: white;
+  }
+
+  .dialog-header {
+    background: white;
+    color: black;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .dialog-close-btn,
+  .dialog-tabs,
+  .dialog-date-selector,
+  .dialog-view-tasks-btn {
+    display: none !important;
+  }
+
+  .dialog-task-card,
+  .dialog-table-container {
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
+
+  .dialog-expanded-row {
+    page-break-inside: avoid;
+  }
 }
