@@ -359,9 +359,12 @@
 /* Active Status */
 .status-badge.status-active,
 .status-badge-small.status-active {
+  height: fit-content;
   background: #dbeafe;
   color: #1e40af;
   border-color: #bfdbfe;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .status-badge.status-active::before,
@@ -760,8 +763,8 @@
 .category-tag,
 .category-tag-small {
   padding: 4px 12px;
-  /* background: var(--primary-gradient); */
-  color: rgb(19, 19, 19);
+  background: var(--primary-gradient);
+  color: rgb(254, 254, 254);
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
