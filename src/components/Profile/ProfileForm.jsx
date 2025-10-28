@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../redux/hooks/useAuth";
-import Input from "../common/Input";
 import Button from "../common/Button";
 import Loader from "../common/Loader";
 import Toast from "../common/Toast";
@@ -9,8 +8,32 @@ import { personalInfoAPI } from "../../utils/api";
 import "../../styles/profile.css";
 import ReactCountryFlag from "react-country-flag";
 import { Dialog, IconButton } from "@mui/material";
-
 import { Eye, Trash } from "lucide-react";
+
+// Phone number length by country code
+const PHONE_LENGTH_BY_COUNTRY = {
+  US: 10,
+  CA: 10,
+  IN: 10,
+  GB: 10,
+  AU: 9,
+  DE: 11,
+  FR: 9,
+  JP: 10,
+  CN: 11,
+  BR: 11,
+  MX: 10,
+  IT: 10,
+  ES: 9,
+  NL: 9,
+  SE: 9,
+  CH: 9,
+  SG: 8,
+  AE: 9,
+  SA: 9,
+  QA: 8,
+  ZA: 9,
+};
 
 const ProfileForm = () => {
   const { user } = useAuth();
@@ -29,15 +52,7 @@ const ProfileForm = () => {
 
   const BASE_URL = "http://localhost:3000";
 
-  const handlePreviewDocument = (path) => {
-    const url = `${BASE_URL}/${path.replace(/^\/+/, "")}`;
-    setPreviewUrl(url);
-    setPreviewOpen(true);
-  };
-
-  // Combined Personal Information State (Profile + Details)
   const [personalInfo, setPersonalInfo] = useState({
-    // Profile fields
     firstName: "",
     lastName: "",
     middleName: "",
@@ -47,7 +62,6 @@ const ProfileForm = () => {
     department: "",
     bio: "",
     avatar: "",
-    // Details fields
     residentialAddress: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
@@ -56,7 +70,6 @@ const ProfileForm = () => {
   });
   const [personalErrors, setPersonalErrors] = useState({});
 
-  // Bank Information State
   const [bankInfo, setBankInfo] = useState({
     accountHolderName: "",
     bankName: "",
@@ -67,20 +80,16 @@ const ProfileForm = () => {
   });
   const [bankErrors, setBankErrors] = useState({});
 
-  // Documents State
   const [documents, setDocuments] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [documentType, setDocumentType] = useState("AADHAR_CARD");
 
-  // Avatar Upload State
   const [selectedAvatarFile, setSelectedAvatarFile] = useState(null);
   const [previewAvatarUrl, setPreviewAvatarUrl] = useState(null);
 
-  // Phone & Country Code State
   const [selectedCountry, setSelectedCountry] = useState("IN");
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
-  // Emergency Contact Phone Country Code State
   const [emergencyCountry, setEmergencyCountry] = useState("IN");
   const [showEmergencyCountryDropdown, setShowEmergencyCountryDropdown] =
     useState(false);
@@ -126,7 +135,90 @@ const ProfileForm = () => {
     "Other",
   ];
 
-  // Parse phone number to extract country code
+  // VALIDATION FUNCTIONS (matching dialog code)
+  const validateName = (name, fieldName) => {
+    if (!name || name.trim() === "") {
+      return { valid: true, message: "" }; // Optional field
+    }
+    if (name.trim().length < 2) {
+      return {
+        valid: false,
+        message: `${fieldName} must be at least 2 characters`,
+      };
+    }
+    if (!/^[a-zA-Z\s'-]+$/.test(name)) {
+      return {
+        valid: false,
+        message: `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`,
+      };
+    }
+    return { valid: true, message: "" };
+  };
+
+  const validatePhoneNumber = (phone, countryCode) => {
+    const expectedLength = PHONE_LENGTH_BY_COUNTRY[countryCode];
+    let phoneDigitsOnly = phone.replace(/\D/g, "");
+
+    // Remove the country dial code
+    const dialCode = countryCodes
+      .find((c) => c.code === countryCode)
+      ?.dialCode.replace("+", "");
+    if (dialCode && phoneDigitsOnly.startsWith(dialCode)) {
+      phoneDigitsOnly = phoneDigitsOnly.slice(dialCode.length);
+    }
+
+    if (!phoneDigitsOnly) {
+      return { valid: false, message: "Phone number is required" };
+    }
+
+    if (!/^\d+$/.test(phoneDigitsOnly)) {
+      return { valid: false, message: "Phone number must contain only digits" };
+    }
+
+    if (phoneDigitsOnly.length !== expectedLength) {
+      return {
+        valid: false,
+        message: `Phone number must be exactly ${expectedLength} digits for ${countryCode}`,
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateIFSCCode = (code) => {
+    if (!code || code.trim() === "") {
+      return { valid: true, message: "" }; // Optional field
+    }
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    if (!ifscRegex.test(code)) {
+      return {
+        valid: false,
+        message: "IFSC code must be 11 characters (e.g., SBIN0001234)",
+      };
+    }
+    return { valid: true, message: "" };
+  };
+
+  const validateAccountNumber = (accountNumber) => {
+    if (!accountNumber || accountNumber.trim() === "") {
+      return { valid: true, message: "" }; // Optional field
+    }
+    const digitsOnly = accountNumber.replace(/\D/g, "");
+    if (digitsOnly.length < 9 || digitsOnly.length > 18) {
+      return {
+        valid: false,
+        message: "Account number must be between 9-18 digits",
+      };
+    }
+    if (!/^\d+$/.test(digitsOnly)) {
+      return {
+        valid: false,
+        message: "Account number must contain only digits",
+      };
+    }
+    return { valid: true, message: "" };
+  };
+
   const parsePhoneNumber = useCallback(
     (phone) => {
       if (!phone) return { countryCode: "IN", number: "" };
@@ -144,132 +236,14 @@ const ProfileForm = () => {
     [countryCodes]
   );
 
-  // Validation Functions
-  const validateName = (name, fieldName) => {
-    if (!name || name.trim() === "") {
-      return `${fieldName} is required`;
-    }
-    if (name.trim().length < 2) {
-      return `${fieldName} must be at least 2 characters`;
-    }
-    if (name.trim().length > 50) {
-      return `${fieldName} must not exceed 50 characters`;
-    }
-    if (!/^[a-zA-Z\s'-]+$/.test(name)) {
-      return `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`;
-    }
-    return "";
-  };
-
-  const validatePhone = (phone) => {
-    if (!phone || phone.trim() === "") {
-      return "Phone number is required";
-    }
-    const digitsOnly = phone.replace(/\D/g, "");
-    if (digitsOnly.length < 10) {
-      return "Phone number must be at least 10 digits";
-    }
-    if (digitsOnly.length > 15) {
-      return "Phone number must not exceed 15 digits";
-    }
-    return "";
-  };
-
-  const validateBio = (bio) => {
-    if (!bio || bio.trim() === "") {
-      return "";
-    }
-    if (bio.trim().length < 10) {
-      return "Bio must be at least 10 characters if provided";
-    }
-    if (bio.trim().length > 500) {
-      return "Bio must not exceed 500 characters";
-    }
-    return "";
-  };
-
-  const validateAddress = (address) => {
-    if (!address || address.trim() === "") {
-      return "Residential address is required";
-    }
-    if (address.trim().length < 10) {
-      return "Address must be at least 10 characters";
-    }
-    if (address.trim().length > 200) {
-      return "Address must not exceed 200 characters";
-    }
-    return "";
-  };
-
-  const validateIfscCode = (code) => {
-    if (!code || code.trim() === "") {
-      return "IFSC Code is required";
-    }
-    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(code.toUpperCase())) {
-      return "IFSC Code format is invalid (e.g., SBIN0001234)";
-    }
-    return "";
-  };
-
-  const validateAccountNumber = (accountNumber) => {
-    if (!accountNumber || accountNumber.trim() === "") {
-      return "Account Number is required";
-    }
-    if (!/^\d{9,18}$/.test(accountNumber)) {
-      return "Account Number must be between 9 and 18 digits";
-    }
-    return "";
-  };
-
-  const validateAvatarFile = (file) => {
-    if (!file) return "";
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ];
-    if (!validTypes.includes(file.type)) {
-      return "Please upload a valid image file (JPG, PNG, GIF, or WebP)";
-    }
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return "Image size must not exceed 10MB";
-    }
-    return "";
-  };
-
-  const validateFile = (file) => {
-    if (!file) return "Please select a file";
-    const validTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    if (!validTypes.includes(file.type)) {
-      return "File format not supported. Please use PDF, JPG, PNG, or DOCX";
-    }
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return "File size must not exceed 5MB";
-    }
-    return "";
-  };
-
   const getAvatarUrl = (url) => {
     if (!url) return "https://randomuser.me/api/portraits/men/1.jpg";
     if (url.startsWith("data:image/")) return url;
     if (url.startsWith("/")) {
-      const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:3000";
-      return `${apiBaseUrl}${url}`;
+      return `${BASE_URL}${url}`;
     }
     if (!url.startsWith("http") && !url.includes("/")) {
-      const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:3000";
-      return `${apiBaseUrl}/uploads/avatars/${url}`;
+      return `${BASE_URL}/uploads/avatars/${url}`;
     }
     return url || "https://randomuser.me/api/portraits/men/1.jpg";
   };
@@ -283,7 +257,6 @@ const ProfileForm = () => {
     });
   };
 
-  // Fetch Data
   const fetchPersonalData = useCallback(async () => {
     if (!user?.employee?.id) {
       setFetchLoading(false);
@@ -295,11 +268,15 @@ const ProfileForm = () => {
       const profileData = await personalInfoAPI.getPersonalInfo(
         user.employee.id
       );
-      const phoneData = parsePhoneNumber(profileData.phone);
+      const phoneData = parsePhoneNumber(profileData.employee?.phone);
       setSelectedCountry(phoneData.countryCode);
 
+      const emergencyPhoneData = parsePhoneNumber(
+        profileData.emergencyContactPhone
+      );
+      setEmergencyCountry(emergencyPhoneData.countryCode);
+
       setPersonalInfo({
-        // Profile fields
         firstName: profileData.employee.firstName || "",
         lastName: profileData.employee.lastName || "",
         middleName: profileData.employee.midName || "",
@@ -309,16 +286,14 @@ const ProfileForm = () => {
         department: profileData.employee.department || "",
         bio: profileData.employee.bio || "",
         avatar: profileData.employee.avatar || "",
-        // Details fields
         residentialAddress: profileData.permanentAddress || "",
         emergencyContactName: profileData.emergencyContactName || "",
         emergencyContactPhone: profileData.emergencyContactPhone || "",
-        maritalStatus: profileData.maritalStatus,
+        maritalStatus: profileData.maritalStatus || "single",
         nationality: profileData.nationality || "",
       });
 
       const bankData = await personalInfoAPI.getBankInfo(user.employee.id);
-
       setBankInfo({
         accountHolderName: bankData.accountHolderName || "",
         bankName: bankData.bankName || "",
@@ -341,7 +316,137 @@ const ProfileForm = () => {
     fetchPersonalData();
   }, [fetchPersonalData]);
 
-  // Handlers
+  // Handle blur events for validation (matching dialog pattern)
+  const handlePersonalBlur = (field) => {
+    const newErrors = { ...personalErrors };
+    console.log(field);
+    if (field === "firstName") {
+      if (personalInfo.firstName && personalInfo.firstName.trim() !== "") {
+        const validation = validateName(personalInfo.firstName, "First name");
+        if (!validation.valid) {
+          newErrors.firstName = validation.message;
+        } else {
+          delete newErrors.firstName;
+        }
+      }
+    } else if (field === "lastName") {
+      if (personalInfo.lastName && personalInfo.lastName.trim() !== "") {
+        const validation = validateName(personalInfo.lastName, "Last name");
+        if (!validation.valid) {
+          newErrors.lastName = validation.message;
+        } else {
+          delete newErrors.lastName;
+        }
+      }
+    } else if (field === "middleName") {
+      if (personalInfo.middleName && personalInfo.middleName.trim() !== "") {
+        const validation = validateName(personalInfo.middleName, "Middle name");
+        if (!validation.valid) {
+          newErrors.middleName = validation.message;
+        } else {
+          delete newErrors.middleName;
+        }
+      }
+    } else if (field === "phone") {
+      if (personalInfo.phone && personalInfo.phone.trim() !== "") {
+        const validation = validatePhoneNumber(
+          personalInfo.phone,
+          selectedCountry
+        );
+        if (!validation.valid) {
+          newErrors.phone = validation.message;
+        } else {
+          delete newErrors.phone;
+        }
+      }
+    } else if (field === "emergencyContactName") {
+      if (
+        personalInfo.emergencyContactName &&
+        personalInfo.emergencyContactName.trim() !== ""
+      ) {
+        const validation = validateName(
+          personalInfo.emergencyContactName,
+          "Emergency contact name"
+        );
+        if (!validation.valid) {
+          newErrors.emergencyContactName = validation.message;
+        } else {
+          delete newErrors.emergencyContactName;
+        }
+      }
+    } else if (field === "emergencyContactPhone") {
+      if (
+        personalInfo.emergencyContactPhone &&
+        personalInfo.emergencyContactPhone.trim() !== ""
+      ) {
+        const validation = validatePhoneNumber(
+          personalInfo.emergencyContactPhone,
+          emergencyCountry
+        );
+        if (!validation.valid) {
+          newErrors.emergencyContactPhone = validation.message;
+        } else {
+          delete newErrors.emergencyContactPhone;
+        }
+      }
+    }
+
+    setPersonalErrors(newErrors);
+  };
+
+  const handleBankBlur = (field) => {
+    const newErrors = { ...bankErrors };
+
+    if (field === "accountHolderName") {
+      const validation = validateName(
+        bankInfo.accountHolderName,
+        "Account holder name"
+      );
+      if (!validation.valid) {
+        newErrors.accountHolderName = validation.message;
+      } else {
+        delete newErrors.accountHolderName;
+      }
+    } else if (field === "bankName") {
+      const validation = validateName(bankInfo.bankName, "Bank name");
+      if (!validation.valid) {
+        newErrors.bankName = validation.message;
+      } else {
+        delete newErrors.bankName;
+      }
+    } else if (field === "city") {
+      const validation = validateName(bankInfo.city, "City");
+      if (!validation.valid) {
+        newErrors.city = validation.message;
+      } else {
+        delete newErrors.city;
+      }
+    } else if (field === "branchName") {
+      const validation = validateName(bankInfo.branchName, "Branch name");
+      if (!validation.valid) {
+        newErrors.branchName = validation.message;
+      } else {
+        delete newErrors.branchName;
+      }
+    } else if (field === "ifscCode") {
+      const validation = validateIFSCCode(bankInfo.ifscCode);
+      if (!validation.valid) {
+        newErrors.ifscCode = validation.message;
+      } else {
+        delete newErrors.ifscCode;
+      }
+    } else if (field === "accountNumber") {
+      const validation = validateAccountNumber(bankInfo.accountNumber);
+      if (!validation.valid) {
+        newErrors.accountNumber = validation.message;
+      } else {
+        delete newErrors.accountNumber;
+      }
+    }
+
+    setBankErrors(newErrors);
+  };
+
   const handlePersonalChange = (e) => {
     const { name, value } = e.target;
     setPersonalInfo((prev) => ({ ...prev, [name]: value }));
@@ -350,33 +455,71 @@ const ProfileForm = () => {
     }
   };
 
-  const handlePhoneChange = (e) => {
+  const handlePhoneChange = (e, type) => {
     const value = e.target.value;
-    const selectedCountryData = countryCodes.find(
-      (c) => c.code === selectedCountry
-    );
-    const fullPhone = selectedCountryData.dialCode + " " + value;
-    setPersonalInfo((prev) => ({ ...prev, phone: fullPhone }));
-    if (personalErrors.phone) {
-      setPersonalErrors((prev) => ({ ...prev, phone: "" }));
+    let countryData;
+
+    if (type === "main") {
+      countryData = countryCodes.find((c) => c.code === selectedCountry);
+      const fullPhone = countryData.dialCode + value;
+      setPersonalInfo((prev) => ({ ...prev, phone: fullPhone }));
+    } else if (type === "emergency") {
+      countryData = countryCodes.find((c) => c.code === emergencyCountry);
+      const fullPhone = countryData.dialCode + value;
+      setPersonalInfo((prev) => ({
+        ...prev,
+        emergencyContactPhone: fullPhone,
+      }));
+    }
+
+    if (personalErrors.phone || personalErrors.emergencyContactPhone) {
+      setPersonalErrors((prev) => ({
+        ...prev,
+        phone: type === "main" ? "" : prev.phone,
+        emergencyContactPhone:
+          type === "emergency" ? "" : prev.emergencyContactPhone,
+      }));
     }
   };
 
-  const handleCountrySelect = (countryCode) => {
-    setSelectedCountry(countryCode);
-    setShowCountryDropdown(false);
-    const phoneData = parsePhoneNumber(personalInfo.phone);
+  const handleCountrySelect = (countryCode, type) => {
     const newCountryData = countryCodes.find((c) => c.code === countryCode);
-    const newPhone = newCountryData.dialCode + " " + phoneData.number;
-    setPersonalInfo((prev) => ({ ...prev, phone: newPhone }));
+
+    if (type === "main") {
+      setSelectedCountry(countryCode);
+      setShowCountryDropdown(false);
+      const phoneData = parsePhoneNumber(personalInfo.phone);
+      const newPhone = newCountryData.dialCode + phoneData.number;
+      setPersonalInfo((prev) => ({ ...prev, phone: newPhone }));
+    } else if (type === "emergency") {
+      setEmergencyCountry(countryCode);
+      setShowEmergencyCountryDropdown(false);
+      const phoneData = parsePhoneNumber(personalInfo.emergencyContactPhone);
+      const newPhone = newCountryData.dialCode + phoneData.number;
+      setPersonalInfo((prev) => ({ ...prev, emergencyContactPhone: newPhone }));
+    }
   };
 
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const error = validateAvatarFile(file);
-      if (error) {
-        showToast(error, "error");
+      const validTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!validTypes.includes(file.type)) {
+        showToast(
+          "Please upload a valid image file (JPG, PNG, GIF, or WebP)",
+          "error"
+        );
+        return;
+      }
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showToast("Image size must not exceed 10MB", "error");
         return;
       }
       setSelectedAvatarFile(file);
@@ -406,9 +549,22 @@ const ProfileForm = () => {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const error = validateFile(file);
-      if (error) {
-        showToast(error, "error");
+      const validTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ];
+      if (!validTypes.includes(file.type)) {
+        showToast(
+          "File format not supported. Please use PDF, JPG, PNG, or DOCX",
+          "error"
+        );
+        return;
+      }
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showToast("File size must not exceed 5MB", "error");
         return;
       }
       setSelectedFile(file);
@@ -421,43 +577,60 @@ const ProfileForm = () => {
     setToastOpen(true);
   };
 
+  const handlePreviewDocument = (path) => {
+    const url = `${BASE_URL}/${path.replace(/^\/+/, "")}`;
+    setPreviewUrl(url);
+    setPreviewOpen(true);
+  };
+
   const handleSavePersonalInfo = async () => {
+    // Validate only filled fields
     const errors = {};
 
-    // Profile validations
-    const firstNameError = validateName(personalInfo.firstName, "First name");
-    if (firstNameError) errors.firstName = firstNameError;
-    const lastNameError = validateName(personalInfo.lastName, "Last name");
-    if (lastNameError) errors.lastName = lastNameError;
-    if (personalInfo.middleName && personalInfo.middleName.trim() !== "") {
-      const middleNameError = validateName(
-        personalInfo.middleName,
-        "Middle name"
-      );
-      if (middleNameError) errors.middleName = middleNameError;
+    if (personalInfo.firstName && personalInfo.firstName.trim() !== "") {
+      const validation = validateName(personalInfo.firstName, "First name");
+      if (!validation.valid) errors.firstName = validation.message;
     }
-    const phoneError = validatePhone(personalInfo.phone);
-    if (phoneError) errors.phone = phoneError;
-    const bioError = validateBio(personalInfo.bio);
-    if (bioError) errors.bio = bioError;
 
-    // Details validations
-    const addressError = validateAddress(personalInfo.residentialAddress);
-    if (addressError) errors.residentialAddress = addressError;
-    const emergencyNameError = validateName(
-      personalInfo.emergencyContactName,
-      "Emergency contact name"
-    );
-    if (emergencyNameError) errors.emergencyContactName = emergencyNameError;
-    const emergencyPhoneError = validatePhone(
-      personalInfo.emergencyContactPhone
-    );
-    if (emergencyPhoneError) errors.emergencyContactPhone = emergencyPhoneError;
-    const nationalityError = validateName(
-      personalInfo.nationality,
-      "Nationality"
-    );
-    if (nationalityError) errors.nationality = nationalityError;
+    if (personalInfo.lastName && personalInfo.lastName.trim() !== "") {
+      const validation = validateName(personalInfo.lastName, "Last name");
+      if (!validation.valid) errors.lastName = validation.message;
+    }
+
+    if (personalInfo.middleName && personalInfo.middleName.trim() !== "") {
+      const validation = validateName(personalInfo.middleName, "Middle name");
+      if (!validation.valid) errors.middleName = validation.message;
+    }
+
+    if (personalInfo.phone && personalInfo.phone.trim() !== "") {
+      const validation = validatePhoneNumber(
+        personalInfo.phone,
+        selectedCountry
+      );
+      if (!validation.valid) errors.phone = validation.message;
+    }
+
+    if (
+      personalInfo.emergencyContactName &&
+      personalInfo.emergencyContactName.trim() !== ""
+    ) {
+      const validation = validateName(
+        personalInfo.emergencyContactName,
+        "Emergency contact name"
+      );
+      if (!validation.valid) errors.emergencyContactName = validation.message;
+    }
+
+    if (
+      personalInfo.emergencyContactPhone &&
+      personalInfo.emergencyContactPhone.trim() !== ""
+    ) {
+      const validation = validatePhoneNumber(
+        personalInfo.emergencyContactPhone,
+        emergencyCountry
+      );
+      if (!validation.valid) errors.emergencyContactPhone = validation.message;
+    }
 
     if (Object.keys(errors).length > 0) {
       setPersonalErrors(errors);
@@ -468,20 +641,17 @@ const ProfileForm = () => {
     setLoading(true);
     try {
       const updateData = {
-        // Profile fields
         firstName: personalInfo.firstName.trim(),
         lastName: personalInfo.lastName.trim(),
         middleName: personalInfo.middleName.trim(),
         phone: personalInfo.phone.trim(),
         bio: personalInfo.bio.trim(),
-        // Details fields
         residentialAddress: personalInfo.residentialAddress.trim(),
         emergencyContactName: personalInfo.emergencyContactName.trim(),
         emergencyContactPhone: personalInfo.emergencyContactPhone.trim(),
         maritalStatus: personalInfo.maritalStatus,
         nationality: personalInfo.nationality.trim(),
       };
-      console.log(selectedAvatarFile);
 
       if (selectedAvatarFile) {
         const base64Image = await convertFileToBase64(selectedAvatarFile);
@@ -489,12 +659,8 @@ const ProfileForm = () => {
           user.employee.id,
           base64Image
         );
-        showToast("Profile Pic updated successfully");
-        personalInfo.avatar = data.avatar;
-      } else if (personalInfo.avatar && personalInfo.avatar.trim()) {
-        updateData.avatar = personalInfo.avatar.trim();
-      } else {
-        updateData.avatar = "";
+        showToast("Profile picture updated successfully");
+        setPersonalInfo((prev) => ({ ...prev, avatar: data.avatar }));
       }
 
       await personalInfoAPI.updatePersonalInfo(user.employee.id, updateData);
@@ -514,21 +680,29 @@ const ProfileForm = () => {
 
   const handleSaveBank = async () => {
     const errors = {};
-    const holderError = validateName(
+
+    const holderValidation = validateName(
       bankInfo.accountHolderName,
       "Account holder name"
     );
-    if (holderError) errors.accountHolderName = holderError;
-    const bankError = validateName(bankInfo.bankName, "Bank name");
-    if (bankError) errors.bankName = bankError;
-    const cityError = validateName(bankInfo.city, "City");
-    if (cityError) errors.city = cityError;
-    const branchError = validateName(bankInfo.branchName, "Branch name");
-    if (branchError) errors.branchName = branchError;
-    const ifscError = validateIfscCode(bankInfo.ifscCode);
-    if (ifscError) errors.ifscCode = ifscError;
-    const accountError = validateAccountNumber(bankInfo.accountNumber);
-    if (accountError) errors.accountNumber = accountError;
+    if (!holderValidation.valid)
+      errors.accountHolderName = holderValidation.message;
+
+    const bankValidation = validateName(bankInfo.bankName, "Bank name");
+    if (!bankValidation.valid) errors.bankName = bankValidation.message;
+
+    const cityValidation = validateName(bankInfo.city, "City");
+    if (!cityValidation.valid) errors.city = cityValidation.message;
+
+    const branchValidation = validateName(bankInfo.branchName, "Branch name");
+    if (!branchValidation.valid) errors.branchName = branchValidation.message;
+
+    const ifscValidation = validateIFSCCode(bankInfo.ifscCode);
+    if (!ifscValidation.valid) errors.ifscCode = ifscValidation.message;
+
+    const accountValidation = validateAccountNumber(bankInfo.accountNumber);
+    if (!accountValidation.valid)
+      errors.accountNumber = accountValidation.message;
 
     if (Object.keys(errors).length > 0) {
       setBankErrors(errors);
@@ -578,6 +752,8 @@ const ProfileForm = () => {
   const handleDeleteDocument = async (docId) => {
     if (!window.confirm("Are you sure you want to delete this document?"))
       return;
+
+    setLoading(true);
     try {
       await personalInfoAPI.deleteDocument(user.employee.id, docId);
       showToast("Document deleted successfully");
@@ -589,6 +765,78 @@ const ProfileForm = () => {
     }
   };
 
+  // Phone input renderer (matching dialog pattern)
+  const renderPhoneInput = (
+    value,
+    countryCode,
+    showDropdown,
+    setShowDropdown,
+    type
+  ) => {
+    const selectedCountryData = countryCodes.find(
+      (c) => c.code === countryCode
+    );
+    const phoneData = parsePhoneNumber(value);
+    const fieldName = type === "main" ? "phone" : "emergencyContactPhone";
+
+    return (
+      <div className="pi-phone-group">
+        <div className="pi-country-selector">
+          <button
+            type="button"
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="pi-country-btn"
+          >
+            <ReactCountryFlag
+              countryCode={selectedCountryData.code}
+              svg
+              style={{ width: "1.5em", height: "1.5em" }}
+            />
+            <span>{selectedCountryData.dialCode}</span>
+          </button>
+
+          {showDropdown && (
+            <motion.div
+              className="pi-country-dropdown"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {countryCodes.map((country) => (
+                <motion.div
+                  key={country.code}
+                  onClick={() => handleCountrySelect(country.code, type)}
+                  className={`pi-country-option ${
+                    country.code === countryCode ? "active" : ""
+                  }`}
+                  whileHover={{ backgroundColor: "#f0f0f0" }}
+                >
+                  <ReactCountryFlag
+                    countryCode={country.code}
+                    svg
+                    style={{ width: "1.5em", height: "1.5em" }}
+                  />
+                  <span>{country.name}</span>
+                  <span>{country.dialCode}</span>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </div>
+
+        <input
+          type="tel"
+          value={phoneData.number}
+          onChange={(e) => handlePhoneChange(e, type)}
+          onBlur={() => handlePersonalBlur(fieldName)}
+          placeholder="Enter phone number"
+          className={`pi-phone-input ${
+            personalErrors[fieldName] ? "error" : ""
+          }`}
+        />
+      </div>
+    );
+  };
+
   if (fetchLoading) {
     return (
       <div className="pi-loading-container">
@@ -598,11 +846,6 @@ const ProfileForm = () => {
     );
   }
 
-  const selectedCountryData = countryCodes.find(
-    (c) => c.code === selectedCountry
-  );
-  const phoneData = parsePhoneNumber(personalInfo.phone);
-
   const tabVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
@@ -611,10 +854,7 @@ const ProfileForm = () => {
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
   };
 
   const itemVariants = {
@@ -637,7 +877,6 @@ const ProfileForm = () => {
         Personal Information
       </motion.h2>
 
-      {/* Tab Navigation */}
       <motion.div
         className="pi-tabs"
         variants={containerVariants}
@@ -662,7 +901,6 @@ const ProfileForm = () => {
         ))}
       </motion.div>
 
-      {/* Personal Information Tab */}
       <AnimatePresence mode="wait">
         {activeTab === "personal" && (
           <motion.div
@@ -700,7 +938,6 @@ const ProfileForm = () => {
                   initial="hidden"
                   animate="visible"
                 >
-                  {/* Profile Information Display */}
                   <div className="pi-info-card">
                     <div className="pi-avatar-container">
                       <img
@@ -714,7 +951,8 @@ const ProfileForm = () => {
                     <motion.div className="pi-info-row" variants={itemVariants}>
                       <span className="pi-label">Name:</span>
                       <span className="pi-value">
-                        {personalInfo.firstName} {personalInfo.lastName}
+                        {personalInfo.firstName} {personalInfo.middleName}{" "}
+                        {personalInfo.lastName}
                       </span>
                     </motion.div>
                     <motion.div className="pi-info-row" variants={itemVariants}>
@@ -739,7 +977,6 @@ const ProfileForm = () => {
                     </motion.div>
                   </div>
 
-                  {/* Personal Details Display */}
                   <motion.div className="pi-info-card" variants={itemVariants}>
                     <div className="pi-info-row-large">
                       <span className="pi-label">Residential Address:</span>
@@ -788,7 +1025,6 @@ const ProfileForm = () => {
                   initial="hidden"
                   animate="visible"
                 >
-                  {/* Avatar Upload */}
                   <motion.div
                     className="pi-avatar-upload-section"
                     variants={itemVariants}
@@ -836,21 +1072,24 @@ const ProfileForm = () => {
                     </div>
                   </motion.div>
 
-                  {/* Profile Fields */}
                   <div className="pi-form-row">
                     <motion.div
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>First Name *</label>
-                      <Input
+                      <label>First Name</label>
+                      <input
                         name="firstName"
                         type="text"
                         value={personalInfo.firstName}
                         onChange={handlePersonalChange}
+                        onBlur={() => handlePersonalBlur("firstName")}
+                        className={`input-field ${
+                          personalErrors.firstName ? "error" : ""
+                        }`}
                       />
                       {personalErrors.firstName && (
-                        <span className="pi-error">
+                        <span className="input-error">
                           {personalErrors.firstName}
                         </span>
                       )}
@@ -859,12 +1098,16 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Last Name *</label>
-                      <Input
+                      <label>Last Name</label>
+                      <input
                         name="lastName"
                         type="text"
                         value={personalInfo.lastName}
                         onChange={handlePersonalChange}
+                        onBlur={() => handlePersonalBlur("lastName")}
+                        className={`pi-phone-input ${
+                          personalErrors.lastName ? "error" : ""
+                        }`}
                       />
                       {personalErrors.lastName && (
                         <span className="pi-error">
@@ -876,17 +1119,26 @@ const ProfileForm = () => {
 
                   <motion.div className="pi-form-group" variants={itemVariants}>
                     <label>Middle Name</label>
-                    <Input
+                    <input
                       name="middleName"
                       type="text"
                       value={personalInfo.middleName}
                       onChange={handlePersonalChange}
+                      onBlur={() => handlePersonalBlur("middleName")}
+                      className={`pi-phone-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                     />
+                    {personalErrors.middleName && (
+                      <span className="pi-error">
+                        {personalErrors.middleName}
+                      </span>
+                    )}
                   </motion.div>
 
                   <motion.div className="pi-form-group" variants={itemVariants}>
                     <label>Email</label>
-                    <Input
+                    <input
                       name="email"
                       type="email"
                       value={personalInfo.email}
@@ -895,62 +1147,14 @@ const ProfileForm = () => {
                   </motion.div>
 
                   <motion.div className="pi-form-group" variants={itemVariants}>
-                    <label>Phone Number *</label>
-                    <div className="pi-phone-group">
-                      <div className="pi-country-selector">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowCountryDropdown(!showCountryDropdown)
-                          }
-                          className="pi-country-btn"
-                        >
-                          <ReactCountryFlag
-                            countryCode={selectedCountryData.code}
-                            svg
-                            style={{ width: "1.5em", height: "1.5em" }}
-                          />
-                          <span>{selectedCountryData.dialCode}</span>
-                        </button>
-                        {showCountryDropdown && (
-                          <motion.div
-                            className="pi-country-dropdown"
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                          >
-                            {countryCodes.map((country) => (
-                              <motion.div
-                                key={country.code}
-                                onClick={() =>
-                                  handleCountrySelect(country.code)
-                                }
-                                className={`pi-country-option ${
-                                  country.code === selectedCountry
-                                    ? "active"
-                                    : ""
-                                }`}
-                                whileHover={{ backgroundColor: "#f0f0f0" }}
-                              >
-                                <ReactCountryFlag
-                                  countryCode={country.code}
-                                  svg
-                                  style={{ width: "1.5em", height: "1.5em" }}
-                                />
-                                <span>{country.name}</span>
-                                <span>{country.dialCode}</span>
-                              </motion.div>
-                            ))}
-                          </motion.div>
-                        )}
-                      </div>
-                      <input
-                        type="tel"
-                        value={phoneData.number}
-                        onChange={handlePhoneChange}
-                        placeholder="Enter phone number"
-                        className="pi-phone-input"
-                      />
-                    </div>
+                    <label>Phone Number</label>
+                    {renderPhoneInput(
+                      personalInfo.phone,
+                      selectedCountry,
+                      showCountryDropdown,
+                      setShowCountryDropdown,
+                      "main"
+                    )}
                     {personalErrors.phone && (
                       <span className="pi-error">{personalErrors.phone}</span>
                     )}
@@ -958,7 +1162,7 @@ const ProfileForm = () => {
 
                   <motion.div className="pi-form-group" variants={itemVariants}>
                     <label>Position</label>
-                    <Input
+                    <input
                       name="position"
                       type="text"
                       value={personalInfo.position}
@@ -976,12 +1180,8 @@ const ProfileForm = () => {
                       placeholder="Write a short bio about yourself..."
                       rows={4}
                     />
-                    {personalErrors.bio && (
-                      <span className="pi-error">{personalErrors.bio}</span>
-                    )}
                   </motion.div>
 
-                  {/* Details Section Header */}
                   <motion.h4
                     className="pi-section-divider"
                     variants={itemVariants}
@@ -991,7 +1191,7 @@ const ProfileForm = () => {
                   </motion.h4>
 
                   <motion.div className="pi-form-group" variants={itemVariants}>
-                    <label>Residential Address *</label>
+                    <label>Residential Address</label>
                     <textarea
                       name="residentialAddress"
                       value={personalInfo.residentialAddress}
@@ -999,11 +1199,6 @@ const ProfileForm = () => {
                       className="pi-textarea"
                       rows={3}
                     />
-                    {personalErrors.residentialAddress && (
-                      <span className="pi-error">
-                        {personalErrors.residentialAddress}
-                      </span>
-                    )}
                   </motion.div>
 
                   <div className="pi-form-row">
@@ -1011,12 +1206,18 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Emergency Contact Name *</label>
-                      <Input
+                      <label>Emergency Contact Name</label>
+                      <input
                         name="emergencyContactName"
                         type="text"
                         value={personalInfo.emergencyContactName}
                         onChange={handlePersonalChange}
+                        onBlur={() =>
+                          handlePersonalBlur("emergencyContactName")
+                        }
+                         className={`pi-phone-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                       />
                       {personalErrors.emergencyContactName && (
                         <span className="pi-error">
@@ -1025,139 +1226,24 @@ const ProfileForm = () => {
                       )}
                     </motion.div>
 
-                    <div
-                      className="pi-form-row"
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "16px",
-                        maxWidth: "600px",
-                        width: "100%",
-                        padding: "8px",
-                        boxSizing: "border-box",
-                        maxHeight: "20px",
-                        height: "100%",
-                      }}
+                    <motion.div
+                      className="pi-form-group"
+                      variants={itemVariants}
                     >
-                      <motion.div
-                        className="pi-form-group"
-                        variants={itemVariants}
-                      >
-                        <label>Emergency Contact Phone *</label>
-                        <div className="pi-phone-group">
-                          <div className="pi-country-selector">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setShowEmergencyCountryDropdown(
-                                  !showEmergencyCountryDropdown
-                                )
-                              }
-                              className="pi-country-btn"
-                            >
-                              <ReactCountryFlag
-                                countryCode={
-                                  countryCodes.find(
-                                    (c) => c.code === emergencyCountry
-                                  )?.code
-                                }
-                                svg
-                                style={{ width: "1.5em", height: "1.5em" }}
-                              />
-                              <span>
-                                {
-                                  countryCodes.find(
-                                    (c) => c.code === emergencyCountry
-                                  )?.dialCode
-                                }
-                              </span>
-                            </button>
-                            {showEmergencyCountryDropdown && (
-                              <motion.div
-                                className="pi-country-dropdown"
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                              >
-                                {countryCodes.map((country) => (
-                                  <motion.div
-                                    key={country.code}
-                                    onClick={() => {
-                                      setEmergencyCountry(country.code);
-                                      setShowEmergencyCountryDropdown(false);
-                                      const currentPhone =
-                                        personalInfo.emergencyContactPhone;
-                                      const phoneDigits = currentPhone.replace(
-                                        /\D/g,
-                                        ""
-                                      );
-                                      const newPhone =
-                                        country.dialCode + " " + phoneDigits;
-                                      setPersonalInfo((prev) => ({
-                                        ...prev,
-                                        emergencyContactPhone: newPhone,
-                                      }));
-                                    }}
-                                    className={`pi-country-option ${
-                                      country.code === emergencyCountry
-                                        ? "active"
-                                        : ""
-                                    }`}
-                                    whileHover={{ backgroundColor: "#f0f0f0" }}
-                                  >
-                                    <ReactCountryFlag
-                                      countryCode={country.code}
-                                      svg
-                                      style={{
-                                        width: "1.5em",
-                                        height: "1.5em",
-                                      }}
-                                    />
-                                    <span>{country.name}</span>
-                                    <span>{country.dialCode}</span>
-                                  </motion.div>
-                                ))}
-                              </motion.div>
-                            )}
-                          </div>
-                          <input
-                            type="tel"
-                            value={
-                              personalInfo.emergencyContactPhone.replace(
-                                countryCodes.find(
-                                  (c) => c.code === emergencyCountry
-                                )?.dialCode + " ",
-                                ""
-                              ) || ""
-                            }
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              const countryData = countryCodes.find(
-                                (c) => c.code === emergencyCountry
-                              );
-                              const fullPhone =
-                                countryData.dialCode + " " + value;
-                              setPersonalInfo((prev) => ({
-                                ...prev,
-                                emergencyContactPhone: fullPhone,
-                              }));
-                              if (personalErrors.emergencyContactPhone) {
-                                setPersonalErrors((prev) => ({
-                                  ...prev,
-                                  emergencyContactPhone: "",
-                                }));
-                              }
-                            }}
-                            placeholder="Enter phone number"
-                            className="pi-phone-input"
-                          />
-                        </div>
-                        {personalErrors.emergencyContactPhone && (
-                          <span className="pi-error">
-                            {personalErrors.emergencyContactPhone}
-                          </span>
-                        )}
-                      </motion.div>
-                    </div>
+                      <label>Emergency Contact Phone</label>
+                      {renderPhoneInput(
+                        personalInfo.emergencyContactPhone,
+                        emergencyCountry,
+                        showEmergencyCountryDropdown,
+                        setShowEmergencyCountryDropdown,
+                        "emergency"
+                      )}
+                      {personalErrors.emergencyContactPhone && (
+                        <span className="pi-error">
+                          {personalErrors.emergencyContactPhone}
+                        </span>
+                      )}
+                    </motion.div>
                   </div>
 
                   <div className="pi-form-row">
@@ -1165,7 +1251,7 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Marital Status *</label>
+                      <label>Marital Status</label>
                       <select
                         name="maritalStatus"
                         value={personalInfo.maritalStatus}
@@ -1184,7 +1270,7 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Nationality *</label>
+                      <label>Nationality</label>
                       <select
                         name="nationality"
                         value={personalInfo.nationality}
@@ -1198,11 +1284,6 @@ const ProfileForm = () => {
                           </option>
                         ))}
                       </select>
-                      {personalErrors.nationality && (
-                        <span className="pi-error">
-                          {personalErrors.nationality}
-                        </span>
-                      )}
                     </motion.div>
                   </div>
 
@@ -1231,7 +1312,6 @@ const ProfileForm = () => {
           </motion.div>
         )}
 
-        {/* Bank Information Tab */}
         {activeTab === "bank" && (
           <motion.div
             className="pi-tab-content"
@@ -1310,12 +1390,16 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Account Holder Name *</label>
-                      <Input
+                      <label>Account Holder Name</label>
+                      <input
                         name="accountHolderName"
                         type="text"
                         value={bankInfo.accountHolderName}
                         onChange={handleBankChange}
+                        onBlur={() => handleBankBlur("accountHolderName")}
+                         className={`pi-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                       />
                       {bankErrors.accountHolderName && (
                         <span className="pi-error">
@@ -1328,12 +1412,16 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Bank Name *</label>
-                      <Input
+                      <label>Bank Name</label>
+                      <input
                         name="bankName"
                         type="text"
                         value={bankInfo.bankName}
                         onChange={handleBankChange}
+                        onBlur={() => handleBankBlur("bankName")}
+                         className={`pi-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                       />
                       {bankErrors.bankName && (
                         <span className="pi-error">{bankErrors.bankName}</span>
@@ -1346,12 +1434,16 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>City *</label>
-                      <Input
+                      <label>City</label>
+                      <input
                         name="city"
                         type="text"
                         value={bankInfo.city}
                         onChange={handleBankChange}
+                        onBlur={() => handleBankBlur("city")}
+                         className={`pi-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                       />
                       {bankErrors.city && (
                         <span className="pi-error">{bankErrors.city}</span>
@@ -1362,12 +1454,16 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Branch Name *</label>
-                      <Input
+                      <label>Branch Name</label>
+                      <input
                         name="branchName"
                         type="text"
                         value={bankInfo.branchName}
                         onChange={handleBankChange}
+                        onBlur={() => handleBankBlur("branchName")}
+                         className={`pi-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                       />
                       {bankErrors.branchName && (
                         <span className="pi-error">
@@ -1382,13 +1478,17 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>IFSC Code *</label>
-                      <Input
+                      <label>IFSC Code</label>
+                      <input
                         name="ifscCode"
                         type="text"
                         value={bankInfo.ifscCode}
                         onChange={handleBankChange}
+                        onBlur={() => handleBankBlur("ifscCode")}
                         placeholder="e.g., SBIN0001234"
+                         className={`pi-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                       />
                       {bankErrors.ifscCode && (
                         <span className="pi-error">{bankErrors.ifscCode}</span>
@@ -1399,12 +1499,17 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
-                      <label>Account Number *</label>
-                      <Input
+                      <label>Account Number</label>
+                      <input
                         name="accountNumber"
                         type="text"
                         value={bankInfo.accountNumber}
                         onChange={handleBankChange}
+                        onBlur={() => handleBankBlur("accountNumber")}
+                        placeholder="9-18 digits"
+                         className={`pi-input ${
+                        personalErrors.middleName ? "error" : ""
+                      }`}
                       />
                       {bankErrors.accountNumber && (
                         <span className="pi-error">
@@ -1437,7 +1542,6 @@ const ProfileForm = () => {
           </motion.div>
         )}
 
-        {/* Documents Tab */}
         {activeTab === "documents" && (
           <motion.div
             className="pi-tab-content"
@@ -1457,7 +1561,7 @@ const ProfileForm = () => {
               <motion.div className="pi-upload-form" variants={itemVariants}>
                 <div className="pi-form-row">
                   <div className="pi-form-group">
-                    <label>Document Type *</label>
+                    <label>Document Type</label>
                     <select
                       value={documentType}
                       onChange={(e) => setDocumentType(e.target.value)}
@@ -1472,7 +1576,7 @@ const ProfileForm = () => {
                   </div>
 
                   <div className="pi-form-group">
-                    <label>Choose File *</label>
+                    <label>Choose File</label>
                     <input
                       id="documentFile"
                       type="file"
@@ -1512,12 +1616,15 @@ const ProfileForm = () => {
                     No documents uploaded yet
                   </div>
                 ) : (
-                  documents.map((doc, idx) => (
-                    // <div className="pi-document-card" key={doc.id}>
+                  documents.map((doc) => (
                     <div key={doc.id} className="document-card">
                       <div className="document-header">
                         <span className="document-type">
-                          {  (documentTypes.find(dt => dt.value === doc.documentType)?.label)}
+                          {
+                            documentTypes.find(
+                              (dt) => dt.value === doc.documentType
+                            )?.label
+                          }
                         </span>
                       </div>
                       <div className="document-body">
@@ -1553,7 +1660,6 @@ const ProfileForm = () => {
                 )}
               </div>
 
-              {/* Preview Dialog */}
               <Dialog
                 open={previewOpen}
                 onClose={() => setPreviewOpen(false)}

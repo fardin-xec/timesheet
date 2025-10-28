@@ -1,14 +1,13 @@
 /* Employee Dialog Styles */
-.employee-dialog .dialog-content {
+.employee-dialog .employee-dialog-content {
   padding: 0;
-  overflow: hidden;
+  max-height: fit-content;
 }
 
 .employee-dialog .loading-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 400px;
 }
 
 /* Header Styles */
@@ -73,7 +72,6 @@
 /* Tab Content */
 .tab-content {
   padding: 24px;
-  max-height: calc(100vh - 400px);
   overflow-y: auto;
 }
 

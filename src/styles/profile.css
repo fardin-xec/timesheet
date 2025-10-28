@@ -2180,3 +2180,32 @@ button, input, select, textarea {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
 }
+
+.pi-input {
+  flex: 1;
+  padding: 0.6rem;
+  border: 2px solid #e8eef5;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+@media (min-width: 481px) {
+  .pi-input {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .pi-input {
+    font-size: 0.95rem;
+  }
+}
+
+.pi-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}

@@ -806,6 +806,79 @@ export const personalInfoAPI = {
     }
   },
 
+   updateEmployeePhone: async (employeeId, phone) => {
+    const token = getToken();
+    try {
+     if(phone!==''){
+       const payload = {
+        phone,
+      }
+      // Using PUT with /personal/:id route
+      const response = await api.put(`/employees/${employeeId}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (
+        response.status !== 200 &&
+        response.status !== 201
+      ) {
+        throw new Error(
+          response.data.message || "Failed to update phone of employee"
+        );
+      }
+      return response.data.data;
+
+     }
+     
+
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update employee information"
+      );
+    }
+  },
+
+  updateEmployeeReportingManger: async (employeeId, reportTo) => {
+    const token = getToken();
+    try {
+     if(reportTo!==''){
+       const payload = {
+        reportTo,
+      }
+      // Using PUT with /personal/:id route
+      const response = await api.put(`/employees/${employeeId}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (
+        response.status !== 200 &&
+        response.status !== 201
+      ) {
+        throw new Error(
+          response.data.message || "Failed to update phone of employee"
+        );
+      }
+      return response.data.data;
+
+     }
+     
+
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update employee information"
+      );
+    }
+  },
 
   /**
    * Fetch bank account information

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Check, X, Calendar, Loader } from "lucide-react";
+import { Check, X } from "lucide-react";
 import "../../styles/employee.css";
 import ReactCountryFlag from "react-country-flag";
 
@@ -7,8 +7,8 @@ import ReactCountryFlag from "react-country-flag";
 const EmployeeStatus = {
   ACTIVE: "active",
   INACTIVE: "inactive",
-  ONLEAVE: "onleave",
-  TERMINATED: "terminated",
+  // ONLEAVE: "onleave",
+  // TERMINATED: "terminated",
 };
 
 const Gender = {
@@ -58,10 +58,27 @@ const COUNTRIES = [
 
 // Phone number length by country code
 const PHONE_LENGTH_BY_COUNTRY = {
-  US: 10, CA: 10, IN: 10, GB: 10, AU: 9,
-  DE: 11, FR: 9, JP: 10, CN: 11, BR: 11,
-  MX: 10, IT: 10, ES: 9, NL: 9, SE: 9,
-  CH: 9, SG: 8, AE: 9, SA: 9, QA: 8, ZA: 9,
+  US: 10,
+  CA: 10,
+  IN: 10,
+  GB: 10,
+  AU: 9,
+  DE: 11,
+  FR: 9,
+  JP: 10,
+  CN: 11,
+  BR: 11,
+  MX: 10,
+  IT: 10,
+  ES: 9,
+  NL: 9,
+  SE: 9,
+  CH: 9,
+  SG: 8,
+  AE: 9,
+  SA: 9,
+  QA: 8,
+  ZA: 9,
 };
 
 const EmployeeForm = ({
@@ -125,6 +142,7 @@ const EmployeeForm = ({
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[1]); // Default to India
   const [isSaving, setIsSaving] = useState(false);
   const [mandatoryErrors, setMandatoryErrors] = useState({});
+  const [optionalErrors, setOptionalErrors] = useState({});
 
   useEffect(() => {
     if (employee) {
@@ -154,7 +172,11 @@ const EmployeeForm = ({
 
   const getMaxDobDate = () => {
     const today = new Date();
-    const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+    const maxDate = new Date(
+      today.getFullYear() - 18,
+      today.getMonth(),
+      today.getDate()
+    );
     return maxDate.toISOString().split("T")[0];
   };
 
@@ -164,6 +186,7 @@ const EmployeeForm = ({
       [field]: value,
     }));
 
+    // Clear errors for the field being edited
     if (errors[field]) {
       setErrors((prevErrors) => ({
         ...prevErrors,
@@ -177,6 +200,395 @@ const EmployeeForm = ({
         [field]: null,
       }));
     }
+
+    if (optionalErrors[field]) {
+      setOptionalErrors((prevErrors) => ({
+        ...prevErrors,
+        [field]: null,
+      }));
+    }
+  };
+  const validateOptionalName = (name, fieldName) => {
+    if (name.trim().length < 2) {
+      return {
+        valid: false,
+        message: `${fieldName} must be at least 2 characters`,
+      };
+    }
+
+    if (!/^[a-zA-Z\s'-]+$/.test(name)) {
+      return {
+        valid: false,
+        message: `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`,
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateMidName = (name, fieldName) => {
+    if (!/^[a-zA-Z\s'-]+$/.test(name)) {
+      return {
+        valid: false,
+        message: `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`,
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateIFSCCode = (code) => {
+    // IFSC code format: 4 letters, 7 digits (e.g., SBIN0001234)
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+    if (!ifscRegex.test(code)) {
+      return {
+        valid: false,
+        message: "IFSC code must be 11 characters (e.g., SBIN0001234)",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateAccountNumber = (accountNumber) => {
+    const digitsOnly = accountNumber.replace(/\D/g, "");
+
+    if (digitsOnly.length < 9 || digitsOnly.length > 18) {
+      return {
+        valid: false,
+        message: "Account number must be between 9-18 digits",
+      };
+    }
+
+    if (!/^\d+$/.test(digitsOnly)) {
+      return {
+        valid: false,
+        message: "Account number must contain only digits",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateCTC = (ctc) => {
+    const numericValue = parseFloat(ctc);
+
+    if (isNaN(numericValue) || numericValue < 0) {
+      return {
+        valid: false,
+        message: "CTC must be a valid positive number",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateQID = (qid) => {
+    // QID is typically 11 digits
+    const digitsOnly = qid.replace(/\D/g, "");
+
+    if (digitsOnly.length !== 11) {
+      return {
+        valid: false,
+        message: "QID must be exactly 11 digits",
+      };
+    }
+
+    if (!/^\d+$/.test(digitsOnly)) {
+      return {
+        valid: false,
+        message: "QID must contain only digits",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validatePassportNumber = (passportNumber) => {
+    // Passport number: typically 8-9 alphanumeric characters
+    if (passportNumber.length < 6 || passportNumber.length > 9) {
+      return {
+        valid: false,
+        message: "Passport number must be 6-9 characters",
+      };
+    }
+
+    if (!/^[A-Z0-9]+$/i.test(passportNumber)) {
+      return {
+        valid: false,
+        message: "Passport number must contain only letters and numbers",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateOptionalFields = () => {
+    const newErrors = {};
+    const {
+      accountHolderName,
+      bankName,
+      city,
+      branchName,
+      ifscCode,
+      accountNumber,
+      ctc,
+      qid,
+      passportNumber,
+    } = employeeData;
+
+    // Validate optional fields only if they have values
+    if (accountHolderName && accountHolderName.trim() !== "") {
+      const validation = validateOptionalName(
+        accountHolderName,
+        "Account holder's name"
+      );
+      if (!validation.valid) {
+        newErrors.accountHolderName = validation.message;
+      }
+    }
+
+    if (bankName && bankName.trim() !== "") {
+      const validation = validateOptionalName(bankName, "Bank name");
+      if (!validation.valid) {
+        newErrors.bankName = validation.message;
+      }
+    }
+
+    if (city && city.trim() !== "") {
+      const validation = validateOptionalName(city, "City");
+      if (!validation.valid) {
+        newErrors.city = validation.message;
+      }
+    }
+
+    if (branchName && branchName.trim() !== "") {
+      const validation = validateOptionalName(branchName, "Branch name");
+      if (!validation.valid) {
+        newErrors.branchName = validation.message;
+      }
+    }
+
+    if (ifscCode && ifscCode.trim() !== "") {
+      const validation = validateIFSCCode(ifscCode);
+      if (!validation.valid) {
+        newErrors.ifscCode = validation.message;
+      }
+    }
+
+    if (accountNumber && accountNumber.trim() !== "") {
+      const validation = validateAccountNumber(accountNumber);
+      if (!validation.valid) {
+        newErrors.accountNumber = validation.message;
+      }
+    }
+
+    if (ctc && ctc.trim() !== "") {
+      const validation = validateCTC(ctc);
+      if (!validation.valid) {
+        newErrors.ctc = validation.message;
+      }
+    }
+
+    if (qid && qid.trim() !== "") {
+      const validation = validateQID(qid);
+      if (!validation.valid) {
+        newErrors.qid = validation.message;
+      }
+    }
+
+    if (passportNumber && passportNumber.trim() !== "") {
+      const validation = validatePassportNumber(passportNumber);
+      if (!validation.valid) {
+        newErrors.passportNumber = validation.message;
+      }
+    }
+
+    setOptionalErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleBlur = (field) => {
+    // Validate on blur for immediate feedback
+    const newErrors = { ...mandatoryErrors };
+    const newOptionalErrors = { ...optionalErrors };
+
+    if (field === "firstName") {
+      console.log(employeeData.firstName);
+
+      const validation = validateName(employeeData.firstName, "First name");
+      if (!validation.valid) {
+        newErrors.firstName = validation.message;
+      } else {
+        delete newErrors.firstName;
+      }
+    } else if (field === "midName") {
+      // Middle name is optional, but if provided, validate it
+      console.log(employeeData.midName);
+      if (employeeData.midName && employeeData.midName.trim() !== "") {
+        const validation = validateMidName(employeeData.midName, "Middle name");
+        if (!validation.valid) {
+          newErrors.midName = validation.message;
+        } else {
+          delete newErrors.midName;
+        }
+      } else {
+        delete newErrors.midName;
+      }
+    } else if (field === "lastName") {
+      const validation = validateName(employeeData.lastName, "Last name");
+      if (!validation.valid) {
+        newErrors.lastName = validation.message;
+      } else {
+        delete newErrors.lastName;
+      }
+    } else if (field === "email") {
+      const validation = validateEmail(employeeData.email);
+      if (!validation.valid) {
+        newErrors.email = validation.message;
+      } else {
+        delete newErrors.email;
+      }
+    } else if (field === "phone") {
+      const validation = validatePhoneNumber(
+        employeeData.phone,
+        selectedCountry.code
+      );
+      if (!validation.valid) {
+        newErrors.phone = validation.message;
+      } else {
+        delete newErrors.phone;
+      }
+    } else if (field === "role") {
+      if (!employeeData.role || employeeData.role.trim() === "") {
+        newErrors.role = "Role is required";
+      } else {
+        delete newErrors.role;
+      }
+    }
+    // Optional field validations
+    else if (field === "accountHolderName") {
+      if (
+        employeeData.accountHolderName &&
+        employeeData.accountHolderName.trim() !== ""
+      ) {
+        const validation = validateOptionalName(
+          employeeData.accountHolderName,
+          "Account holder's name"
+        );
+        if (!validation.valid) {
+          newOptionalErrors.accountHolderName = validation.message;
+        } else {
+          delete newOptionalErrors.accountHolderName;
+        }
+      } else {
+        delete newOptionalErrors.accountHolderName;
+      }
+    } else if (field === "bankName") {
+      if (employeeData.bankName && employeeData.bankName.trim() !== "") {
+        const validation = validateOptionalName(
+          employeeData.bankName,
+          "Bank name"
+        );
+        if (!validation.valid) {
+          newOptionalErrors.bankName = validation.message;
+        } else {
+          delete newOptionalErrors.bankName;
+        }
+      } else {
+        delete newOptionalErrors.bankName;
+      }
+    } else if (field === "city") {
+      if (employeeData.city && employeeData.city.trim() !== "") {
+        const validation = validateOptionalName(employeeData.city, "City");
+        if (!validation.valid) {
+          newOptionalErrors.city = validation.message;
+        } else {
+          delete newOptionalErrors.city;
+        }
+      } else {
+        delete newOptionalErrors.city;
+      }
+    } else if (field === "branchName") {
+      if (employeeData.branchName && employeeData.branchName.trim() !== "") {
+        const validation = validateOptionalName(
+          employeeData.branchName,
+          "Branch name"
+        );
+        if (!validation.valid) {
+          newOptionalErrors.branchName = validation.message;
+        } else {
+          delete newOptionalErrors.branchName;
+        }
+      } else {
+        delete newOptionalErrors.branchName;
+      }
+    } else if (field === "ifscCode") {
+      if (employeeData.ifscCode && employeeData.ifscCode.trim() !== "") {
+        const validation = validateIFSCCode(employeeData.ifscCode);
+        if (!validation.valid) {
+          newOptionalErrors.ifscCode = validation.message;
+        } else {
+          delete newOptionalErrors.ifscCode;
+        }
+      } else {
+        delete newOptionalErrors.ifscCode;
+      }
+    } else if (field === "accountNumber") {
+      if (
+        employeeData.accountNumber &&
+        employeeData.accountNumber.trim() !== ""
+      ) {
+        const validation = validateAccountNumber(employeeData.accountNumber);
+        if (!validation.valid) {
+          newOptionalErrors.accountNumber = validation.message;
+        } else {
+          delete newOptionalErrors.accountNumber;
+        }
+      } else {
+        delete newOptionalErrors.accountNumber;
+      }
+    } else if (field === "ctc") {
+      if (employeeData.ctc && employeeData.ctc.trim() !== "") {
+        const validation = validateCTC(employeeData.ctc);
+        if (!validation.valid) {
+          newOptionalErrors.ctc = validation.message;
+        } else {
+          delete newOptionalErrors.ctc;
+        }
+      } else {
+        delete newOptionalErrors.ctc;
+      }
+    } else if (field === "qid") {
+      if (employeeData.qid && employeeData.qid.trim() !== "") {
+        const validation = validateQID(employeeData.qid);
+        if (!validation.valid) {
+          newOptionalErrors.qid = validation.message;
+        } else {
+          delete newOptionalErrors.qid;
+        }
+      } else {
+        delete newOptionalErrors.qid;
+      }
+    } else if (field === "passportNumber") {
+      if (
+        employeeData.passportNumber &&
+        employeeData.passportNumber.trim() !== ""
+      ) {
+        const validation = validatePassportNumber(employeeData.passportNumber);
+        if (!validation.valid) {
+          newOptionalErrors.passportNumber = validation.message;
+        } else {
+          delete newOptionalErrors.passportNumber;
+        }
+      } else {
+        delete newOptionalErrors.passportNumber;
+      }
+    }
+
+    setMandatoryErrors(newErrors);
+    setOptionalErrors(newOptionalErrors);
   };
 
   const validatePhoneNumber = (phone, countryCode) => {
@@ -187,10 +599,49 @@ const EmployeeForm = ({
       return { valid: false, message: "Phone number is required" };
     }
 
+    if (!/^\d+$/.test(phoneDigitsOnly)) {
+      return { valid: false, message: "Phone number must contain only digits" };
+    }
+
     if (phoneDigitsOnly.length !== expectedLength) {
       return {
         valid: false,
-        message: `Phone number should be ${expectedLength} digits for ${countryCode}`,
+        message: `Phone number must be exactly ${expectedLength} digits for ${countryCode}`,
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateEmail = (email) => {
+    if (!email) {
+      return { valid: false, message: "Email is required" };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { valid: false, message: "Please enter a valid email address" };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateName = (name, fieldName) => {
+    if (!name || name.trim() === "") {
+      return { valid: false, message: `${fieldName} is required` };
+    }
+
+    if (name.trim().length < 2) {
+      return {
+        valid: false,
+        message: `${fieldName} must be at least 2 characters`,
+      };
+    }
+
+    if (!/^[a-zA-Z\s'-]+$/.test(name)) {
+      return {
+        valid: false,
+        message: `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`,
       };
     }
 
@@ -201,36 +652,55 @@ const EmployeeForm = ({
     const newErrors = {};
     const { firstName, lastName, email, phone, role, status } = employeeData;
 
-    if (!firstName) newErrors.firstName = "First name is required.";
-    if (!lastName) newErrors.lastName = "Last name is required.";
-    if (!email) newErrors.email = "Email is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      newErrors.email = "Email must be a valid email address.";
-
-    if (!phone) {
-      newErrors.phone = "Phone number is required.";
-    } else {
-      const phoneValidation = validatePhoneNumber(phone, selectedCountry.code);
-      if (!phoneValidation.valid) {
-        newErrors.phone = phoneValidation.message;
-      }
+    // Validate First Name
+    const firstNameValidation = validateName(firstName, "First name");
+    if (!firstNameValidation.valid) {
+      newErrors.firstName = firstNameValidation.message;
     }
 
-    if (!role) newErrors.role = "Role is required.";
-    if (!status) newErrors.status = "Status is required.";
+    // Validate Last Name
+    const lastNameValidation = validateName(lastName, "Last name");
+    if (!lastNameValidation.valid) {
+      newErrors.lastName = lastNameValidation.message;
+    }
+
+    // Validate Email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      newErrors.email = emailValidation.message;
+    }
+
+    // Validate Phone
+    const phoneValidation = validatePhoneNumber(phone, selectedCountry.code);
+    if (!phoneValidation.valid) {
+      newErrors.phone = phoneValidation.message;
+    }
+
+    // Validate Role
+    if (!role || role.trim() === "") {
+      newErrors.role = "Role is required";
+    }
+
+    // Validate Status
+    if (!status || status.trim() === "") {
+      newErrors.status = "Status is required";
+    }
 
     setMandatoryErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validate = () => {
-    return validateMandatoryFields();
+    const mandatoryValid = validateMandatoryFields();
+    const optionalValid = validateOptionalFields();
+    return mandatoryValid && optionalValid;
   };
 
   const handleSave = async () => {
     if (validate()) {
       setIsSaving(true);
       try {
+        // await new Promise(resolve => setTimeout(resolve, 2000));
         await onSave(employeeData);
       } catch (error) {
         console.error("Error saving employee:", error);
@@ -268,17 +738,37 @@ const EmployeeForm = ({
 
   const isMandatoryValid = () => {
     const { firstName, lastName, email, phone, role, status } = employeeData;
-    
+
+    // Check if all required fields are filled
     if (!firstName || !lastName || !email || !phone || !role || !status) {
       return false;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Validate first name
+    const firstNameValidation = validateName(firstName, "First name");
+    if (!firstNameValidation.valid) {
       return false;
     }
 
+    // Validate last name
+    const lastNameValidation = validateName(lastName, "Last name");
+    if (!lastNameValidation.valid) {
+      return false;
+    }
+
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return false;
+    }
+
+    // Validate phone
     const phoneValidation = validatePhoneNumber(phone, selectedCountry.code);
-    return phoneValidation.valid;
+    if (!phoneValidation.valid) {
+      return false;
+    }
+
+    return true;
   };
 
   const renderMandatoryInfo = () => (
@@ -288,9 +778,12 @@ const EmployeeForm = ({
           <label className="input-label">First Name *</label>
           <input
             type="text"
-            className={`input-field ${mandatoryErrors.firstName ? "error" : ""}`}
+            className={`input-field ${
+              mandatoryErrors.firstName ? "error" : ""
+            }`}
             value={employeeData.firstName}
             onChange={(e) => handleInputChange("firstName", e.target.value)}
+            onBlur={() => handleBlur("firstName")}
             required
           />
           {mandatoryErrors.firstName && (
@@ -304,6 +797,7 @@ const EmployeeForm = ({
             className={`input-field ${mandatoryErrors.midName ? "error" : ""}`}
             value={employeeData.midName}
             onChange={(e) => handleInputChange("midName", e.target.value)}
+            onBlur={() => handleBlur("midName")}
           />
           {mandatoryErrors.midName && (
             <span className="input-error">{mandatoryErrors.midName}</span>
@@ -316,6 +810,7 @@ const EmployeeForm = ({
             className={`input-field ${mandatoryErrors.lastName ? "error" : ""}`}
             value={employeeData.lastName}
             onChange={(e) => handleInputChange("lastName", e.target.value)}
+            onBlur={() => handleBlur("lastName")}
             required
           />
           {mandatoryErrors.lastName && (
@@ -332,6 +827,7 @@ const EmployeeForm = ({
             className={`input-field ${mandatoryErrors.email ? "error" : ""}`}
             value={employeeData.email}
             onChange={(e) => handleInputChange("email", e.target.value)}
+            onBlur={() => handleBlur("email")}
             required
           />
           {mandatoryErrors.email && (
@@ -361,7 +857,10 @@ const EmployeeForm = ({
               </button>
 
               {showCountryDropdown && (
-                <div className="country-dropdown-menu" style={{ width: "180px" }}>
+                <div
+                  className="country-dropdown-menu"
+                  style={{ width: "180px" }}
+                >
                   {COUNTRIES.map((country) => (
                     <button
                       key={country.code}
@@ -393,8 +892,11 @@ const EmployeeForm = ({
                 placeholder="Enter your mobile number"
                 value={employeeData.phone}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
+                onBlur={() => handleBlur("phone")}
                 required
-                className={`input-field ${mandatoryErrors.phone ? "error" : ""}`}
+                className={`input-field ${
+                  mandatoryErrors.phone ? "error" : ""
+                }`}
                 style={{ height: "2.7rem" }}
               />
             </div>
@@ -410,6 +912,7 @@ const EmployeeForm = ({
         <select
           value={employeeData.role}
           onChange={(e) => handleInputChange("role", e.target.value)}
+          onBlur={() => handleBlur("role")}
           className={`input-field ${mandatoryErrors.role ? "error" : ""}`}
           required
         >
@@ -450,32 +953,6 @@ const EmployeeForm = ({
             <X size={16} className="status-icon" />
             <span>Inactive</span>
           </button>
-          <button
-            className={`status-button ${
-              employeeData.status === EmployeeStatus.ONLEAVE
-                ? "onleave-status"
-                : ""
-            }`}
-            onClick={() => handleInputChange("status", EmployeeStatus.ONLEAVE)}
-            type="button"
-          >
-            <Calendar size={16} className="status-icon" />
-            <span>On Leave</span>
-          </button>
-          <button
-            className={`status-button ${
-              employeeData.status === EmployeeStatus.TERMINATED
-                ? "terminated-status"
-                : ""
-            }`}
-            onClick={() =>
-              handleInputChange("status", EmployeeStatus.TERMINATED)
-            }
-            type="button"
-          >
-            <X size={16} className="status-icon" />
-            <span>Terminated</span>
-          </button>
         </div>
       </div>
 
@@ -488,7 +965,9 @@ const EmployeeForm = ({
           CANCEL
         </button>
         <button
-          className={`button button-primary ${!isMandatoryValid() ? "disabled" : ""}`}
+          className={`button button-primary ${
+            !isMandatoryValid() ? "disabled" : ""
+          }`}
           onClick={handleNextTab}
           type="button"
           disabled={!isMandatoryValid()}
@@ -506,16 +985,14 @@ const EmployeeForm = ({
         <div className="grid-cols-2">
           <div className="input-wrapper">
             <label className="input-label">Date of Birth</label>
-            <div className="input-with-icon">
-              <input
-                type="date"
-                className="input-field"
-                value={employeeData.dob}
-                onChange={(e) => handleInputChange("dob", e.target.value)}
-                max={getMaxDobDate()}
-              />
-              <Calendar size={16} className="icon" />
-            </div>
+            <input
+              type="date"
+              className="input-field"
+              value={employeeData.dob}
+              onChange={(e) => handleInputChange("dob", e.target.value)}
+              max={getMaxDobDate()}
+            />
+            {/* <Calendar size={16} className="icon" /> */}
           </div>
           <div className="input-wrapper">
             <label className="input-label">Gender</label>
@@ -551,7 +1028,7 @@ const EmployeeForm = ({
           </div>
         </div>
 
-        <div className="input-wrapper">
+        {/* <div className="input-wrapper">
           <label className="input-label">Bio</label>
           <textarea
             className="input-field text-area"
@@ -559,7 +1036,7 @@ const EmployeeForm = ({
             value={employeeData.bio || ""}
             onChange={(e) => handleInputChange("bio", e.target.value)}
           />
-        </div>
+        </div> */}
 
         <div className="input-wrapper">
           <label className="input-label">Address</label>
@@ -568,6 +1045,7 @@ const EmployeeForm = ({
             rows={3}
             value={employeeData.address || ""}
             onChange={(e) => handleInputChange("address", e.target.value)}
+            onBlur={() => handleBlur("address")}
           />
         </div>
       </div>
@@ -627,7 +1105,9 @@ const EmployeeForm = ({
             <label className="input-label">Work Location</label>
             <select
               value={employeeData.workLocation}
-              onChange={(e) => handleInputChange("workLocation", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("workLocation", e.target.value)
+              }
               className="input-field"
             >
               <option value="">Select Work Location</option>
@@ -682,17 +1162,13 @@ const EmployeeForm = ({
 
         <div className="input-wrapper">
           <label className="input-label">Date of Joining</label>
-          <div className="input-with-icon">
-            <input
-              type="date"
-              className="input-field"
-              value={employeeData.joiningDate}
-              onChange={(e) =>
-                handleInputChange("joiningDate", e.target.value)
-              }
-            />
-            <Calendar size={16} className="icon" />
-          </div>
+          <input
+            type="date"
+            className="input-field"
+            value={employeeData.joiningDate}
+            onChange={(e) => handleInputChange("joiningDate", e.target.value)}
+          />
+          {/* <Calendar size={16} className="icon" /> */}
         </div>
       </div>
 
@@ -703,11 +1179,15 @@ const EmployeeForm = ({
             <label className="input-label">CTC</label>
             <input
               type="text"
-              className="input-field"
+              className={`input-field ${optionalErrors.ctc ? "error" : ""}`}
               value={employeeData.ctc}
               onChange={(e) => handleInputChange("ctc", e.target.value)}
+              onBlur={() => handleBlur("ctc")}
               placeholder="0.00"
             />
+            {optionalErrors.ctc && (
+              <span className="input-error">{optionalErrors.ctc}</span>
+            )}
           </div>
 
           <div className="input-wrapper">
@@ -739,12 +1219,20 @@ const EmployeeForm = ({
           <label className="input-label">Account Holder's Name</label>
           <input
             type="text"
-            className="input-field"
+            className={`input-field ${
+              optionalErrors.accountHolderName ? "error" : ""
+            }`}
             value={employeeData.accountHolderName}
             onChange={(e) =>
               handleInputChange("accountHolderName", e.target.value)
             }
+            onBlur={() => handleBlur("accountHolderName")}
           />
+          {optionalErrors.accountHolderName && (
+            <span className="input-error">
+              {optionalErrors.accountHolderName}
+            </span>
+          )}
         </div>
 
         <div className="grid-cols-2">
@@ -752,19 +1240,29 @@ const EmployeeForm = ({
             <label className="input-label">Bank Name</label>
             <input
               type="text"
-              className="input-field"
+              className={`input-field ${
+                optionalErrors.bankName ? "error" : ""
+              }`}
               value={employeeData.bankName}
               onChange={(e) => handleInputChange("bankName", e.target.value)}
+              onBlur={() => handleBlur("bankName")}
             />
+            {optionalErrors.bankName && (
+              <span className="input-error">{optionalErrors.bankName}</span>
+            )}
           </div>
           <div className="input-wrapper">
             <label className="input-label">City</label>
             <input
               type="text"
-              className="input-field"
+              className={`input-field ${optionalErrors.city ? "error" : ""}`}
               value={employeeData.city}
               onChange={(e) => handleInputChange("city", e.target.value)}
+              onBlur={() => handleBlur("city")}
             />
+            {optionalErrors.city && (
+              <span className="input-error">{optionalErrors.city}</span>
+            )}
           </div>
         </div>
 
@@ -772,10 +1270,16 @@ const EmployeeForm = ({
           <label className="input-label">Branch Name</label>
           <input
             type="text"
-            className="input-field"
+            className={`input-field ${
+              optionalErrors.branchName ? "error" : ""
+            }`}
             value={employeeData.branchName}
             onChange={(e) => handleInputChange("branchName", e.target.value)}
+            onBlur={() => handleBlur("branchName")}
           />
+          {optionalErrors.branchName && (
+            <span className="input-error">{optionalErrors.branchName}</span>
+          )}
         </div>
 
         <div className="grid-cols-2">
@@ -783,22 +1287,36 @@ const EmployeeForm = ({
             <label className="input-label">IFSC Code</label>
             <input
               type="text"
-              className="input-field"
+              className={`input-field ${
+                optionalErrors.ifscCode ? "error" : ""
+              }`}
               value={employeeData.ifscCode}
               onChange={(e) => handleInputChange("ifscCode", e.target.value)}
+              onBlur={() => handleBlur("ifscCode")}
             />
+            {optionalErrors.ifscCode && (
+              <span className="input-error">{optionalErrors.ifscCode}</span>
+            )}
           </div>
           <div className="input-wrapper">
             <label className="input-label">Account Number</label>
             <input
               type="text"
-              className="input-field"
+              className={`input-field ${
+                optionalErrors.accountNumber ? "error" : ""
+              }`}
               value={employeeData.accountNumber}
               onChange={(e) =>
                 handleInputChange("accountNumber", e.target.value)
               }
+              onBlur={() => handleBlur("accountNumber")}
               placeholder="9-18 digits"
             />
+            {optionalErrors.accountNumber && (
+              <span className="input-error">
+                {optionalErrors.accountNumber}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -812,24 +1330,34 @@ const EmployeeForm = ({
                 <label className="input-label">QID</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className={`input-field ${optionalErrors.qid ? "error" : ""}`}
                   value={employeeData.qid}
                   onChange={(e) => handleInputChange("qid", e.target.value)}
+                  onBlur={() => handleBlur("qid")}
                 />
+                {optionalErrors.qid && (
+                  <span className="input-error">{optionalErrors.qid}</span>
+                )}
               </div>
               <div className="input-wrapper">
                 <label className="input-label">QID Expiration Date</label>
-                <div className="input-with-icon">
-                  <input
-                    type="date"
-                    className="input-field"
-                    value={employeeData.qidExpirationDate}
-                    onChange={(e) =>
-                      handleInputChange("qidExpirationDate", e.target.value)
-                    }
-                  />
-                  <Calendar size={16} className="icon" />
-                </div>
+                <input
+                  type="date"
+                  className={`input-field ${
+                    optionalErrors.qidExpirationDate ? "error" : ""
+                  }`}
+                  value={employeeData.qidExpirationDate}
+                  onChange={(e) =>
+                    handleInputChange("qidExpirationDate", e.target.value)
+                  }
+                  onBlur={() => handleBlur("qidExpirationDate")}
+                />
+                {/* <Calendar size={16} className="icon" /> */}
+                {optionalErrors.qidExpirationDate && (
+                  <span className="input-error">
+                    {optionalErrors.qidExpirationDate}
+                  </span>
+                )}
               </div>
             </div>
           </>
@@ -840,26 +1368,40 @@ const EmployeeForm = ({
             <label className="input-label">Passport Number</label>
             <input
               type="text"
-              className="input-field"
+              className={`input-field ${
+                optionalErrors.passportNumber ? "error" : ""
+              }`}
               value={employeeData.passportNumber}
               onChange={(e) =>
                 handleInputChange("passportNumber", e.target.value)
               }
+              onBlur={() => handleBlur("passportNumber")}
             />
+            {optionalErrors.passportNumber && (
+              <span className="input-error">
+                {optionalErrors.passportNumber}
+              </span>
+            )}
           </div>
           <div className="input-wrapper">
             <label className="input-label">Passport Valid Till</label>
-            <div className="input-with-icon">
-              <input
-                type="date"
-                className="input-field"
-                value={employeeData.passportValidTill}
-                onChange={(e) =>
-                  handleInputChange("passportValidTill", e.target.value)
-                }
-              />
-              <Calendar size={16} className="icon" />
-            </div>
+            <input
+              type="date"
+              className={`input-field ${
+                optionalErrors.passportValidTill ? "error" : ""
+              }`}
+              value={employeeData.passportValidTill}
+              onChange={(e) =>
+                handleInputChange("passportValidTill", e.target.value)
+              }
+              onBlur={() => handleBlur("passportValidTill")}
+            />
+            {optionalErrors.passportValidTill && (
+              <span className="input-error">
+                {optionalErrors.passportValidTill}
+              </span>
+            )}
+            {/* <Calendar size={16} className="icon" /> */}
           </div>
         </div>
       </div>
@@ -869,7 +1411,7 @@ const EmployeeForm = ({
           className="button button-outlined"
           onClick={() => setCurrentTab("mandatory")}
           type="button"
-          disabled={isSaving}
+          // disabled={isSaving}
         >
           BACK
         </button>
@@ -881,7 +1423,6 @@ const EmployeeForm = ({
         >
           {isSaving ? (
             <>
-              <Loader size={18} className="spinner" style={{ marginRight: "8px" }} />
               SAVING...
             </>
           ) : (
