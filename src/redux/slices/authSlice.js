@@ -46,11 +46,9 @@ export const logoutUser = createAsyncThunk(
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
       localStorage.removeItem('orgId');
-      localStorage.removeItem('timezone');
       localStorage.removeItem('elapsedTime');
-      localStorage.removeItem('checkOutTime');
-      localStorage.removeItem('showCheckOutTime');
-      localStorage.removeItem('isCheckedIn');
+    
+      
 
  
       // Clear user profile in userSlice when logging out

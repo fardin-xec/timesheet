@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import Button from "../common/Button";
-import { checkOut,checkIn } from "../../utils/api";
+import { checkOut, checkIn } from "../../utils/api";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const DashboardHeader = ({ user, onLogout }) => {
   // Helper function to get today's date string (YYYY-MM-DD)
   const getTodayDateString = () => {
-    return new Date().toISOString().split('T')[0];
+    return new Date().toISOString().split("T")[0];
   };
 
   // Helper function to check if stored data is from today
@@ -36,7 +36,7 @@ const DashboardHeader = ({ user, onLogout }) => {
     const savedStartTime = localStorage.getItem("startTime");
     return savedStartTime ? new Date(savedStartTime) : null;
   });
-  
+
   const [elapsedTime, setElapsedTime] = useState(() => {
     if (!isStoredDataFromToday()) {
       return 0;
@@ -44,9 +44,9 @@ const DashboardHeader = ({ user, onLogout }) => {
     const savedElapsedTime = localStorage.getItem("elapsedTime");
     return savedElapsedTime ? parseInt(savedElapsedTime, 10) : 0;
   });
-  
+
   const [timerInterval, setTimerInterval] = useState(null);
-  
+
   const [checkOutTime, setCheckOutTime] = useState(() => {
     if (!isStoredDataFromToday()) {
       return null;
@@ -54,7 +54,7 @@ const DashboardHeader = ({ user, onLogout }) => {
     const savedCheckOutTime = localStorage.getItem("checkOutTime");
     return savedCheckOutTime ? new Date(savedCheckOutTime) : null;
   });
-  
+
   const [showCheckOutTime, setShowCheckOutTime] = useState(() => {
     if (!isStoredDataFromToday()) {
       return false;
@@ -62,7 +62,7 @@ const DashboardHeader = ({ user, onLogout }) => {
     const savedShowCheckOutTime = localStorage.getItem("showCheckOutTime");
     return savedShowCheckOutTime === "true";
   });
-  
+
   // Fix: Initialize isCheckedIn from localStorage first, then fallback to user data
   const [isCheckedIn, setIsCheckedIn] = useState(() => {
     if (!isStoredDataFromToday()) {
@@ -74,7 +74,7 @@ const DashboardHeader = ({ user, onLogout }) => {
     }
     return user?.isClockedInToday || false;
   });
-  
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -84,7 +84,7 @@ const DashboardHeader = ({ user, onLogout }) => {
       const storedDate = localStorage.getItem("checkInDate");
       const today = getTodayDateString();
       const isDataFromToday = storedDate === today;
-      
+
       if (!isDataFromToday) {
         // New day detected, reset all timer states
         setStartTime(null);
@@ -92,16 +92,17 @@ const DashboardHeader = ({ user, onLogout }) => {
         setCheckOutTime(null);
         setShowCheckOutTime(false);
         setIsCheckedIn(false);
-        
+        localStorage.setItem("isCheckedIn", "false");
+
         // Clear timer interval if running
         if (timerInterval) {
           clearInterval(timerInterval);
           setTimerInterval(null);
         }
-        
+
         // Clear localStorage
         clearPreviousDayData();
-        
+
         console.log("New day detected - timer data reset");
       }
     };
@@ -150,7 +151,7 @@ const DashboardHeader = ({ user, onLogout }) => {
             (new Date().getTime() - startTime.getTime()) / 1000
           );
           setElapsedTime(resumeElapsedTime);
-          
+
           const interval = setInterval(() => {
             setElapsedTime((prev) => {
               const newElapsed = prev + 1;
@@ -204,20 +205,28 @@ const DashboardHeader = ({ user, onLogout }) => {
     const now = new Date();
     const utcTime = now.toISOString().substr(11, 8);
     const today = getTodayDateString();
-    
+
+    // Clear any existing intervals before starting a new one
+    if (timerInterval) {
+      clearInterval(timerInterval);
+    }
+
     setStartTime(now);
     setIsCheckedIn(true);
+    localStorage.setItem("isCheckedIn", "true");
     setElapsedTime(0);
     setShowCheckOutTime(false);
     setCheckOutTime(null);
 
+    // Update localStorage
     localStorage.setItem("startTime", now.toISOString());
     localStorage.setItem("elapsedTime", "0");
     localStorage.setItem("isCheckedIn", "true");
     localStorage.setItem("showCheckOutTime", "false");
-    localStorage.setItem("checkInDate", today); // Store today's date
+    localStorage.setItem("checkInDate", today);
     localStorage.removeItem("checkOutTime");
 
+    // Start timer interval
     const interval = setInterval(() => {
       setElapsedTime((prev) => {
         const newElapsed = prev + 1;
@@ -235,10 +244,15 @@ const DashboardHeader = ({ user, onLogout }) => {
     } catch (err) {
       console.error("Failed to check in:", err);
       toast.error(`Check-in failed: ${err.message || "Unknown error"}`);
+
+      // Roll back state and interval on error
       setIsCheckedIn(false);
       setStartTime(null);
       setElapsedTime(0);
-      if (timerInterval) clearInterval(timerInterval);
+      if (interval) {
+        clearInterval(interval);
+        setTimerInterval(null);
+      }
       localStorage.setItem("isCheckedIn", "false");
       localStorage.removeItem("startTime");
       localStorage.removeItem("checkInDate");
@@ -249,20 +263,24 @@ const DashboardHeader = ({ user, onLogout }) => {
   const handleCheckOut = async () => {
     const now = new Date();
     const utcTime = now.toISOString().substr(11, 8);
+
+    // Clear timer interval on check out
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+
     setIsCheckedIn(false);
+    localStorage.setItem("isCheckedIn", "false");
     setCheckOutTime(now);
     setShowCheckOutTime(true);
 
+    // Update localStorage accordingly
     localStorage.setItem("checkOutTime", now.toISOString());
     localStorage.setItem("elapsedTime", elapsedTime.toString());
     localStorage.setItem("isCheckedIn", "false");
     localStorage.setItem("showCheckOutTime", "true");
     localStorage.removeItem("startTime");
-
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
-    }
 
     try {
       const data = { checkOutTime: utcTime };
@@ -272,12 +290,15 @@ const DashboardHeader = ({ user, onLogout }) => {
     } catch (err) {
       console.error("Failed to check out:", err);
       toast.error(`Check-out failed: ${err.message || "Unknown error"}`);
+
+      // Roll back state and localStorage on error
       setIsCheckedIn(true);
       setCheckOutTime(null);
       setShowCheckOutTime(false);
       localStorage.setItem("isCheckedIn", "true");
       localStorage.removeItem("checkOutTime");
     }
+
     console.log("Checked out at:", now);
     console.log("Total time:", formatTime(elapsedTime));
   };
@@ -325,7 +346,7 @@ const DashboardHeader = ({ user, onLogout }) => {
       </div>
 
       <div className="time-tracking">
-        {isCheckedIn && user?.role==='user' && elapsedTime!==0 && (
+        {isCheckedIn && elapsedTime !== 0 && (
           <div className="timer-display">
             <span className="timer-label">Working:</span>
             <span className="timer-value">{formatTime(elapsedTime)}</span>
@@ -340,7 +361,7 @@ const DashboardHeader = ({ user, onLogout }) => {
       </div>
 
       <div className="user-actions">
-        {user?.role === "user" && (
+        {/* {user?.role === "user" && ( */}
           <div className="check-buttons">
             {isCheckedIn ? (
               <Button onClick={handleCheckOut} className="checkout-btn">
@@ -352,7 +373,7 @@ const DashboardHeader = ({ user, onLogout }) => {
               </Button>
             )}
           </div>
-        )}
+        {/* )} */}
         <div className="user-info">
           <span className="user-name">
             {user?.employee.firstName + " " + user?.employee.lastName || "User"}
