@@ -1,128 +1,93 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Button from "../common/Button";
-import { checkOut, checkIn } from "../../utils/api";
+import { checkOut, checkIn, fetchActiveTimer } from "../../utils/api";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import "../../styles/common.css"
 
 const DashboardHeader = ({ user, onLogout }) => {
-  // Helper function to get today's date string (YYYY-MM-DD)
-  const getTodayDateString = () => {
-    return new Date().toISOString().split("T")[0];
-  };
-
-  // Helper function to check if stored data is from today
-  const isStoredDataFromToday = () => {
-    const storedDate = localStorage.getItem("checkInDate");
-    const today = getTodayDateString();
-    return storedDate === today;
-  };
-
-  // Helper function to clear previous day's data
-  const clearPreviousDayData = () => {
-    localStorage.removeItem("startTime");
-    localStorage.removeItem("elapsedTime");
-    localStorage.removeItem("checkOutTime");
-    localStorage.removeItem("showCheckOutTime");
-    localStorage.removeItem("isCheckedIn");
-    localStorage.removeItem("checkInDate");
-  };
-
-  // Initialize state from localStorage with proper fallbacks and daily reset
-  const [startTime, setStartTime] = useState(() => {
-    if (!isStoredDataFromToday()) {
-      clearPreviousDayData();
-      return null;
-    }
-    const savedStartTime = localStorage.getItem("startTime");
-    return savedStartTime ? new Date(savedStartTime) : null;
-  });
-
-  const [elapsedTime, setElapsedTime] = useState(() => {
-    if (!isStoredDataFromToday()) {
-      return 0;
-    }
-    const savedElapsedTime = localStorage.getItem("elapsedTime");
-    return savedElapsedTime ? parseInt(savedElapsedTime, 10) : 0;
-  });
-
-  const [timerInterval, setTimerInterval] = useState(null);
-
-  const [checkOutTime, setCheckOutTime] = useState(() => {
-    if (!isStoredDataFromToday()) {
-      return null;
-    }
-    const savedCheckOutTime = localStorage.getItem("checkOutTime");
-    return savedCheckOutTime ? new Date(savedCheckOutTime) : null;
-  });
-
-  const [showCheckOutTime, setShowCheckOutTime] = useState(() => {
-    if (!isStoredDataFromToday()) {
-      return false;
-    }
-    const savedShowCheckOutTime = localStorage.getItem("showCheckOutTime");
-    return savedShowCheckOutTime === "true";
-  });
-
-  // Fix: Initialize isCheckedIn from localStorage first, then fallback to user data
-  const [isCheckedIn, setIsCheckedIn] = useState(() => {
-    if (!isStoredDataFromToday()) {
-      return false;
-    }
-    const savedIsCheckedIn = localStorage.getItem("isCheckedIn");
-    if (savedIsCheckedIn !== null) {
-      return savedIsCheckedIn === "true";
-    }
-    return user?.isClockedInToday || false;
-  });
-
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [checkOutTime, setCheckOutTime] = useState(null);
+  const [showCheckOutTime, setShowCheckOutTime] = useState(false);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const dropdownRef = useRef(null);
+  const timerIntervalRef = useRef(null);
 
-  // Check for new day on component mount and periodically
-  useEffect(() => {
-    const checkForNewDay = () => {
-      const storedDate = localStorage.getItem("checkInDate");
-      const today = getTodayDateString();
-      const isDataFromToday = storedDate === today;
-
-      if (!isDataFromToday) {
-        // New day detected, reset all timer states
-        setStartTime(null);
-        setElapsedTime(0);
-        setCheckOutTime(null);
+  // Fetch active timer data from API
+  const loadActiveTimer = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetchActiveTimer();
+      console.log("Active timer response:", response);
+      
+      if (response?.isActive && response?.entry) {
+        const timerData = response;
+        
+        setIsCheckedIn(true);
+        setElapsedTime(timerData.elapsedSeconds || 0);
         setShowCheckOutTime(false);
-        setIsCheckedIn(false);
-        localStorage.setItem("isCheckedIn", "false");
+        setCheckOutTime(null);
 
-        // Clear timer interval if running
-        if (timerInterval) {
-          clearInterval(timerInterval);
-          setTimerInterval(null);
+        // Start the interval timer if not already running
+        if (!timerIntervalRef.current) {
+          const interval = setInterval(() => {
+            setElapsedTime((prev) => prev + 1);
+          }, 1000);
+          timerIntervalRef.current = interval;
         }
-
-        // Clear localStorage
-        clearPreviousDayData();
-
-        console.log("New day detected - timer data reset");
+      } else {
+        // No active timer
+        setIsCheckedIn(false);
+        setElapsedTime(0);
+        setShowCheckOutTime(false);
+        setCheckOutTime(null);
+        
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
       }
-    };
+    } catch (err) {
+      console.error("Failed to fetch active timer:", err);
+      // On error, assume no active timer
+      setIsCheckedIn(false);
+      setElapsedTime(0);
+      
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    // Check immediately on mount
-    checkForNewDay();
-
-    // Check every minute for new day
-    const newDayCheckInterval = setInterval(checkForNewDay, 60000);
+  // Load active timer on component mount
+  useEffect(() => {
+    loadActiveTimer();
 
     return () => {
-      clearInterval(newDayCheckInterval);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     };
-  }, [timerInterval]);
+  }, [loadActiveTimer]);
+
+  // Periodically sync with server (every 5 minutes)
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      loadActiveTimer();
+    }, 5 * 60 * 1000); // Sync every 5 minutes
+
+    return () => {
+      clearInterval(syncInterval);
+    };
+  }, [loadActiveTimer]);
 
   // Handle clicks outside the dropdown to close it
   useEffect(() => {
-    console.log(user);
-
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
@@ -132,36 +97,14 @@ const DashboardHeader = ({ user, onLogout }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [user]);
+  }, []);
 
   // Handle page visibility change to pause/resume timer
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Page is hidden, save current elapsed time
-        if (isCheckedIn && startTime) {
-          const currentElapsedTime = Math.floor(
-            (new Date().getTime() - startTime.getTime()) / 1000
-          );
-          localStorage.setItem("elapsedTime", currentElapsedTime.toString());
-        }
-      } else {
-        // Page is visible again, resume timer if needed
-        if (isCheckedIn && startTime && !timerInterval) {
-          const resumeElapsedTime = Math.floor(
-            (new Date().getTime() - startTime.getTime()) / 1000
-          );
-          setElapsedTime(resumeElapsedTime);
-
-          const interval = setInterval(() => {
-            setElapsedTime((prev) => {
-              const newElapsed = prev + 1;
-              localStorage.setItem("elapsedTime", newElapsed.toString());
-              return newElapsed;
-            });
-          }, 1000);
-          setTimerInterval(interval);
-        }
+      if (!document.hidden && isCheckedIn) {
+        // Page is visible again, resync with server
+        loadActiveTimer();
       }
     };
 
@@ -169,94 +112,31 @@ const DashboardHeader = ({ user, onLogout }) => {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isCheckedIn, startTime, timerInterval]);
-
-  // Resume timer on mount if checked in
-  useEffect(() => {
-    if (isCheckedIn && startTime && !timerInterval) {
-      const resumeElapsedTime = Math.floor(
-        (new Date().getTime() - startTime.getTime()) / 1000
-      );
-      setElapsedTime(resumeElapsedTime);
-
-      const interval = setInterval(() => {
-        setElapsedTime((prev) => {
-          const newElapsed = prev + 1;
-          localStorage.setItem("elapsedTime", newElapsed.toString());
-          return newElapsed;
-        });
-      }, 1000);
-      setTimerInterval(interval);
-    }
-
-    return () => {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
-    };
-  }, [isCheckedIn, startTime, timerInterval]);
-
-  // Sync localStorage when isCheckedIn changes
-  useEffect(() => {
-    localStorage.setItem("isCheckedIn", isCheckedIn.toString());
-  }, [isCheckedIn]);
+  }, [isCheckedIn, loadActiveTimer]);
 
   // Handle check-in with API call
   const handleCheckIn = async () => {
     const now = new Date();
     const utcTime = now.toISOString().substr(11, 8);
-    const today = getTodayDateString();
-
-    // Clear any existing intervals before starting a new one
-    if (timerInterval) {
-      clearInterval(timerInterval);
-    }
-
-    setStartTime(now);
-    setIsCheckedIn(true);
-    localStorage.setItem("isCheckedIn", "true");
-    setElapsedTime(0);
-    setShowCheckOutTime(false);
-    setCheckOutTime(null);
-
-    // Update localStorage
-    localStorage.setItem("startTime", now.toISOString());
-    localStorage.setItem("elapsedTime", "0");
-    localStorage.setItem("isCheckedIn", "true");
-    localStorage.setItem("showCheckOutTime", "false");
-    localStorage.setItem("checkInDate", today);
-    localStorage.removeItem("checkOutTime");
-
-    // Start timer interval
-    const interval = setInterval(() => {
-      setElapsedTime((prev) => {
-        const newElapsed = prev + 1;
-        localStorage.setItem("elapsedTime", newElapsed.toString());
-        return newElapsed;
-      });
-    }, 1000);
-    setTimerInterval(interval);
-
+    
     try {
       const data = { checkInTime: utcTime, status: "present" };
       await checkIn(user?.employee?.id, data);
+      
+      // Fetch the latest timer state from server after check-in
+      await loadActiveTimer();
+      
       toast.success("Successfully checked in!");
       console.log("Checked in at:", utcTime);
     } catch (err) {
       console.error("Failed to check in:", err);
       toast.error(`Check-in failed: ${err.message || "Unknown error"}`);
-
-      // Roll back state and interval on error
       setIsCheckedIn(false);
-      setStartTime(null);
       setElapsedTime(0);
-      if (interval) {
-        clearInterval(interval);
-        setTimerInterval(null);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
       }
-      localStorage.setItem("isCheckedIn", "false");
-      localStorage.removeItem("startTime");
-      localStorage.removeItem("checkInDate");
     }
   };
 
@@ -264,44 +144,29 @@ const DashboardHeader = ({ user, onLogout }) => {
   const handleCheckOut = async () => {
     const now = new Date();
     const utcTime = now.toISOString().substr(11, 8);
-
-    // Clear timer interval on check out
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
-    }
-
-    setIsCheckedIn(false);
-    localStorage.setItem("isCheckedIn", "false");
-    setCheckOutTime(now);
-    setShowCheckOutTime(true);
-
-    // Update localStorage accordingly
-    localStorage.setItem("checkOutTime", now.toISOString());
-    localStorage.setItem("elapsedTime", elapsedTime.toString());
-    localStorage.setItem("isCheckedIn", "false");
-    localStorage.setItem("showCheckOutTime", "true");
-    localStorage.removeItem("startTime");
+    const finalElapsedTime = elapsedTime;
 
     try {
       const data = { checkOutTime: utcTime };
       await checkOut(user?.employee?.id, data);
+      
+      // Update local state after successful check-out
+      setIsCheckedIn(false);
+      setCheckOutTime(now);
+      setShowCheckOutTime(true);
+      
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+
       toast.success("Successfully checked out!");
       console.log("Checked out at:", utcTime);
+      console.log("Total time:", formatTime(finalElapsedTime));
     } catch (err) {
       console.error("Failed to check out:", err);
       toast.error(`Check-out failed: ${err.message || "Unknown error"}`);
-
-      // Roll back state and localStorage on error
-      setIsCheckedIn(true);
-      setCheckOutTime(null);
-      setShowCheckOutTime(false);
-      localStorage.setItem("isCheckedIn", "true");
-      localStorage.removeItem("checkOutTime");
     }
-
-    console.log("Checked out at:", now);
-    console.log("Total time:", formatTime(elapsedTime));
   };
 
   // Format the timer display
@@ -330,7 +195,7 @@ const DashboardHeader = ({ user, onLogout }) => {
     // Update the user role to 'user'
     const updatedUser = { ...user, role: "user" };
 
-    // Save the updated user back to localStorage
+    // Save the updated user back to localStorage (keeping this one for auth)
     localStorage.setItem("user", JSON.stringify(updatedUser));
 
     // Close the dropdown
@@ -347,7 +212,7 @@ const DashboardHeader = ({ user, onLogout }) => {
       </div>
 
       <div className="time-tracking">
-        {isCheckedIn && elapsedTime !== 0 && (
+        {!isLoading && isCheckedIn && elapsedTime !== 0 && (
           <div className="timer-display">
             <span className="timer-label">Working:</span>
             <span className="timer-value">{formatTime(elapsedTime)}</span>
@@ -362,19 +227,21 @@ const DashboardHeader = ({ user, onLogout }) => {
       </div>
 
       <div className="user-actions">
-        {/* {user?.role === "user" && ( */}
-          <div className="check-buttons">
-            {isCheckedIn ? (
-              <Button onClick={handleCheckOut} className="checkout-btn">
-                Check-Out
-              </Button>
-            ) : (
-              <Button onClick={handleCheckIn} className="checkin-btn">
-                Check-In
-              </Button>
-            )}
-          </div>
-        {/* )} */}
+        <div className="check-buttons">
+          {isLoading ? (
+            <Button disabled className="checkin-btn">
+              Loading...
+            </Button>
+          ) : isCheckedIn ? (
+            <Button onClick={handleCheckOut} className="checkout-btn">
+              Check-Out
+            </Button>
+          ) : (
+            <Button onClick={handleCheckIn} className="checkin-btn">
+              Check-In
+            </Button>
+          )}
+        </div>
         <div className="user-info">
           <span className="user-name">
             {user?.employee.firstName + " " + user?.employee.lastName || "User"}

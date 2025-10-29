@@ -1516,4 +1516,23 @@ export const fetchMonthlyLogs = async (startDate, endDate) => {
     console.error('Error fetching monthly logs:', error);
     throw error;
   }
+
+  
+};
+
+export const fetchActiveTimer = async () => {
+  const token = getToken();
+
+  const response = await api.get('/attendances/active-timer', {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch active timer');
+  }
+
+  return response.data.data;
 };
