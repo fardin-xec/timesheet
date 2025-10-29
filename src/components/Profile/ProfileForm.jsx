@@ -62,7 +62,7 @@ const ProfileForm = () => {
     department: "",
     bio: "",
     avatar: "",
-    residentialAddress: "",
+    permanentAddress: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
     maritalStatus: "single",
@@ -286,7 +286,7 @@ const ProfileForm = () => {
         department: profileData.employee.department || "",
         bio: profileData.employee.bio || "",
         avatar: profileData.employee.avatar || "",
-        residentialAddress: profileData.permanentAddress || "",
+        permanentAddress: profileData.permanentAddress || "",
         emergencyContactName: profileData.emergencyContactName || "",
         emergencyContactPhone: profileData.emergencyContactPhone || "",
         maritalStatus: profileData.maritalStatus || "single",
@@ -646,7 +646,7 @@ const ProfileForm = () => {
         midName: personalInfo.midName.trim(),
         phone: personalInfo.phone.trim(),
         bio: personalInfo.bio.trim(),
-        residentialAddress: personalInfo.residentialAddress.trim(),
+        permanentAddress: personalInfo.permanentAddress.trim(),
         emergencyContactName: personalInfo.emergencyContactName.trim(),
         emergencyContactPhone: personalInfo.emergencyContactPhone.trim(),
         maritalStatus: personalInfo.maritalStatus,
@@ -981,7 +981,7 @@ const ProfileForm = () => {
                     <div className="pi-info-row-large">
                       <span className="pi-label">Residential Address:</span>
                       <span className="pi-value">
-                        {personalInfo.residentialAddress || "Not provided"}
+                        {personalInfo.permanentAddress || "Not provided"}
                       </span>
                     </div>
                   </motion.div>
@@ -1193,8 +1193,8 @@ const ProfileForm = () => {
                   <motion.div className="pi-form-group" variants={itemVariants}>
                     <label>Residential Address</label>
                     <textarea
-                      name="residentialAddress"
-                      value={personalInfo.residentialAddress}
+                      name="permanentAddress"
+                      value={personalInfo.permanentAddress}
                       onChange={handlePersonalChange}
                       className="pi-textarea"
                       rows={3}

@@ -183,6 +183,13 @@ const EmployeesView = () => {
     },
   };
 
+  const handleProfileDialogClose = async () => {
+  setProfileDialogOpen(false);
+  setSelectedEmployee(null);
+  
+  // Refresh employee data when dialog closes
+  await handleRefresh();
+}
   const fetchData = useCallback(
     async (url, setter, errorMessage) => {
       try {
@@ -1101,7 +1108,7 @@ const EmployeesView = () => {
       <AnimatePresence>
         <EmployeeProfileDialog
           open={profileDialogOpen}
-          onClose={() => setProfileDialogOpen(false)}
+          onClose={handleProfileDialogClose}
           employee={selectedEmployee}
           departments={department}
           workLocation={workLocation}

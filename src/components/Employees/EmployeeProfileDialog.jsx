@@ -882,6 +882,7 @@ const EmployeeProfileDialog = ({
           employeeData.ctc,
           employeeData.currency
         );
+       
         await personalInfoAPI.updateBankInfo(employee.id, bankInfo);
         if (activeTab !== 4) {
           setToastMessage("Bank Info saved successfully!");
