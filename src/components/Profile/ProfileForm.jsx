@@ -55,7 +55,7 @@ const ProfileForm = () => {
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
     lastName: "",
-    middleName: "",
+    midName: "",
     email: "",
     phone: "",
     position: "",
@@ -279,7 +279,7 @@ const ProfileForm = () => {
       setPersonalInfo({
         firstName: profileData.employee.firstName || "",
         lastName: profileData.employee.lastName || "",
-        middleName: profileData.employee.midName || "",
+        midName: profileData.employee.midName || "",
         email: profileData.employee.email || "",
         phone: profileData.employee.phone || "",
         position: profileData.employee.jobTitle || "",
@@ -338,13 +338,13 @@ const ProfileForm = () => {
           delete newErrors.lastName;
         }
       }
-    } else if (field === "middleName") {
-      if (personalInfo.middleName && personalInfo.middleName.trim() !== "") {
-        const validation = validateName(personalInfo.middleName, "Middle name");
+    } else if (field === "midName") {
+      if (personalInfo.midName && personalInfo.midName.trim() !== "") {
+        const validation = validateName(personalInfo.midName, "Middle name");
         if (!validation.valid) {
-          newErrors.middleName = validation.message;
+          newErrors.midName = validation.message;
         } else {
-          delete newErrors.middleName;
+          delete newErrors.midName;
         }
       }
     } else if (field === "phone") {
@@ -597,9 +597,9 @@ const ProfileForm = () => {
       if (!validation.valid) errors.lastName = validation.message;
     }
 
-    if (personalInfo.middleName && personalInfo.middleName.trim() !== "") {
-      const validation = validateName(personalInfo.middleName, "Middle name");
-      if (!validation.valid) errors.middleName = validation.message;
+    if (personalInfo.midName && personalInfo.midName.trim() !== "") {
+      const validation = validateName(personalInfo.midName, "Middle name");
+      if (!validation.valid) errors.midName = validation.message;
     }
 
     if (personalInfo.phone && personalInfo.phone.trim() !== "") {
@@ -643,7 +643,7 @@ const ProfileForm = () => {
       const updateData = {
         firstName: personalInfo.firstName.trim(),
         lastName: personalInfo.lastName.trim(),
-        middleName: personalInfo.middleName.trim(),
+        midName: personalInfo.midName.trim(),
         phone: personalInfo.phone.trim(),
         bio: personalInfo.bio.trim(),
         residentialAddress: personalInfo.residentialAddress.trim(),
@@ -951,7 +951,7 @@ const ProfileForm = () => {
                     <motion.div className="pi-info-row" variants={itemVariants}>
                       <span className="pi-label">Name:</span>
                       <span className="pi-value">
-                        {personalInfo.firstName} {personalInfo.middleName}{" "}
+                        {personalInfo.firstName} {personalInfo.midName}{" "}
                         {personalInfo.lastName}
                       </span>
                     </motion.div>
@@ -1120,18 +1120,18 @@ const ProfileForm = () => {
                   <motion.div className="pi-form-group" variants={itemVariants}>
                     <label>Middle Name</label>
                     <input
-                      name="middleName"
+                      name="midName"
                       type="text"
-                      value={personalInfo.middleName}
+                      value={personalInfo.midName}
                       onChange={handlePersonalChange}
-                      onBlur={() => handlePersonalBlur("middleName")}
+                      onBlur={() => handlePersonalBlur("midName")}
                       className={`pi-phone-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                     />
-                    {personalErrors.middleName && (
+                    {personalErrors.midName && (
                       <span className="pi-error">
-                        {personalErrors.middleName}
+                        {personalErrors.midName}
                       </span>
                     )}
                   </motion.div>
@@ -1216,7 +1216,7 @@ const ProfileForm = () => {
                           handlePersonalBlur("emergencyContactName")
                         }
                          className={`pi-phone-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                       />
                       {personalErrors.emergencyContactName && (
@@ -1398,7 +1398,7 @@ const ProfileForm = () => {
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("accountHolderName")}
                          className={`pi-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                       />
                       {bankErrors.accountHolderName && (
@@ -1420,7 +1420,7 @@ const ProfileForm = () => {
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("bankName")}
                          className={`pi-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                       />
                       {bankErrors.bankName && (
@@ -1442,7 +1442,7 @@ const ProfileForm = () => {
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("city")}
                          className={`pi-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                       />
                       {bankErrors.city && (
@@ -1462,7 +1462,7 @@ const ProfileForm = () => {
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("branchName")}
                          className={`pi-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                       />
                       {bankErrors.branchName && (
@@ -1487,7 +1487,7 @@ const ProfileForm = () => {
                         onBlur={() => handleBankBlur("ifscCode")}
                         placeholder="e.g., SBIN0001234"
                          className={`pi-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                       />
                       {bankErrors.ifscCode && (
@@ -1508,7 +1508,7 @@ const ProfileForm = () => {
                         onBlur={() => handleBankBlur("accountNumber")}
                         placeholder="9-18 digits"
                          className={`pi-input ${
-                        personalErrors.middleName ? "error" : ""
+                        personalErrors.midName ? "error" : ""
                       }`}
                       />
                       {bankErrors.accountNumber && (
