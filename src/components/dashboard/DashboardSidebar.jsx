@@ -10,6 +10,7 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import BusinessIcon from "@mui/icons-material/Business";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { CalendarMonth } from "@mui/icons-material";
+import "../../styles/common.css"
 
 const DashboardSidebar = ({ activePage }) => {
   const location = useLocation();

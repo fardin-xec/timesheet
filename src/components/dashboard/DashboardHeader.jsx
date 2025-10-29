@@ -3,6 +3,7 @@ import Button from "../common/Button";
 import { checkOut, checkIn } from "../../utils/api";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "../../styles/common.css"
 
 const DashboardHeader = ({ user, onLogout }) => {
   // Helper function to get today's date string (YYYY-MM-DD)
