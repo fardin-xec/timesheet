@@ -1,0 +1,348 @@
+/* Base Input Field Styles */
+.input-field {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background-color: white;
+  color: #1f2937;
+  flex: 1;
+  padding-right: 40px;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-field:disabled,
+.input-field[readonly] {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Select/Dropdown Styles */
+select.input-field {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234b5563' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+select.input-field option {
+  background-color: white;
+  color: #1f2937;
+  padding: 10px;
+  font-weight: 500;
+}
+
+select.input-field option:checked {
+  background-color: #e0e7ff;
+  color: #667eea;
+}
+
+select.input-field:focus {
+  border-color: #667eea;
+}
+
+textarea.input-field {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* Auth Form Container */
+.auth-form {
+  width: 100%;
+  max-width: 450px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Login Method Toggle */
+.login-method-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background-color: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover:not(:disabled) {
+  color: #374151;
+  background-color: #e5e7eb;
+}
+
+.toggle-btn.active {
+  background-color: white;
+  color: #667eea;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Input Labels */
+.input-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Input Error Styles */
+.input-field.error {
+  border-color: #ef4444;
+}
+
+.input-field.error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.input-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+/* Mobile Input Group */
+.mobile-input-group {
+  margin-bottom: 16px;
+}
+
+.country-selector-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* Country Dropdown Button */
+.country-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: white;
+  color: #1f2937;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.country-dropdown-btn:hover:not(:disabled) {
+  border-color: #9ca3af;
+}
+
+.country-dropdown-btn:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+/* Country Dropdown Menu */
+.country-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.country-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background-color: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.country-dropdown-item:hover {
+  background-color: #f3f4f6;
+}
+
+.country-dropdown-item.selected {
+  background-color: #e0e7ff;
+  color: #667eea;
+}
+
+.country-name {
+  font-weight: 500;
+  font-size: 14px;
+  min-width: 40px;
+}
+
+.country-dial {
+  font-size: 14px;
+  color: #6b7280;
+  margin-left: auto;
+}
+
+/* Password Input Wrapper */
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.password-toggle-btn:hover:not(:disabled) {
+  color: #374151;
+}
+
+.password-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.password-input-wrapper .input-field {
+  padding-right: 40px;
+}
+
+/* Warning/Alert Styles */
+.attempt-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border: 1px solid #ffeeba;
+  font-size: 14px;
+}
+
+.lockout-warning {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border: 1px solid #f5c6cb;
+  font-size: 14px;
+}
+
+/* Center Div for Submit Button */
+.center-div {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* Scrollbar Styles for Dropdown */
+.country-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.country-dropdown-menu::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.country-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.country-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Responsive Styles */
+@media (max-width: 640px) {
+  .auth-form {
+    padding: 16px;
+  }
+
+  .country-dropdown-btn {
+    min-width: 90px;
+    padding: 10px 8px;
+  }
+
+  .toggle-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .input-field {
+    font-size: 13px;
+  }
+}
+
+.password-input-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative; /* for button absolute positioning, if needed */
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
