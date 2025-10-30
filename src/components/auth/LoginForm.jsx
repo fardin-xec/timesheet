@@ -11,7 +11,7 @@ import { useAuth } from "../../redux/hooks/useAuth";
 const COUNTRIES = [
   { code: "US", dialCode: "+1", name: "United States" },
   { code: "IN", dialCode: "+91", name: "India" },
-  { code: "QA", dialCode: "+974", name: "Qatar" }, 
+  { code: "QA", dialCode: "+974", name: "Qatar" },
   { code: "GB", dialCode: "+44", name: "United Kingdom" },
   { code: "CA", dialCode: "+1", name: "Canada" },
   { code: "AU", dialCode: "+61", name: "Australia" },
@@ -426,11 +426,12 @@ const LoginForm = () => {
 
         {/* Email input */}
         {loginMethod === "email" && (
-          <div style={{ marginBottom: "16px" }}>
+          <div className="form-field">
+            <label className="input-label">Email Address</label>
             <input
               type="email"
               name="email"
-              label="Email Id"
+              placeholder="Enter your email"
               value={formData.email}
               onChange={handleChange}
               onBlur={() => handleBlur("email")}
@@ -445,129 +446,127 @@ const LoginForm = () => {
 
         {/* Mobile input with Country Code */}
         {loginMethod === "mobile" && (
-          <>
-            <div className="mobile-input-group">
-              <label className="input-label">Mobile No.</label>
-              <div className="country-selector-wrapper">
-                <div style={{ position: "relative" }}>
-                  <button
-                    type="button"
-                    className="country-dropdown-btn"
-                    onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                    disabled={isAccountLocked}
-                  >
-                    <span style={{ fontSize: "1rem" }}>
-                      <ReactCountryFlag
-                        countryCode={selectedCountry.code}
-                        svg
-                        style={{ width: "1em", height: "1em" }}
-                      />
-                    </span>
-                    <span>{selectedCountry.dialCode}</span>
-                    <span className="dropdown-arrow">▼</span>
-                  </button>
+          <div className="mobile-input-group">
+            <label className="input-label">Mobile No.</label>
+            <div className="country-selector-wrapper">
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  className="country-dropdown-btn"
+                  onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                  disabled={isAccountLocked}
+                >
+                  <span style={{ fontSize: "1rem" }}>
+                    <ReactCountryFlag
+                      countryCode={selectedCountry.code}
+                      svg
+                      style={{ width: "1em", height: "1em" }}
+                    />
+                  </span>
+                  <span>{selectedCountry.dialCode}</span>
+                  <span className="dropdown-arrow">▼</span>
+                </button>
 
-                  {showCountryDropdown && (
-                    <div className="country-dropdown-menu">
-                      {COUNTRIES.map((country) => (
-                        <button
-                          key={country.code}
-                          type="button"
-                          className={`country-dropdown-item ${
-                            selectedCountry.code === country.code
-                              ? "selected"
-                              : ""
-                          }`}
-                          onClick={() => handleCountrySelect(country)}
-                        >
-                          <span style={{ fontSize: "1.25rem" }}>
-                            <ReactCountryFlag
-                              countryCode={country.code}
-                              svg
-                              style={{ width: "1.25em", height: "1.25em" }}
-                            />
-                          </span>
-                          <span className="country-name">{country.code}</span>
-                          <span className="country-dial">
-                            {country.dialCode}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {showCountryDropdown && (
+                  <div className="country-dropdown-menu">
+                    {COUNTRIES.map((country) => (
+                      <button
+                        key={country.code}
+                        type="button"
+                        className={`country-dropdown-item ${
+                          selectedCountry.code === country.code
+                            ? "selected"
+                            : ""
+                        }`}
+                        onClick={() => handleCountrySelect(country)}
+                      >
+                        <span style={{ fontSize: "1.25rem" }}>
+                          <ReactCountryFlag
+                            countryCode={country.code}
+                            svg
+                            style={{ width: "1.25em", height: "1.25em" }}
+                          />
+                        </span>
+                        <span className="country-name">{country.code}</span>
+                        <span className="country-dial">{country.dialCode}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-                <div style={{ flex: 1 }}>
-                  <input
-                    type="tel"
-                    name="mobile"
-                    label=""
-                    placeholder="Enter mobile number"
-                    value={formData.mobile}
-                    onChange={handleChange}
-                    onBlur={() => handleBlur("mobile")}
-                    className={`input-field ${errors.mobile ? "error" : ""}`}
-                    disabled={isAccountLocked}
-                  />
-                  {errors.mobile && (
-                    <span className="input-error">{errors.mobile}</span>
-                  )}
-                </div>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="tel"
+                  name="mobile"
+                  placeholder="Enter mobile number"
+                  value={formData.mobile}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("mobile")}
+                  className={`input-field ${errors.mobile ? "error" : ""}`}
+                  disabled={isAccountLocked}
+                />
+                {errors.mobile && (
+                  <span className="input-error">{errors.mobile}</span>
+                )}
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* Password input with Show/Hide */}
-        <div
-          className="password-input-wrapper"
-          style={{ marginBottom: "16px" }}
-        >
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            label="Password"
-            value={formData.password}
-            onChange={handleChange}
-            onBlur={() => handleBlur("password")}
-            className={`input-field ${errors.password ? "error" : ""}`}
-            disabled={isAccountLocked}
-          />
-          <button
-            type="button"
-            className="password-toggle-btn"
-            onClick={togglePasswordVisibility}
-            title={showPassword ? "Hide password" : "Show password"}
-            disabled={isAccountLocked}
-          >
-            {showPassword ? (
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            ) : (
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                <line x1="1" y1="1" x2="23" y2="23"></line>
-              </svg>
-            )}
-          </button>
-
-          {errors.mobile && (
+        <div className="form-field">
+          <label className="input-label">Password</label>
+          <div className="password-input-wrapper">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={handleChange}
+              onBlur={() => handleBlur("password")}
+              className={`input-field ${errors.password ? "error" : ""}`}
+              disabled={isAccountLocked}
+            />
+            <button
+              type="button"
+              className="password-toggle-btn"
+              onClick={togglePasswordVisibility}
+              title={showPassword ? "Hide password" : "Show password"}
+              disabled={isAccountLocked}
+              style={{
+                opacity: formData.newPassword ? 1 : 0.35,
+                cursor: formData.newPassword ? "pointer" : "default",
+              }}
+            >
+              {showPassword ? (
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              ) : (
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              )}
+            </button>
+          </div>
+          {errors.password && (
             <span className="input-error">{errors.password}</span>
           )}
         </div>

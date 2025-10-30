@@ -173,4 +173,12 @@
     border-top-color: var(--primary-color);
   }
 
+  input[type="password"]::-ms-reveal {
+  display: none;
+}
+input[type="password"]::-webkit-input-decoration,
+input[type="password"]::-webkit-password-toggle-button {
+  display: none;
+}
+
  
