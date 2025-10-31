@@ -1239,7 +1239,9 @@ export const fetchTasksByDate = async (date,employeeId) => {
 
   if (response.status !== 200 && response.status !== 201) {
     throw new Error(response.data.message || 'Failed to fetch tasks for the specified date');
+    
   }
+  
 
   return response.data.data;
 };
@@ -1513,6 +1515,31 @@ export const fetchMonthlyLogs = async (startDate, endDate) => {
 
     return  response.data;
   } catch (error) {
+    console.error('Error fetching monthly logs:', error);
+    throw error;
+  }
+
+  
+};
+export const fetchEmployeeMonthlyLogs = async (startDate, endDate,employeeId) => {
+  try {
+        const token = getToken();
+
+    const response = await api.get(
+      `/attendances/employee-monthly-logs?startDate=${startDate}&endDate=${endDate}&employeeId=${employeeId}`,{
+         headers: { 
+      Authorization: `Bearer ${token}`,
+    }
+      }
+    );
+    console.log(response)
+    if (response.status!==200) {
+      const error = await response.data.json();
+      throw new Error(error.message || 'Failed to fetch monthly logs');
+    }
+
+    return  response.data;
+  } catch (error) {    
     console.error('Error fetching monthly logs:', error);
     throw error;
   }
