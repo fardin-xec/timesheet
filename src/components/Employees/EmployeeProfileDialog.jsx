@@ -26,10 +26,11 @@ const EmployeeProfileDialog = ({
   open,
   onClose,
   employee,
-  departments,
-  workLocation,
-  employmentType,
-  positions,
+  departments = [],
+  workLocation = [],
+  employmentType = [],
+  designations = [],
+  jobTitle = [],
   onSave,
   managers,
 }) => {
@@ -75,6 +76,8 @@ const EmployeeProfileDialog = ({
   // Validation errors
   const [personalErrors, setPersonalErrors] = useState({});
   const [bankErrors, setBankErrors] = useState({});
+  const [documentErrors, setDocumentsErrors] = useState({});
+
   const [ctcErrors, setCtcErrors] = useState({});
 
   // Country code states
@@ -278,6 +281,46 @@ const EmployeeProfileDialog = ({
     return { valid: true, message: "" };
   };
 
+  const validateQID = (qid) => {
+    // QID is typically 11 digits
+    const digitsOnly = qid.replace(/\D/g, "");
+
+    if (digitsOnly.length !== 11) {
+      return {
+        valid: false,
+        message: "QID must be exactly 11 digits",
+      };
+    }
+
+    if (!/^\d+$/.test(digitsOnly)) {
+      return {
+        valid: false,
+        message: "QID must contain only digits",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validatePassportNumber = (passportNumber) => {
+    // Passport number: typically 8-9 alphanumeric characters
+    if (passportNumber.length < 6 || passportNumber.length > 9) {
+      return {
+        valid: false,
+        message: "Passport number must be 6-9 characters",
+      };
+    }
+
+    if (!/^[A-Z0-9]+$/i.test(passportNumber)) {
+      return {
+        valid: false,
+        message: "Passport number must contain only letters and numbers",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
   // Clear all data function
   const clearAllData = useCallback(() => {
     setEmployeeData({ reportingManagers: [], reportTo: null });
@@ -309,6 +352,7 @@ const EmployeeProfileDialog = ({
     setSubOrdinates([]);
     setPersonalErrors({});
     setBankErrors({});
+    setDocumentsErrors({});
     setCtcErrors({});
     setActiveTab(0);
     setSelectedCountry("IN");
@@ -537,6 +581,9 @@ const EmployeeProfileDialog = ({
 
     // Clear error for this field
     setBankErrors((prev) => ({ ...prev, [field]: "" }));
+
+    // Clear error for this field
+    setDocumentsErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleBlur = (field, tabType) => {
@@ -567,6 +614,39 @@ const EmployeeProfileDialog = ({
       }
 
       setPersonalErrors(newErrors);
+    } else if (tabType === "documents") {
+      const newErrors = { ...documentErrors };
+
+      if (field === "qid") {
+        if (employeeData.qid && employeeData.qid.trim() !== "") {
+          const validation = validateQID(employeeData.qid);
+          if (!validation.valid) {
+            newErrors.qid = validation.message;
+            console.log(newErrors.qid);
+          } else {
+            delete newErrors.qid;
+          }
+        } else {
+          delete newErrors.qid;
+        }
+      } else if (field === "passportNumber") {
+        if (
+          employeeData.passportNumber &&
+          employeeData.passportNumber.trim() !== ""
+        ) {
+          const validation = validatePassportNumber(
+            employeeData.passportNumber
+          );
+          if (!validation.valid) {
+            newErrors.passportNumber = validation.message;
+          } else {
+            delete newErrors.passportNumber;
+          }
+        } else {
+          delete newErrors.passportNumber;
+        }
+      }
+      setDocumentsErrors(newErrors);
     } else if (tabType === "bank") {
       const newErrors = { ...bankErrors };
 
@@ -882,14 +962,14 @@ const EmployeeProfileDialog = ({
           employeeData.ctc,
           employeeData.currency
         );
-       
+
         await personalInfoAPI.updateBankInfo(employee.id, bankInfo);
         if (activeTab !== 4) {
           setToastMessage("Bank Info saved successfully!");
           setToastSeverity("success");
           setToastOpen(true);
         }
-      } else if (activeTab === 4) {
+      } else if (activeTab === 4 || activeTab === 3) {
         onSave(employeeData);
       } else {
         if (activeTab !== 4) {
@@ -1459,6 +1539,224 @@ const EmployeeProfileDialog = ({
               <div className="team-tab">
                 <div className="section-tabs">
                   <Typography variant="h6" className="section-title">
+                    WORK INFORMATION
+                  </Typography>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+                      gap: "1.5rem",
+                    }}
+                  >
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "0.5rem",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "#374151",
+                        }}
+                      >
+                        Department
+                      </label>
+                      <select
+                        value={employeeData.department || ""}
+                        onChange={(e) =>
+                          handleInputChange("department", e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.875rem",
+                          backgroundColor: "white",
+                        }}
+                      >
+                        <option value="">Select Department</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.name}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "0.5rem",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "#374151",
+                        }}
+                      >
+                        Designation
+                      </label>
+                      <select
+                        value={employeeData.designation || ""}
+                        onChange={(e) =>
+                          handleInputChange("designation", e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.875rem",
+                          backgroundColor: "white",
+                        }}
+                      >
+                        <option value="">Select Designation</option>
+                        {designations.map((desg) => (
+                          <option key={desg.id} value={desg.name}>
+                            {desg.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "0.5rem",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "#374151",
+                        }}
+                      >
+                        Job Title
+                      </label>
+                      <select
+                        value={employeeData.jobTitle || ""}
+                        onChange={(e) =>
+                          handleInputChange("jobTitle", e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.875rem",
+                          backgroundColor: "white",
+                        }}
+                      >
+                        <option value="">Select Job Title</option>
+                        {jobTitle.map((jt) => (
+                          <option key={jt.id} value={jt.name}>
+                            {jt.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "0.5rem",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "#374151",
+                        }}
+                      >
+                        Work Location
+                      </label>
+
+                      <select
+                        value={employeeData.workLocation || ""}
+                        onChange={(e) =>
+                          handleInputChange("workLocation", e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.875rem",
+                          backgroundColor: "white",
+                        }}
+                      >
+                        <option value="">Select Work Location</option>
+                        {workLocation.map((loc) => (
+                          <option key={loc.id} value={loc.name}>
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "0.5rem",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "#374151",
+                        }}
+                      >
+                        Employment Type
+                      </label>
+                      <select
+                        value={employeeData.employmentType || ""}
+                        onChange={(e) =>
+                          handleInputChange("employmentType", e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.875rem",
+                          backgroundColor: "white",
+                        }}
+                      >
+                        <option value="">Select Employment Type</option>
+                        {employmentType.map((type) => (
+                          <option key={type.id} value={type.name}>
+                            {type.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "0.5rem",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "#374151",
+                        }}
+                      >
+                        Date of Joining
+                      </label>
+                      <input
+                        type="date"
+                        value={employeeData.joiningDate || ""}
+                        onChange={(e) =>
+                          handleInputChange("joiningDate", e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.875rem",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="section-tabs">
+                  <Typography variant="h6" className="section-title">
                     Reporting Manager
                   </Typography>
                   {reportingManager && reportingManager.length > 0 ? (
@@ -1830,6 +2128,101 @@ const EmployeeProfileDialog = ({
               <div className="documents-tab">
                 <div className="section-tabs">
                   <Typography variant="h6" className="section-title">
+                    DOCUMENT INFORMATION
+                  </Typography>
+                  {employeeData.workLocation === "On-site" && (
+                    <>
+                      <div className="grid-cols-2">
+                        <div className="form-field">
+                          <label>QID</label>
+                          <input
+                            type="text"
+                            className={`input-field ${
+                              documentErrors.qid ? "error" : ""
+                            }`}
+                            value={employeeData.qid}
+                            onChange={(e) =>
+                              handleInputChange("qid", e.target.value)
+                            }
+                            onBlur={() => handleBlur("qid", "documents")}
+                          />
+                          {documentErrors.qid && (
+                            <span className="input-error">
+                              {documentErrors.qid}
+                            </span>
+                          )}
+                        </div>
+                        <div className="form-field">
+                          <label>QID Expiration Date</label>
+                          <input
+                            type="date"
+                            className={`input-field ${
+                              documentErrors.qidExpirationDate ? "error" : ""
+                            }`}
+                            value={employeeData.qidExpirationDate}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "qidExpirationDate",
+                                e.target.value
+                              )
+                            }
+                            onBlur={() => handleBlur("qidExpirationDate")}
+                          />
+                          {/* <Calendar size={16} className="icon" /> */}
+                          {documentErrors.qidExpirationDate && (
+                            <span className="input-error">
+                              {documentErrors.qidExpirationDate}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <div className="grid-cols-2">
+                    <div className="form-field">
+                      <label>Passport Number</label>
+                      <input
+                        type="text"
+                        className={`input-field ${
+                          documentErrors.passportNumber ? "error" : ""
+                        }`}
+                        value={employeeData.passportNumber}
+                        onChange={(e) =>
+                          handleInputChange("passportNumber", e.target.value)
+                        }
+                        onBlur={() => handleBlur("passportNumber", "documents")}
+                      />
+
+                      {documentErrors.passportNumber && (
+                        <span className="input-error">
+                          {documentErrors.passportNumber}
+                        </span>
+                      )}
+                    </div>
+                    <div className="form-field">
+                      <label>Passport Valid Till</label>
+                      <input
+                        type="date"
+                        className={`input-field ${
+                          documentErrors.passportValidTill ? "error" : ""
+                        }`}
+                        value={employeeData.passportValidTill}
+                        onChange={(e) =>
+                          handleInputChange("passportValidTill", e.target.value)
+                        }
+                        onBlur={() => handleBlur("passportValidTill")}
+                      />
+                      {documentErrors.passportValidTill && (
+                        <span className="input-error">
+                          {documentErrors.passportValidTill}
+                        </span>
+                      )}
+                      {/* <Calendar size={16} className="icon" /> */}
+                    </div>
+                  </div>
+                </div>
+                <div className="section-tabs">
+                  <Typography variant="h6" className="section-title">
                     Upload Documents
                   </Typography>
                   <div className="upload-form">
@@ -1912,6 +2305,7 @@ const EmployeeProfileDialog = ({
                           </div>
                           <div className="document-actions">
                             <IconButton
+                              className="MuiIconButton-root preview-btn"
                               onClick={() =>
                                 window.open(
                                   `http://localhost:3000/${doc.filePath}`,
@@ -1921,7 +2315,9 @@ const EmployeeProfileDialog = ({
                             >
                               <Eye size={20} />
                             </IconButton>
+
                             <IconButton
+                              className="MuiIconButton-root delete-btn"
                               onClick={() => handleDeleteDocument(doc.id)}
                               disabled={loading}
                             >
@@ -1940,19 +2336,16 @@ const EmployeeProfileDialog = ({
               <Button variant="outlined" onClick={handleClose}>
                 Cancel
               </Button>
-              {activeTab !== 3 &&
-                activeTab !== 1 &&
-                activeTab !== 5 &&
-                activeTab !== 6 && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSave}
-                    disabled={loading}
-                  >
-                    {loading ? <>SAVING...</> : "SAVE CHANGES"}
-                  </Button>
-                )}
+              {activeTab !== 1 && activeTab !== 5 && activeTab !== 6 && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSave}
+                  disabled={loading}
+                >
+                  {loading ? <>SAVING...</> : "SAVE CHANGES"}
+                </Button>
+              )}
             </div>
           </div>
         </>

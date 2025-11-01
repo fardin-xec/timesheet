@@ -1563,3 +1563,20 @@ export const fetchActiveTimer = async () => {
 
   return response.data.data;
 };
+
+export const checkExistence = async (payload) => {
+  const token = getToken();
+
+  
+  const response = await api.post('/employees/check-existence', payload, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to start timer');
+  }
+
+  return response.data.data;
+};

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Check, X } from "lucide-react";
+import { checkExistence } from "../../utils/api"; // Import the API function
 import "../../styles/employee.css";
 import ReactCountryFlag from "react-country-flag";
 
@@ -7,8 +8,6 @@ import ReactCountryFlag from "react-country-flag";
 const EmployeeStatus = {
   ACTIVE: "active",
   INACTIVE: "inactive",
-  // ONLEAVE: "onleave",
-  // TERMINATED: "terminated",
 };
 
 const Gender = {
@@ -88,7 +87,6 @@ const EmployeeForm = ({
   employmentType = [],
   managers = [],
   designations = [],
-  subdepartment = [],
   jobTitle = [],
   onSave,
   onCancel,
@@ -144,6 +142,12 @@ const EmployeeForm = ({
   const [mandatoryErrors, setMandatoryErrors] = useState({});
   const [optionalErrors, setOptionalErrors] = useState({});
 
+  // States for existence checking
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const [emailTimeout, setEmailTimeout] = useState(null);
+  const [phoneTimeout, setPhoneTimeout] = useState(null);
+
   useEffect(() => {
     if (employee) {
       const formattedEmployee = {
@@ -180,6 +184,107 @@ const EmployeeForm = ({
     return maxDate.toISOString().split("T")[0];
   };
 
+  // Debounced email existence check
+  const checkEmailExistence = useCallback(
+    async (email) => {
+      // Skip if editing existing employee with same email
+      if (employee && employee.email === email) {
+        return;
+      }
+
+      // Clear previous timeout
+      if (emailTimeout) {
+        clearTimeout(emailTimeout);
+      }
+
+      // Validate email format first
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        return;
+      }
+
+      setCheckingEmail(true);
+
+      // Set new timeout for debouncing
+      const timeout = setTimeout(async () => {
+        try {
+          const data = await checkExistence({ email });
+          if (data.email.exists) {
+            setMandatoryErrors((prev) => ({
+              ...prev,
+              email: "This email is already registered",
+            }));
+          } else {
+            setMandatoryErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors.email;
+              return newErrors;
+            });
+          }
+        } catch (error) {
+          console.error("Error checking email:", error);
+        } finally {
+          setCheckingEmail(false);
+        }
+      }, 500); // 500ms debounce
+
+      setEmailTimeout(timeout);
+    },
+    [employee, emailTimeout]
+  );
+
+  // Debounced phone existence check
+  const checkPhoneExistence = useCallback(
+    async (phone, countryCode) => {
+      // Skip if editing existing employee with same phone
+      if (employee && employee.phone === phone) {
+        return;
+      }
+
+      // Clear previous timeout
+      if (phoneTimeout) {
+        clearTimeout(phoneTimeout);
+      }
+
+      // Validate phone format first
+      const phoneDigitsOnly = phone.replace(/\D/g, "");
+      const expectedLength = PHONE_LENGTH_BY_COUNTRY[countryCode];
+      if (!phone || phoneDigitsOnly.length !== expectedLength) {
+        return;
+      }
+
+      setCheckingPhone(true);
+
+      // Set new timeout for debouncing
+      const timeout = setTimeout(async () => {
+        try {
+          const contryCode = COUNTRIES[countryCode].dialCode;
+          phone = contryCode + phone;
+          const data = await checkExistence({ phone });
+          if (data.phone.exists) {
+            setMandatoryErrors((prev) => ({
+              ...prev,
+              phone: "This phone number is already registered",
+            }));
+          } else {
+            setMandatoryErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors.phone;
+              return newErrors;
+            });
+          }
+        } catch (error) {
+          console.error("Error checking phone:", error);
+        } finally {
+          setCheckingPhone(false);
+        }
+      }, 500); // 500ms debounce
+
+      setPhoneTimeout(timeout);
+    },
+    [employee, phoneTimeout]
+  );
+
   const handleInputChange = (field, value) => {
     setEmployeeData((prev) => ({
       ...prev,
@@ -207,7 +312,15 @@ const EmployeeForm = ({
         [field]: null,
       }));
     }
+
+    // Trigger existence checks for email and phone
+    if (field === "email") {
+      checkEmailExistence(value);
+    } else if (field === "phone") {
+      checkPhoneExistence(value, selectedCountry.code);
+    }
   };
+
   const validateOptionalName = (name, fieldName) => {
     if (name.trim().length < 2) {
       return {
@@ -238,7 +351,6 @@ const EmployeeForm = ({
   };
 
   const validateIFSCCode = (code) => {
-    // IFSC code format: 4 letters, 7 digits (e.g., SBIN0001234)
     const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
     if (!ifscRegex.test(code)) {
@@ -285,7 +397,6 @@ const EmployeeForm = ({
   };
 
   const validateQID = (qid) => {
-    // QID is typically 11 digits
     const digitsOnly = qid.replace(/\D/g, "");
 
     if (digitsOnly.length !== 11) {
@@ -306,7 +417,6 @@ const EmployeeForm = ({
   };
 
   const validatePassportNumber = (passportNumber) => {
-    // Passport number: typically 8-9 alphanumeric characters
     if (passportNumber.length < 6 || passportNumber.length > 9) {
       return {
         valid: false,
@@ -338,7 +448,6 @@ const EmployeeForm = ({
       passportNumber,
     } = employeeData;
 
-    // Validate optional fields only if they have values
     if (accountHolderName && accountHolderName.trim() !== "") {
       const validation = validateOptionalName(
         accountHolderName,
@@ -410,13 +519,10 @@ const EmployeeForm = ({
   };
 
   const handleBlur = (field) => {
-    // Validate on blur for immediate feedback
     const newErrors = { ...mandatoryErrors };
     const newOptionalErrors = { ...optionalErrors };
 
     if (field === "firstName") {
-      console.log(employeeData.firstName);
-
       const validation = validateName(employeeData.firstName, "First name");
       if (!validation.valid) {
         newErrors.firstName = validation.message;
@@ -424,8 +530,6 @@ const EmployeeForm = ({
         delete newErrors.firstName;
       }
     } else if (field === "midName") {
-      // Middle name is optional, but if provided, validate it
-      console.log(employeeData.midName);
       if (employeeData.midName && employeeData.midName.trim() !== "") {
         const validation = validateMidName(employeeData.midName, "Middle name");
         if (!validation.valid) {
@@ -448,7 +552,14 @@ const EmployeeForm = ({
       if (!validation.valid) {
         newErrors.email = validation.message;
       } else {
-        delete newErrors.email;
+        // Don't delete the error here if it's an existence error
+        // The API check will handle that
+        if (
+          !checkingEmail &&
+          !newErrors.email?.includes("already registered")
+        ) {
+          delete newErrors.email;
+        }
       }
     } else if (field === "phone") {
       const validation = validatePhoneNumber(
@@ -458,7 +569,13 @@ const EmployeeForm = ({
       if (!validation.valid) {
         newErrors.phone = validation.message;
       } else {
-        delete newErrors.phone;
+        // Don't delete the error here if it's an existence error
+        if (
+          !checkingPhone &&
+          !newErrors.phone?.includes("already registered")
+        ) {
+          delete newErrors.phone;
+        }
       }
     } else if (field === "role") {
       if (!employeeData.role || employeeData.role.trim() === "") {
@@ -652,36 +769,36 @@ const EmployeeForm = ({
     const newErrors = {};
     const { firstName, lastName, email, phone, role, status } = employeeData;
 
-    // Validate First Name
     const firstNameValidation = validateName(firstName, "First name");
     if (!firstNameValidation.valid) {
       newErrors.firstName = firstNameValidation.message;
     }
 
-    // Validate Last Name
     const lastNameValidation = validateName(lastName, "Last name");
     if (!lastNameValidation.valid) {
       newErrors.lastName = lastNameValidation.message;
     }
 
-    // Validate Email
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
       newErrors.email = emailValidation.message;
+    } else if (mandatoryErrors.email?.includes("already registered")) {
+      // Keep the existence error
+      newErrors.email = mandatoryErrors.email;
     }
 
-    // Validate Phone
     const phoneValidation = validatePhoneNumber(phone, selectedCountry.code);
     if (!phoneValidation.valid) {
       newErrors.phone = phoneValidation.message;
+    } else if (mandatoryErrors.phone?.includes("already registered")) {
+      // Keep the existence error
+      newErrors.phone = mandatoryErrors.phone;
     }
 
-    // Validate Role
     if (!role || role.trim() === "") {
       newErrors.role = "Role is required";
     }
 
-    // Validate Status
     if (!status || status.trim() === "") {
       newErrors.status = "Status is required";
     }
@@ -697,16 +814,15 @@ const EmployeeForm = ({
   };
 
   const handleSave = async () => {
+    setIsSaving(true);
+
     if (validate()) {
-      setIsSaving(true);
       try {
-        // await new Promise(resolve => setTimeout(resolve, 2000));
         await onSave(employeeData);
       } catch (error) {
         console.error("Error saving employee:", error);
-      } finally {
-        setIsSaving(false);
-      }
+         setIsSaving(false);
+      } 
     } else {
       const firstErrorField = document.querySelector(".input-field.error");
       if (firstErrorField) {
@@ -721,6 +837,10 @@ const EmployeeForm = ({
     setShowCountryDropdown(false);
     if (mandatoryErrors.phone) {
       setMandatoryErrors({ ...mandatoryErrors, phone: "" });
+    }
+    // Re-validate phone with new country code
+    if (employeeData.phone) {
+      checkPhoneExistence(employeeData.phone, country.code);
     }
   };
 
@@ -739,32 +859,42 @@ const EmployeeForm = ({
   const isMandatoryValid = () => {
     const { firstName, lastName, email, phone, role, status } = employeeData;
 
-    // Check if all required fields are filled
     if (!firstName || !lastName || !email || !phone || !role || !status) {
       return false;
     }
 
-    // Validate first name
     const firstNameValidation = validateName(firstName, "First name");
     if (!firstNameValidation.valid) {
       return false;
     }
 
-    // Validate last name
     const lastNameValidation = validateName(lastName, "Last name");
     if (!lastNameValidation.valid) {
       return false;
     }
 
-    // Validate email
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
       return false;
     }
 
-    // Validate phone
+    // Check if email exists
+    if (mandatoryErrors.email?.includes("already registered")) {
+      return false;
+    }
+
     const phoneValidation = validatePhoneNumber(phone, selectedCountry.code);
     if (!phoneValidation.valid) {
+      return false;
+    }
+
+    // Check if phone exists
+    if (mandatoryErrors.phone?.includes("already registered")) {
+      return false;
+    }
+
+    // Don't allow submission while checking
+    if (checkingEmail || checkingPhone) {
       return false;
     }
 
@@ -775,7 +905,9 @@ const EmployeeForm = ({
     <div className="form-section">
       <div className="grid-cols-3">
         <div className="input-wrapper">
-          <label className="input-label">First Name *</label>
+          <label className="input-label">
+            First Name <span style={{ color: "red" }}>*</span>
+          </label>
           <input
             type="text"
             className={`input-field ${
@@ -804,7 +936,9 @@ const EmployeeForm = ({
           )}
         </div>
         <div className="input-wrapper">
-          <label className="input-label">Last Name *</label>
+          <label className="input-label">
+            Last Name <span style={{ color: "red" }}>*</span>
+          </label>
           <input
             type="text"
             className={`input-field ${mandatoryErrors.lastName ? "error" : ""}`}
@@ -821,7 +955,9 @@ const EmployeeForm = ({
 
       <div className="grid-cols-2">
         <div className="input-wrapper">
-          <label className="input-label">Official Email ID *</label>
+          <label className="input-label">
+            Official Email ID <span style={{ color: "red" }}>*</span>
+          </label>
           <input
             type="email"
             className={`input-field ${mandatoryErrors.email ? "error" : ""}`}
@@ -830,13 +966,23 @@ const EmployeeForm = ({
             onBlur={() => handleBlur("email")}
             required
           />
+          {checkingEmail && (
+            <span
+              className="input-info"
+              style={{ color: "#2196F3", fontSize: "0.75rem" }}
+            >
+              Checking availability...
+            </span>
+          )}
           {mandatoryErrors.email && (
             <span className="input-error">{mandatoryErrors.email}</span>
           )}
         </div>
 
         <div className="input-wrapper">
-          <label className="input-label">Phone Number *</label>
+          <label className="input-label">
+            Phone Number <span style={{ color: "red" }}>*</span>
+          </label>
           <div className="mobile-input-group">
             <div style={{ position: "relative" }}>
               <button
@@ -901,6 +1047,14 @@ const EmployeeForm = ({
               />
             </div>
           </div>
+          {checkingPhone && (
+            <span
+              className="input-info"
+              style={{ color: "#2196F3", fontSize: "0.75rem" }}
+            >
+              Checking availability...
+            </span>
+          )}
           {mandatoryErrors.phone && (
             <span className="input-error">{mandatoryErrors.phone}</span>
           )}
@@ -908,7 +1062,9 @@ const EmployeeForm = ({
       </div>
 
       <div className="input-wrapper">
-        <label className="input-label">Role *</label>
+        <label className="input-label">
+          Role <span style={{ color: "red" }}>*</span>
+        </label>
         <select
           value={employeeData.role}
           onChange={(e) => handleInputChange("role", e.target.value)}
@@ -927,7 +1083,9 @@ const EmployeeForm = ({
       </div>
 
       <div className="input-wrapper">
-        <label className="input-label">Status *</label>
+        <label className="input-label">
+          Status <span style={{ color: "red" }}>*</span>
+        </label>
         <div className="status-button-group">
           <button
             className={`status-button ${
@@ -992,7 +1150,6 @@ const EmployeeForm = ({
               onChange={(e) => handleInputChange("dob", e.target.value)}
               max={getMaxDobDate()}
             />
-            {/* <Calendar size={16} className="icon" /> */}
           </div>
           <div className="input-wrapper">
             <label className="input-label">Gender</label>
@@ -1027,16 +1184,6 @@ const EmployeeForm = ({
             </div>
           </div>
         </div>
-
-        {/* <div className="input-wrapper">
-          <label className="input-label">Bio</label>
-          <textarea
-            className="input-field text-area"
-            rows={3}
-            value={employeeData.bio || ""}
-            onChange={(e) => handleInputChange("bio", e.target.value)}
-          />
-        </div> */}
 
         <div className="input-wrapper">
           <label className="input-label">Address</label>
@@ -1168,7 +1315,6 @@ const EmployeeForm = ({
             value={employeeData.joiningDate}
             onChange={(e) => handleInputChange("joiningDate", e.target.value)}
           />
-          {/* <Calendar size={16} className="icon" /> */}
         </div>
       </div>
 
@@ -1352,7 +1498,6 @@ const EmployeeForm = ({
                   }
                   onBlur={() => handleBlur("qidExpirationDate")}
                 />
-                {/* <Calendar size={16} className="icon" /> */}
                 {optionalErrors.qidExpirationDate && (
                   <span className="input-error">
                     {optionalErrors.qidExpirationDate}
@@ -1401,7 +1546,6 @@ const EmployeeForm = ({
                 {optionalErrors.passportValidTill}
               </span>
             )}
-            {/* <Calendar size={16} className="icon" /> */}
           </div>
         </div>
       </div>
@@ -1411,7 +1555,7 @@ const EmployeeForm = ({
           className="button button-outlined"
           onClick={() => setCurrentTab("mandatory")}
           type="button"
-          // disabled={isSaving}
+          disabled={isSaving}
         >
           BACK
         </button>
@@ -1419,15 +1563,10 @@ const EmployeeForm = ({
           className={`button button-primary ${isSaving ? "loading" : ""}`}
           onClick={handleSave}
           type="button"
-          disabled={isSaving}
+          disabled={isSaving || checkingEmail || checkingPhone}
         >
-          {isSaving ? (
-            <>
-              SAVING...
-            </>
-          ) : (
-            "SAVE"
-          )}
+          {console.log(isSaving)}
+          {isSaving ? "SAVING..." : "SAVE"}
         </button>
       </div>
     </div>
@@ -1451,6 +1590,7 @@ const EmployeeForm = ({
           }`}
           onClick={() => setCurrentTab("optional")}
           type="button"
+          disabled={!isMandatoryValid()}
         >
           Optional Info
         </button>

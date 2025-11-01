@@ -85,8 +85,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
+  margin-top: 16px;
   border-bottom: 2px solid #e5e7eb;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -550,10 +549,17 @@ textarea.input-field {
   transition: all 0.2s ease;
 }
 
-.document-actions .MuiIconButton-root:hover {
-  background-color: #f3f4f6;
-  color: #667eea;
+.document-actions .MuiIconButton-root.preview-btn:hover {
+  background-color: #e7f6e7;
+  color: #3455a8;
 }
+
+.document-actions .MuiIconButton-root.delete-btn:hover {
+  background-color: #fdeaea;
+  color: #ea4335;
+}
+
+
 
 /* CTC Styles */
 .ctc-card {

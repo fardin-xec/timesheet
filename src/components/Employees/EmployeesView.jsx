@@ -241,8 +241,10 @@ const EmployeesView = () => {
         department: emp.department,
         designation: emp.designation,
         jobTitle: emp.jobTitle,
+        employmentType:emp.employmentType,
+        workLocation: emp.workLocation,
         dob: emp.dob,
-        joiningDate: formatDate(emp.joiningDate),
+        joiningDate: emp.joiningDate,
         avatar: emp.avatar || "/default-avatar.png",
         status: emp.status,
         createdat: formatDate(emp.createdat),
@@ -254,6 +256,10 @@ const EmployeesView = () => {
         orgId: emp.organization.orgId,
         ctc: emp.ctc,
         currency: emp.currency,
+        qid: emp.qid,
+        qidExpirationDate: emp.qidExpiration,
+        passportNumber: emp.passportNumber,
+        passportValidTill: emp.passportExpiration,
       }));
       setEmployees(processedEmployees);
       setError(null);
@@ -424,6 +430,7 @@ const EmployeesView = () => {
           jobTitle: employeeData.jobTitle || null,
           designation: employeeData.designation || null,
           employmentType: employeeData.employmentType || null,
+          workLocation: employeeData.workLocation || null,
           address: employeeData.address || null,
           joiningDate: employeeData.joiningDate || null,
           bio: employeeData.bio || null,
@@ -451,9 +458,9 @@ const EmployeesView = () => {
             employeeData.accountNumber ||
             null,
           qid: employeeData.qid || null,
-          qidExpirationDate: employeeData.qidExpirationDate || null,
+          qidExpiration: employeeData.qidExpirationDate || null,
           passportNumber: employeeData.passportNumber || null,
-          passportValidTill: employeeData.passportValidTill || null,
+          passportExpiration: employeeData.passportValidTill || null,
         };
       } else {
         endpoint = `/employees/${employeeData.id}`;
@@ -470,6 +477,7 @@ const EmployeesView = () => {
           jobTitle: employeeData.jobTitle,
           designation: employeeData.designation,
           employmentType: employeeData.employmentType,
+          workLocation: employeeData.workLocation,
           address: employeeData.address,
           joiningDate: employeeData.joiningDate,
           bio: employeeData.bio,
@@ -497,11 +505,11 @@ const EmployeesView = () => {
 
         if (employeeData.qid) payload.qid = employeeData.qid;
         if (employeeData.qidExpirationDate)
-          payload.qidExpirationDate = employeeData.qidExpirationDate;
+          payload.qidExpiration = employeeData.qidExpirationDate;
         if (employeeData.passportNumber)
           payload.passportNumber = employeeData.passportNumber;
         if (employeeData.passportValidTill)
-          payload.passportValidTill = employeeData.passportValidTill;
+          payload.passportExpiration = employeeData.passportValidTill;
 
         Object.keys(payload).forEach(
           (key) => payload[key] === undefined && delete payload[key]
@@ -1113,7 +1121,8 @@ const EmployeesView = () => {
           departments={department}
           workLocation={workLocation}
           employmentType={employmentType}
-          positions={positions}
+          designations={positions}
+          jobTitle={jobTitle}
           onSave={handleSaveEmployee}
           managers={managers}
         />
