@@ -258,9 +258,9 @@ const EmployeeForm = ({
       // Set new timeout for debouncing
       const timeout = setTimeout(async () => {
         try {
-          const contryCode = COUNTRIES[countryCode].dialCode;
-          phone = contryCode + phone;
-          const data = await checkExistence({ phone });
+          const country = COUNTRIES.find((c) => c.code === countryCode);
+          const fullPhone = country.dialCode + phone;
+          const data = await checkExistence({ phone: fullPhone });
           if (data.phone.exists) {
             setMandatoryErrors((prev) => ({
               ...prev,
@@ -521,6 +521,7 @@ const EmployeeForm = ({
   const handleBlur = (field) => {
     const newErrors = { ...mandatoryErrors };
     const newOptionalErrors = { ...optionalErrors };
+    console.log(field);
 
     if (field === "firstName") {
       const validation = validateName(employeeData.firstName, "First name");
@@ -821,8 +822,8 @@ const EmployeeForm = ({
         await onSave(employeeData);
       } catch (error) {
         console.error("Error saving employee:", error);
-         setIsSaving(false);
-      } 
+        setIsSaving(false);
+      }
     } else {
       const firstErrorField = document.querySelector(".input-field.error");
       if (firstErrorField) {
