@@ -545,7 +545,7 @@ const EmployeesView = () => {
     } finally {
       setLoading(false);
       setDrawerOpen(false);
-      setProfileDialogOpen(false);
+      // setProfileDialqogOpen(false);
     }
   };
 

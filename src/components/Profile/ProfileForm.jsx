@@ -34,7 +34,11 @@ const PHONE_LENGTH_BY_COUNTRY = {
   QA: 8,
   ZA: 9,
 };
-
+const Gender = {
+  MALE: "male",
+  FEMALE: "female",
+  OTHER: "other",
+};
 const ProfileForm = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("personal");
@@ -67,6 +71,9 @@ const ProfileForm = () => {
     emergencyContactPhone: "",
     maritalStatus: "single",
     nationality: "",
+    dob: "",
+    gender: "",
+    alternativePhone: "",
   });
   const [personalErrors, setPersonalErrors] = useState({});
 
@@ -93,10 +100,14 @@ const ProfileForm = () => {
   const [emergencyCountry, setEmergencyCountry] = useState("IN");
   const [showEmergencyCountryDropdown, setShowEmergencyCountryDropdown] =
     useState(false);
+  const [alternateCountry, setAlternateCountry] = useState("IN");
+  const [showAlternateCountryDropdown, setShowAlternateCountryDropdown] =
+    useState(false);
 
   const countryCodes = React.useMemo(
     () => [
       { code: "US", dialCode: "+1", flag: "🇺🇸", name: "United States" },
+      { code: "QA", dialCode: "+974", flag: "QA", name: "Qatar" },
       { code: "IN", dialCode: "+91", flag: "🇮🇳", name: "India" },
       { code: "GB", dialCode: "+44", flag: "🇬🇧", name: "United Kingdom" },
       { code: "CA", dialCode: "+1", flag: "🇨🇦", name: "Canada" },
@@ -152,6 +163,14 @@ const ProfileForm = () => {
         message: `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`,
       };
     }
+    return { valid: true, message: "" };
+  };
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { valid: false, message: "Please enter a valid email address" };
+    }
+
     return { valid: true, message: "" };
   };
 
@@ -276,11 +295,14 @@ const ProfileForm = () => {
       );
       setEmergencyCountry(emergencyPhoneData.countryCode);
 
+      const alternatePhoneData = parsePhoneNumber(profileData.alternativePhone);
+      setAlternateCountry(alternatePhoneData.countryCode);
+
       setPersonalInfo({
         firstName: profileData.employee.firstName || "",
         lastName: profileData.employee.lastName || "",
         midName: profileData.employee.midName || "",
-        email: profileData.employee.email || "",
+        email: profileData.email || "",
         phone: profileData.employee.phone || "",
         position: profileData.employee.jobTitle || "",
         department: profileData.employee.department || "",
@@ -291,6 +313,9 @@ const ProfileForm = () => {
         emergencyContactPhone: profileData.emergencyContactPhone || "",
         maritalStatus: profileData.maritalStatus || "single",
         nationality: profileData.nationality || "",
+        dob: profileData.employee.dob,
+        gender: profileData.employee.gender,
+        alternativePhone: profileData.alternativePhone,
       });
 
       const bankData = await personalInfoAPI.getBankInfo(user.employee.id);
@@ -359,6 +384,15 @@ const ProfileForm = () => {
           delete newErrors.phone;
         }
       }
+    } else if (field === "email") {
+      if (personalInfo.email && personalInfo.email.trim() !== "") {
+        const validation = validateEmail(personalInfo.email);
+        if (!validation.valid) {
+          newErrors.email = validation.message;
+        } else {
+          delete newErrors.email;
+        }
+      }
     } else if (field === "emergencyContactName") {
       if (
         personalInfo.emergencyContactName &&
@@ -387,6 +421,21 @@ const ProfileForm = () => {
           newErrors.emergencyContactPhone = validation.message;
         } else {
           delete newErrors.emergencyContactPhone;
+        }
+      }
+    } else if (field === "alternativePhone") {
+      if (
+        personalInfo.alternativePhone &&
+        personalInfo.alternativePhone.trim() !== ""
+      ) {
+        const validation = validatePhoneNumber(
+          personalInfo.alternativePhone,
+          alternateCountry
+        );
+        if (!validation.valid) {
+          newErrors.alternativePhone = validation.message;
+        } else {
+          delete newErrors.alternativePhone;
         }
       }
     }
@@ -470,14 +519,26 @@ const ProfileForm = () => {
         ...prev,
         emergencyContactPhone: fullPhone,
       }));
+    } else if (type === "alternative") {
+      countryData = countryCodes.find((c) => c.code === alternateCountry);
+      const fullPhone = countryData.dialCode + value;
+      setPersonalInfo((prev) => ({
+        ...prev,
+        alternativePhone: fullPhone,
+      }));
     }
 
-    if (personalErrors.phone || personalErrors.emergencyContactPhone) {
+    if (
+      personalErrors.phone ||
+      personalErrors.emergencyContactPhone ||
+      personalErrors.alternativePhone
+    ) {
       setPersonalErrors((prev) => ({
         ...prev,
         phone: type === "main" ? "" : prev.phone,
         emergencyContactPhone:
           type === "emergency" ? "" : prev.emergencyContactPhone,
+        alternativePhone: type === "alternative" ? "" : prev.alternativePhone,
       }));
     }
   };
@@ -497,6 +558,12 @@ const ProfileForm = () => {
       const phoneData = parsePhoneNumber(personalInfo.emergencyContactPhone);
       const newPhone = newCountryData.dialCode + phoneData.number;
       setPersonalInfo((prev) => ({ ...prev, emergencyContactPhone: newPhone }));
+    } else if (type === "alternative") {
+      setAlternateCountry(countryCode);
+      setShowAlternateCountryDropdown(false);
+      const phoneData = parsePhoneNumber(personalInfo.alternativePhone);
+      const newPhone = newCountryData.dialCode + phoneData.number;
+      setPersonalInfo((prev) => ({ ...prev, alternativePhone: newPhone }));
     }
   };
 
@@ -631,6 +698,16 @@ const ProfileForm = () => {
       );
       if (!validation.valid) errors.emergencyContactPhone = validation.message;
     }
+    if (
+      personalInfo.alternativePhone &&
+      personalInfo.alternativePhone.trim() !== ""
+    ) {
+      const validation = validatePhoneNumber(
+        personalInfo.alternativePhone,
+        alternateCountry
+      );
+      if (!validation.valid) errors.alternativePhone = validation.message;
+    }
 
     if (Object.keys(errors).length > 0) {
       setPersonalErrors(errors);
@@ -644,6 +721,7 @@ const ProfileForm = () => {
         firstName: personalInfo.firstName.trim(),
         lastName: personalInfo.lastName.trim(),
         midName: personalInfo.midName.trim(),
+        email: personalInfo.email.trim(),
         phone: personalInfo.phone.trim(),
         bio: personalInfo.bio.trim(),
         permanentAddress: personalInfo.permanentAddress.trim(),
@@ -651,6 +729,9 @@ const ProfileForm = () => {
         emergencyContactPhone: personalInfo.emergencyContactPhone.trim(),
         maritalStatus: personalInfo.maritalStatus,
         nationality: personalInfo.nationality.trim(),
+        dob: personalInfo.dob,
+        gender: personalInfo.gender,
+        alternativePhone: personalInfo.alternativePhone,
       };
 
       if (selectedAvatarFile) {
@@ -777,8 +858,10 @@ const ProfileForm = () => {
       (c) => c.code === countryCode
     );
     const phoneData = parsePhoneNumber(value);
-    const fieldName = type === "main" ? "phone" : "emergencyContactPhone";
-
+    let fieldName = type === "main" ? "phone" : "emergencyContactPhone";
+    if (type === "alternative") {
+      fieldName = "alternativePhone";
+    }
     return (
       <div className="pi-phone-group">
         <div className="pi-country-selector">
@@ -822,6 +905,7 @@ const ProfileForm = () => {
             </motion.div>
           )}
         </div>
+        {console.log(fieldName)}
 
         <input
           type="tel"
@@ -832,6 +916,7 @@ const ProfileForm = () => {
           className={`pi-phone-input ${
             personalErrors[fieldName] ? "error" : ""
           }`}
+          disabled={type === "main"}
         />
       </div>
     );
@@ -860,6 +945,16 @@ const ProfileForm = () => {
   const itemVariants = {
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  };
+
+  const getMaxDobDate = () => {
+    const today = new Date();
+    const maxDate = new Date(
+      today.getFullYear() - 18,
+      today.getMonth(),
+      today.getDate()
+    );
+    return maxDate.toISOString().split("T")[0];
   };
 
   return (
@@ -964,6 +1059,12 @@ const ProfileForm = () => {
                       <span className="pi-value">{personalInfo.phone}</span>
                     </motion.div>
                     <motion.div className="pi-info-row" variants={itemVariants}>
+                      <span className="pi-label">Alternate Phone:</span>
+                      <span className="pi-value">
+                        {personalInfo.alternativePhone}
+                      </span>
+                    </motion.div>
+                    <motion.div className="pi-info-row" variants={itemVariants}>
                       <span className="pi-label">Position:</span>
                       <span className="pi-value">
                         {personalInfo.position || "Not specified"}
@@ -982,6 +1083,22 @@ const ProfileForm = () => {
                       <span className="pi-label">Residential Address:</span>
                       <span className="pi-value">
                         {personalInfo.permanentAddress || "Not provided"}
+                      </span>
+                    </div>
+                  </motion.div>
+                  <motion.div className="pi-info-card" variants={itemVariants}>
+                    <div className="pi-info-row-large">
+                      <span className="pi-label">DOB:</span>
+                      <span className="pi-value">
+                        {personalInfo.dob || "Not provided"}
+                      </span>
+                    </div>
+                  </motion.div>
+                  <motion.div className="pi-info-card" variants={itemVariants}>
+                    <div className="pi-info-row-large">
+                      <span className="pi-label">Gender:</span>
+                      <span className="pi-value">
+                        {personalInfo.gender || "Not provided"}
                       </span>
                     </div>
                   </motion.div>
@@ -1130,20 +1247,25 @@ const ProfileForm = () => {
                       }`}
                     />
                     {personalErrors.midName && (
-                      <span className="pi-error">
-                        {personalErrors.midName}
-                      </span>
+                      <span className="pi-error">{personalErrors.midName}</span>
                     )}
                   </motion.div>
 
                   <motion.div className="pi-form-group" variants={itemVariants}>
-                    <label>Email</label>
+                    <label>Personal Email</label>
                     <input
                       name="email"
                       type="email"
                       value={personalInfo.email}
-                      disabled
+                      onChange={handlePersonalChange}
+                      onBlur={() => handlePersonalBlur("email")}
+                      className={`pi-phone-input ${
+                        personalErrors.midName ? "error" : ""
+                      }`}
                     />
+                    {personalErrors.email && (
+                      <span className="pi-error">{personalErrors.email}</span>
+                    )}
                   </motion.div>
 
                   <motion.div className="pi-form-group" variants={itemVariants}>
@@ -1157,6 +1279,22 @@ const ProfileForm = () => {
                     )}
                     {personalErrors.phone && (
                       <span className="pi-error">{personalErrors.phone}</span>
+                    )}
+                  </motion.div>
+
+                  <motion.div className="pi-form-group" variants={itemVariants}>
+                    <label>Alternative Phone Number</label>
+                    {renderPhoneInput(
+                      personalInfo.alternativePhone,
+                      alternateCountry,
+                      showAlternateCountryDropdown,
+                      setShowAlternateCountryDropdown,
+                      "alternative"
+                    )}
+                    {personalErrors.alternativePhone && (
+                      <span className="pi-error">
+                        {personalErrors.alternativePhone}
+                      </span>
                     )}
                   </motion.div>
 
@@ -1206,6 +1344,80 @@ const ProfileForm = () => {
                       className="pi-form-group"
                       variants={itemVariants}
                     >
+                      <label>Date of Birth</label>
+                      <input
+                        type="date"
+                        name="dob"
+                        className="input-field"
+                        value={personalInfo.dob}
+                        onChange={handlePersonalChange}
+                        max={getMaxDobDate()}
+                      />
+                    </motion.div>
+
+                    <motion.div
+                      className="pi-form-group"
+                      variants={itemVariants}
+                    >
+                      <label>Gender</label>
+                      <div className="gender-button-group">
+                        <button
+                          className={`gender-button ${
+                            personalInfo.gender === Gender.MALE
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            setPersonalInfo((prev) => ({
+                              ...prev,
+                              gender: Gender.MALE,
+                            }))
+                          }
+                          type="button"
+                        >
+                          Male
+                        </button>
+                        <button
+                          className={`gender-button ${
+                            personalInfo.gender === Gender.FEMALE
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            setPersonalInfo((prev) => ({
+                              ...prev,
+                              gender: Gender.FEMALE,
+                            }))
+                          }
+                          type="button"
+                        >
+                          Female
+                        </button>
+                        <button
+                          className={`gender-button ${
+                            personalInfo.gender === Gender.OTHER
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            setPersonalInfo((prev) => ({
+                              ...prev,
+                              gender: Gender.OTHER,
+                            }))
+                          }
+                          type="button"
+                        >
+                          Other
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div className="pi-form-row">
+                    <motion.div
+                      className="pi-form-group"
+                      variants={itemVariants}
+                    >
                       <label>Emergency Contact Name</label>
                       <input
                         name="emergencyContactName"
@@ -1215,9 +1427,9 @@ const ProfileForm = () => {
                         onBlur={() =>
                           handlePersonalBlur("emergencyContactName")
                         }
-                         className={`pi-phone-input ${
-                        personalErrors.midName ? "error" : ""
-                      }`}
+                        className={`pi-phone-input ${
+                          personalErrors.midName ? "error" : ""
+                        }`}
                       />
                       {personalErrors.emergencyContactName && (
                         <span className="pi-error">
@@ -1397,9 +1609,9 @@ const ProfileForm = () => {
                         value={bankInfo.accountHolderName}
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("accountHolderName")}
-                         className={`pi-input ${
-                        personalErrors.midName ? "error" : ""
-                      }`}
+                        className={`pi-input ${
+                          personalErrors.midName ? "error" : ""
+                        }`}
                       />
                       {bankErrors.accountHolderName && (
                         <span className="pi-error">
@@ -1419,9 +1631,9 @@ const ProfileForm = () => {
                         value={bankInfo.bankName}
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("bankName")}
-                         className={`pi-input ${
-                        personalErrors.midName ? "error" : ""
-                      }`}
+                        className={`pi-input ${
+                          personalErrors.midName ? "error" : ""
+                        }`}
                       />
                       {bankErrors.bankName && (
                         <span className="pi-error">{bankErrors.bankName}</span>
@@ -1441,9 +1653,9 @@ const ProfileForm = () => {
                         value={bankInfo.city}
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("city")}
-                         className={`pi-input ${
-                        personalErrors.midName ? "error" : ""
-                      }`}
+                        className={`pi-input ${
+                          personalErrors.midName ? "error" : ""
+                        }`}
                       />
                       {bankErrors.city && (
                         <span className="pi-error">{bankErrors.city}</span>
@@ -1461,9 +1673,9 @@ const ProfileForm = () => {
                         value={bankInfo.branchName}
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("branchName")}
-                         className={`pi-input ${
-                        personalErrors.midName ? "error" : ""
-                      }`}
+                        className={`pi-input ${
+                          personalErrors.midName ? "error" : ""
+                        }`}
                       />
                       {bankErrors.branchName && (
                         <span className="pi-error">
@@ -1486,9 +1698,9 @@ const ProfileForm = () => {
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("ifscCode")}
                         placeholder="e.g., SBIN0001234"
-                         className={`pi-input ${
-                        personalErrors.midName ? "error" : ""
-                      }`}
+                        className={`pi-input ${
+                          personalErrors.midName ? "error" : ""
+                        }`}
                       />
                       {bankErrors.ifscCode && (
                         <span className="pi-error">{bankErrors.ifscCode}</span>
@@ -1507,9 +1719,9 @@ const ProfileForm = () => {
                         onChange={handleBankChange}
                         onBlur={() => handleBankBlur("accountNumber")}
                         placeholder="9-18 digits"
-                         className={`pi-input ${
-                        personalErrors.midName ? "error" : ""
-                      }`}
+                        className={`pi-input ${
+                          personalErrors.midName ? "error" : ""
+                        }`}
                       />
                       {bankErrors.accountNumber && (
                         <span className="pi-error">

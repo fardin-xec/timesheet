@@ -13,8 +13,8 @@ const Employees = () => {
   return (
     <>
       <Breadcrumb items={breadcrumbItems} />
-      <h1>Employees</h1>
-      <p>View your Employees information.</p>
+      {/* <h1>Employees</h1>
+      <p>View your Employees information.</p> */}
 
       <Card>
         <EmployeesView />

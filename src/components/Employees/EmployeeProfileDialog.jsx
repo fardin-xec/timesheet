@@ -12,7 +12,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-
 import { Trash2, Eye, Trash } from "lucide-react";
 import { Facebook, LinkedIn, Twitter } from "@mui/icons-material";
 import ReactCountryFlag from "react-country-flag";
@@ -44,6 +43,12 @@ const EmployeeProfileDialog = ({
   const [toastOpen, setToastOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState("");
   const [toastSeverity, setToastSeverity] = React.useState("success");
+
+  const Gender = {
+    MALE: "male",
+    FEMALE: "female",
+    OTHER: "other",
+  };
 
   const [personalData, setPersonalData] = useState({
     id: 0,
@@ -115,16 +120,27 @@ const EmployeeProfileDialog = ({
 
   const countryCodes = React.useMemo(
     () => [
-      { code: "US", dialCode: "+1", flag: "🇺🇸", name: "United States" },
-      { code: "IN", dialCode: "+91", flag: "🇮🇳", name: "India" },
-      { code: "GB", dialCode: "+44", flag: "🇬🇧", name: "United Kingdom" },
-      { code: "CA", dialCode: "+1", flag: "🇨🇦", name: "Canada" },
-      { code: "AU", dialCode: "+61", flag: "🇦🇺", name: "Australia" },
-      { code: "DE", dialCode: "+49", flag: "🇩🇪", name: "Germany" },
-      { code: "FR", dialCode: "+33", flag: "🇫🇷", name: "France" },
-      { code: "JP", dialCode: "+81", flag: "🇯🇵", name: "Japan" },
-      { code: "CN", dialCode: "+86", flag: "🇨🇳", name: "China" },
-      { code: "BR", dialCode: "+55", flag: "🇧🇷", name: "Brazil" },
+      { code: "US", dialCode: "+1", name: "United States" },
+      { code: "IN", dialCode: "+91", name: "India" },
+      { code: "GB", dialCode: "+44", name: "United Kingdom" },
+      { code: "CA", dialCode: "+1", name: "Canada" },
+      { code: "AU", dialCode: "+61", name: "Australia" },
+      { code: "DE", dialCode: "+49", name: "Germany" },
+      { code: "FR", dialCode: "+33", name: "France" },
+      { code: "JP", dialCode: "+81", name: "Japan" },
+      { code: "CN", dialCode: "+86", name: "China" },
+      { code: "BR", dialCode: "+55", name: "Brazil" },
+      { code: "MX", dialCode: "+52", name: "Mexico" },
+      { code: "IT", dialCode: "+39", name: "Italy" },
+      { code: "ES", dialCode: "+34", name: "Spain" },
+      { code: "NL", dialCode: "+31", name: "Netherlands" },
+      { code: "SE", dialCode: "+46", name: "Sweden" },
+      { code: "CH", dialCode: "+41", name: "Switzerland" },
+      { code: "SG", dialCode: "+65", name: "Singapore" },
+      { code: "AE", dialCode: "+971", name: "UAE" },
+      { code: "SA", dialCode: "+966", name: "Saudi Arabia" },
+      { code: "QA", dialCode: "+974", name: "Qatar" },
+      { code: "ZA", dialCode: "+27", name: "South Africa" },
     ],
     []
   );
@@ -922,6 +938,16 @@ const EmployeeProfileDialog = ({
     }
   };
 
+  const getMaxDobDate = () => {
+    const today = new Date();
+    const maxDate = new Date(
+      today.getFullYear() - 18,
+      today.getMonth(),
+      today.getDate()
+    );
+    return maxDate.toISOString().split("T")[0];
+  };
+
   const handleSave = async () => {
     let isValid = false;
     if (activeTab === 0) {
@@ -945,12 +971,14 @@ const EmployeeProfileDialog = ({
       setLoading(true);
       if (activeTab === 0) {
         await personalInfoAPI.updatePersonalInfo(employee.id, personalData);
-        if (employeeData.phone) {
-          await personalInfoAPI.updateEmployeePhone(
-            employee.id,
-            employeeData.phone
-          );
-        }
+        // if (employeeData.phone) {
+        //   await personalInfoAPI.updateEmployeePhone(
+        //     employee.id,
+        //     employeeData.phone
+        //   );
+        // }
+        onSave(employeeData);
+
         if (activeTab !== 4) {
           setToastMessage("Personal Info saved successfully!");
           setToastSeverity("success");
@@ -1126,6 +1154,7 @@ const EmployeeProfileDialog = ({
             type="button"
             onClick={() => setShowDropdown(!showDropdown)}
             className="country-button"
+            disabled={fieldName === "phone"}
           >
             <ReactCountryFlag
               countryCode={selectedCountryData.code}
@@ -1169,6 +1198,7 @@ const EmployeeProfileDialog = ({
           className={`input-field ${
             personalErrors[getFieldName()] ? "error" : ""
           }`}
+          disabled={fieldName === "phone"}
         />
         {personalErrors[fieldName] && (
           <span className="input-error">{personalErrors[fieldName]}</span>
@@ -1267,18 +1297,58 @@ const EmployeeProfileDialog = ({
                       <label>Date of Birth</label>
                       <input
                         type="date"
-                        value={employeeData.dob || ""}
-                        readOnly
                         className="input-field"
+                        onChange={(e) =>
+                          handleInputChange("dob", e.target.value)
+                        }
+                        name="dob"
+                        value={employeeData.dob}
+                        max={getMaxDobDate()}
                       />
                     </div>
                     <div className="form-field">
                       <label>Gender</label>
-                      <input
-                        value={employeeData.gender || ""}
-                        readOnly
-                        className="input-field"
-                      />
+                      <div className="gender-button-group">
+                        <button
+                          className={`gender-button ${
+                            employeeData.gender === Gender.MALE
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={(e) =>
+                            handleInputChange("gender", Gender.MALE)
+                          }
+                          type="button"
+                        >
+                          Male
+                        </button>
+                        <button
+                          className={`gender-button ${
+                            employeeData.gender === Gender.FEMALE
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={(e) =>
+                            handleInputChange("gender", Gender.FEMALE)
+                          }
+                          type="button"
+                        >
+                          Female
+                        </button>
+                        <button
+                          className={`gender-button ${
+                            employeeData.gender === Gender.OTHER
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={(e) =>
+                            handleInputChange("gender", Gender.OTHER)
+                          }
+                          type="button"
+                        >
+                          Other
+                        </button>
+                      </div>
                     </div>
                     <div className="form-field">
                       <label>Blood Group</label>
@@ -1375,6 +1445,7 @@ const EmployeeProfileDialog = ({
                         className="input-field"
                       />
                     </div>
+
                     <div className="form-field">
                       <label>Personal Email ID</label>
                       <input
@@ -1394,6 +1465,7 @@ const EmployeeProfileDialog = ({
                         </span>
                       )}
                     </div>
+
                     <div className="form-field">
                       <label>Phone Number</label>
                       {renderPhoneInput(

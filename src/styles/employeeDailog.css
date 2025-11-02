@@ -824,3 +824,81 @@ textarea.input-field {
 .MuiCircularProgress-root {
   color: #667eea;
 }
+
+/* Gender button group */
+.gender-button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gender-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  flex: 1;
+  min-width: 100px;
+  font-weight: 500;
+}
+
+.gender-button:hover {
+  border-color: #3b82f6;
+}
+
+.gender-button.selected {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+/* Button styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  min-width: 120px;
+}
+
+.button-outlined {
+  background-color: transparent;
+  border: 1px solid #64748b;
+  color: #64748b;
+}
+
+.button-outlined:hover {
+  background-color: #f1f5f9;
+  border-color: #334155;
+}
+
+.button-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.button-primary:hover {
+  background-color: #2563eb;
+}
+
+.button-primary:disabled {
+  background-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
