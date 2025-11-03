@@ -1294,6 +1294,15 @@ const EmployeeProfileDialog = ({
                       />
                     </div>
                     <div className="form-field">
+                      <label>EmployeeId</label>
+                      <input
+                        type="text"
+                        value={`${employeeData.employeeId || ""}`}
+                        readOnly
+                        className="input-field"
+                      />
+                    </div>
+                    <div className="form-field">
                       <label>Date of Birth</label>
                       <input
                         type="date"
