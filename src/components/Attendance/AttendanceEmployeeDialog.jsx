@@ -14,16 +14,16 @@ import {
 import { fetchTasksByDate, fetchEmployeeMonthlyLogs } from "../../utils/api";
 import "../../styles/attendanceDailog.css";
 import Toast from "../common/Toast";
+import { format } from "date-fns";
 
 // Helper function to get last month's date range
 function getLastMonthDates() {
   const today = new Date();
   const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
- 
 
   return {
-    start: lastMonth.toISOString().split("T")[0],
+     start: lastMonth.toISOString().split("T")[0],
     end: lastMonthEnd.toISOString().split("T")[0],
   };
 }
@@ -119,8 +119,8 @@ const AttendanceEmployeeDialog = ({
   const [activeTab, setActiveTab] = useState("tasks");
   const [selectedDate, setSelectedDate] = useState(
     date instanceof Date
-      ? date.toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0]
+      ? format(date, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd")
   );
   const [taskLogs, setTaskLogs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -177,7 +177,9 @@ const AttendanceEmployeeDialog = ({
       setToastOpen(true);
     } catch (err) {
       setError(err.response.data.message || "Failed to load monthly logs");
-      setToastMessage(err.response.data.message || "Failed to load monthly logs");
+      setToastMessage(
+        err.response.data.message || "Failed to load monthly logs"
+      );
       setToastSeverity("error");
       setToastOpen(true);
       setMonthlyLogs({ summary: {}, dailyLogs: [] });
@@ -198,7 +200,7 @@ const AttendanceEmployeeDialog = ({
 
   const handleDateChange = (e) => {
     const newDate = e.target.value;
-    const today = new Date().toISOString().split("T")[0];
+    const today = format(new Date(), "yyyy-MM-dd");
     if (newDate <= today) setSelectedDate(newDate);
   };
 
@@ -349,7 +351,7 @@ const AttendanceEmployeeDialog = ({
                   <input
                     id="taskDate"
                     type="date"
-                    max={new Date().toISOString().split("T")[0]}
+                    max={format(new Date(), "yyyy-MM-dd")}
                     value={selectedDate}
                     onChange={handleDateChange}
                     className="border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 bg-white shadow-sm"
@@ -371,7 +373,7 @@ const AttendanceEmployeeDialog = ({
                     onChange={(e) =>
                       handleDateRangeChange("startDate", e.target.value)
                     }
-                    max={new Date().toISOString().split("T")[0]}
+                    max={format(new Date(), "yyyy-MM-dd")}
                     className="border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 bg-white shadow-sm"
                   />
                   <span className="text-gray-500">to</span>
@@ -381,7 +383,7 @@ const AttendanceEmployeeDialog = ({
                     onChange={(e) =>
                       handleDateRangeChange("endDate", e.target.value)
                     }
-                    max={new Date().toISOString().split("T")[0]}
+                    max={format(new Date(), "yyyy-MM-dd")}
                     min={dateRange.startDate}
                     className="border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 bg-white shadow-sm"
                   />

@@ -10,11 +10,7 @@ const ForgotPassword = () => {
       <Card>
         <h1 className="auth-title">Reset Password</h1>
         <ForgotPasswordForm />
-        <div className="auth-links">
-          <Link to="/login" className="auth-link">
-            Back to Login
-          </Link>
-        </div>
+       
       </Card>
     </div>
   );
