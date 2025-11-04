@@ -260,6 +260,8 @@ const EmployeesView = () => {
         qidExpirationDate: emp.qidExpiration,
         passportNumber: emp.passportNumber,
         passportValidTill: emp.passportExpiration,
+        isProbation:emp.isProbation,
+        confirmationDate:emp.confirmationDate,
       }));
       setEmployees(processedEmployees);
       setError(null);
@@ -401,18 +403,24 @@ const EmployeesView = () => {
 
       setLoading(true);
 
-      const buildBankAccountPayload = (bankInfo) => {
-        if (!bankInfo) return undefined;
-        return {
-          accountHolderName:
-            bankInfo.account_holder_name || bankInfo.accountHolderName,
-          bankName: bankInfo.bank_name || bankInfo.bankName,
-          branchName: bankInfo.branch_name || bankInfo.branchName,
-          city: bankInfo.city,
-          ifscCode: bankInfo.ifsc_code || bankInfo.ifscCode,
-          accountNumber: bankInfo.account_number || bankInfo.accountNumber,
-        };
-      };
+      // const buildBankAccountPayload = (bankInfo) => {
+      //   if (!bankInfo) return undefined;
+      //   return {
+      //     accountHolderName:
+      //       bankInfo.account_holder_name || bankInfo.accountHolderName,
+      //     bankName: bankInfo.bank_name || bankInfo.bankName,
+      //     branchName: bankInfo.branch_name || bankInfo.branchName,
+      //     city: bankInfo.city,
+      //     ifscCode: bankInfo.ifsc_code || bankInfo.ifscCode,
+      //     accountNumber: bankInfo.account_number || bankInfo.accountNumber,
+      //     swiftCode:
+      //       bankInfo.swiftCode || bankInfo.swiftCode || null,
+      //     ibankNo:
+      //       bankInfo.ibankNo ||
+      //       bankInfo.ibankNo ||
+      //       null,
+      //   };
+      // };
 
       if (isNewEmployee) {
         endpoint = `/employees`;
@@ -433,6 +441,8 @@ const EmployeesView = () => {
           workLocation: employeeData.workLocation || null,
           address: employeeData.address || null,
           joiningDate: employeeData.joiningDate || null,
+          isProbation: employeeData.isProbation|| false,
+          confirmationDate: employeeData.confirmationDate||null,
           bio: employeeData.bio || null,
           ctc: employeeData.ctc ? employeeData.ctc.toString() : null,
           currency: employeeData.currency || null,
@@ -457,6 +467,12 @@ const EmployeesView = () => {
             employeeData.bank_info?.account_number ||
             employeeData.accountNumber ||
             null,
+          swiftCode:
+            employeeData.bank_info?.swiftCode || employeeData.swiftCode || null,
+          ibankNo:
+            employeeData.bank_info?.ibankNo ||
+            employeeData.ibankNo ||
+            null,
           qid: employeeData.qid || null,
           qidExpiration: employeeData.qidExpirationDate || null,
           passportNumber: employeeData.passportNumber || null,
@@ -480,6 +496,8 @@ const EmployeesView = () => {
           workLocation: employeeData.workLocation,
           address: employeeData.address,
           joiningDate: employeeData.joiningDate,
+          isProbation: employeeData.isProbation|| false,
+          confirmationDate: employeeData.confirmationDate||null,
           bio: employeeData.bio,
         };
 
@@ -496,12 +514,12 @@ const EmployeesView = () => {
           payload.reportTo = parseInt(employeeData.reportTo);
         }
 
-        const bankPayload = buildBankAccountPayload(
-          employeeData.bank_info || employeeData
-        );
-        if (bankPayload) {
-          Object.assign(payload, bankPayload);
-        }
+        // const bankPayload = buildBankAccountPayload(
+        //   employeeData.bank_info || employeeData
+        // );
+        // if (bankPayload) {
+        //   Object.assign(payload, bankPayload);
+        // }
 
         if (employeeData.qid) payload.qid = employeeData.qid;
         if (employeeData.qidExpirationDate)
@@ -514,7 +532,11 @@ const EmployeesView = () => {
         Object.keys(payload).forEach(
           (key) => payload[key] === undefined && delete payload[key]
         );
+
+       
       }
+
+  
 
       const method = isNewEmployee ? api.post : api.put;
       const response = await method(endpoint, payload, {

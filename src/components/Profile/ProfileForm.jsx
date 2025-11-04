@@ -74,6 +74,7 @@ const ProfileForm = () => {
     dob: "",
     gender: "",
     alternativePhone: "",
+    workLocation: "",
   });
   const [personalErrors, setPersonalErrors] = useState({});
 
@@ -84,6 +85,8 @@ const ProfileForm = () => {
     branchName: "",
     ifscCode: "",
     accountNumber: "",
+    swiftCode: "",
+    ibankNo: "",
   });
   const [bankErrors, setBankErrors] = useState({});
 
@@ -238,6 +241,136 @@ const ProfileForm = () => {
     return { valid: true, message: "" };
   };
 
+  //
+  const validateSWIFTCode = (code) => {
+    // SWIFT code: 8 or 11 characters
+    // Format: AAAABBCCXXX where:
+    // AAAA = Bank code (4 letters)
+    // BB = Country code (2 letters)
+    // CC = Location code (2 letters or digits)
+    // XXX = Branch code (3 letters or digits, optional)
+    const swiftRegex = /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
+
+    if (!code) {
+      return { valid: true, message: "" }; // Optional field
+    }
+
+    if (!swiftRegex.test(code)) {
+      return {
+        valid: false,
+        message:
+          "SWIFT code must be 8 or 11 characters (e.g., SBININBB or SBININBB123)",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateIBAN = (code) => {
+    // IBAN: up to 34 alphanumeric characters
+    // Format: 2 letter country code + 2 check digits + up to 30 alphanumeric characters
+    const ibanRegex = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/;
+
+    if (!code) {
+      return { valid: true, message: "" }; // Optional field
+    }
+
+    if (!ibanRegex.test(code)) {
+      return {
+        valid: false,
+        message:
+          "IBAN must start with 2 letter country code, 2 digits, followed by up to 30 alphanumeric characters (e.g., GB82WEST12345698765432)",
+      };
+    }
+
+    // Length validation by country (common examples)
+    const countryLengths = {
+      AD: 24,
+      AE: 23,
+      AL: 28,
+      AT: 20,
+      AZ: 28,
+      BA: 20,
+      BE: 16,
+      BG: 22,
+      BH: 22,
+      BR: 29,
+      BY: 28,
+      CH: 21,
+      CR: 22,
+      CY: 28,
+      CZ: 24,
+      DE: 22,
+      DK: 18,
+      DO: 28,
+      EE: 20,
+      EG: 29,
+      ES: 24,
+      FI: 18,
+      FO: 18,
+      FR: 27,
+      GB: 22,
+      GE: 22,
+      GI: 23,
+      GL: 18,
+      GR: 27,
+      GT: 28,
+      HR: 21,
+      HU: 28,
+      IE: 22,
+      IL: 23,
+      IS: 26,
+      IT: 27,
+      JO: 30,
+      KW: 30,
+      KZ: 20,
+      LB: 28,
+      LI: 21,
+      LT: 20,
+      LU: 20,
+      LV: 21,
+      MC: 27,
+      MD: 24,
+      ME: 22,
+      MK: 19,
+      MR: 27,
+      MT: 31,
+      MU: 30,
+      NL: 18,
+      NO: 15,
+      PK: 24,
+      PL: 28,
+      PS: 29,
+      PT: 25,
+      QA: 29,
+      RO: 24,
+      RS: 22,
+      SA: 24,
+      SE: 24,
+      SI: 19,
+      SK: 24,
+      SM: 27,
+      TN: 24,
+      TR: 26,
+      UA: 29,
+      VA: 22,
+      VG: 24,
+      XK: 20,
+    };
+
+    const countryCode = code.substring(0, 2);
+    const expectedLength = countryLengths[countryCode];
+
+    if (expectedLength && code.length !== expectedLength) {
+      return {
+        valid: false,
+        message: `IBAN for ${countryCode} must be exactly ${expectedLength} characters`,
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
   const parsePhoneNumber = useCallback(
     (phone) => {
       if (!phone) return { countryCode: "IN", number: "" };
@@ -316,6 +449,7 @@ const ProfileForm = () => {
         dob: profileData.employee.dob,
         gender: profileData.employee.gender,
         alternativePhone: profileData.alternativePhone,
+        workLocation: profileData.employee.workLocation,
       });
 
       const bankData = await personalInfoAPI.getBankInfo(user.employee.id);
@@ -326,6 +460,8 @@ const ProfileForm = () => {
         branchName: bankData.branchName || "",
         ifscCode: bankData.ifscCode || "",
         accountNumber: bankData.accountNo || "",
+        swiftCode: bankData.swiftCode || "",
+        ibankNo: bankData.ibankNo || "",
       });
 
       const docsData = await personalInfoAPI.getDocuments(user.employee.id);
@@ -490,6 +626,28 @@ const ProfileForm = () => {
         newErrors.accountNumber = validation.message;
       } else {
         delete newErrors.accountNumber;
+      }
+    } else if (field === "swiftCode") {
+      if (bankInfo.swiftCode && bankInfo.swiftCode.trim() !== "") {
+        const validation = validateSWIFTCode(bankInfo.swiftCode);
+        if (!validation.valid) {
+          newErrors.swiftCode = validation.message;
+        } else {
+          delete newErrors.swiftCode;
+        }
+      } else {
+        delete newErrors.swiftCode;
+      }
+    } else if (field === "ibankNo") {
+      if (bankInfo.ibankNo && bankInfo.ibankNo.trim() !== "") {
+        const validation = validateIBAN(bankInfo.ibankNo);
+        if (!validation.valid) {
+          newErrors.ibankNo = validation.message;
+        } else {
+          delete newErrors.ibankNo;
+        }
+      } else {
+        delete newErrors.ibankNo;
       }
     }
 
@@ -714,7 +872,7 @@ const ProfileForm = () => {
       showToast("Please fix all validation errors", "error");
       return;
     }
-//loading
+    //loading
     setLoading(true);
     try {
       const updateData = {
@@ -1569,6 +1727,13 @@ const ProfileForm = () => {
                     { label: "City", value: bankInfo.city },
                     { label: "Branch Name", value: bankInfo.branchName },
                     { label: "IFSC Code", value: bankInfo.ifscCode },
+                    ...(personalInfo.workLocation?.trim().toLowerCase() ===
+                    "on-site"
+                      ? [
+                          { label: "Swift Code", value: bankInfo.swiftCode },
+                          { label: "IBank Number", value: bankInfo.iban },
+                        ]
+                      : []),
                     {
                       label: "Account Number",
                       value: bankInfo.accountNumber
@@ -1730,6 +1895,53 @@ const ProfileForm = () => {
                       )}
                     </motion.div>
                   </div>
+                  {personalInfo.workLocation === "On-site" && (
+                    <div className="pi-form-row">
+                      <motion.div
+                        className="pi-form-group"
+                        variants={itemVariants}
+                      >
+                        <label>Swift Code</label>
+                        <input
+                          name="swiftCode"
+                          type="text"
+                          value={bankInfo.swiftCode}
+                          onChange={handleBankChange}
+                          onBlur={() => handleBankBlur("swiftCode")}
+                          placeholder="e.g., SBIN0001234"
+                          className={`pi-input ${
+                            personalErrors.midName ? "error" : ""
+                          }`}
+                        />
+                        {bankErrors.swiftCode && (
+                          <span className="pi-error">
+                            {bankErrors.swiftCode}
+                          </span>
+                        )}
+                      </motion.div>
+
+                      <motion.div
+                        className="pi-form-group"
+                        variants={itemVariants}
+                      >
+                        <label>IBank Number</label>
+                        <input
+                          name="ibankNo"
+                          type="text"
+                          value={bankInfo.ibankNo}
+                          onChange={handleBankChange}
+                          onBlur={() => handleBankBlur("ibankNo")}
+                          placeholder="9-18 digits"
+                          className={`pi-input ${
+                            personalErrors.midName ? "error" : ""
+                          }`}
+                        />
+                        {bankErrors.ibankNo && (
+                          <span className="pi-error">{bankErrors.ibankNo}</span>
+                        )}
+                      </motion.div>
+                    </div>
+                  )}
 
                   <motion.div
                     className="pi-button-group"

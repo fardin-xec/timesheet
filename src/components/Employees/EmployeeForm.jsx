@@ -114,6 +114,8 @@ const EmployeeForm = ({
     reportTo: null,
     orgId: null,
     workLocation: "",
+    isProbation: false,
+    confirmationDate: "",
 
     // Salary Information
     ctc: "",
@@ -126,6 +128,8 @@ const EmployeeForm = ({
     branchName: "",
     ifscCode: "",
     accountNumber: "",
+    ibankNo: "",
+    swiftCode: "",
 
     // Document Information
     qid: "",
@@ -183,7 +187,21 @@ const EmployeeForm = ({
     );
     return maxDate.toISOString().split("T")[0];
   };
+  const getMinFutureDate = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
 
+  // Get maximum future date (e.g., 100 years from now)
+  const getMaxFutureDate = (yearsAhead = 100) => {
+    const today = new Date();
+    const maxDate = new Date(
+      today.getFullYear() + yearsAhead,
+      today.getMonth(),
+      today.getDate()
+    );
+    return maxDate.toISOString().split("T")[0];
+  };
   // Debounced email existence check
   const checkEmailExistence = useCallback(
     async (email) => {
@@ -362,7 +380,134 @@ const EmployeeForm = ({
 
     return { valid: true, message: "" };
   };
+  const validateSWIFTCode = (code) => {
+    // SWIFT code: 8 or 11 characters
+    // Format: AAAABBCCXXX where:
+    // AAAA = Bank code (4 letters)
+    // BB = Country code (2 letters)
+    // CC = Location code (2 letters or digits)
+    // XXX = Branch code (3 letters or digits, optional)
+    const swiftRegex = /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
 
+    if (!code) {
+      return { valid: true, message: "" }; // Optional field
+    }
+
+    if (!swiftRegex.test(code)) {
+      return {
+        valid: false,
+        message:
+          "SWIFT code must be 8 or 11 characters (e.g., SBININBB or SBININBB123)",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateIBAN = (code) => {
+    // IBAN: up to 34 alphanumeric characters
+    // Format: 2 letter country code + 2 check digits + up to 30 alphanumeric characters
+    const ibanRegex = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/;
+
+    if (!code) {
+      return { valid: true, message: "" }; // Optional field
+    }
+
+    if (!ibanRegex.test(code)) {
+      return {
+        valid: false,
+        message:
+          "IBAN must start with 2 letter country code, 2 digits, followed by up to 30 alphanumeric characters (e.g., GB82WEST12345698765432)",
+      };
+    }
+
+    // Length validation by country (common examples)
+    const countryLengths = {
+      AD: 24,
+      AE: 23,
+      AL: 28,
+      AT: 20,
+      AZ: 28,
+      BA: 20,
+      BE: 16,
+      BG: 22,
+      BH: 22,
+      BR: 29,
+      BY: 28,
+      CH: 21,
+      CR: 22,
+      CY: 28,
+      CZ: 24,
+      DE: 22,
+      DK: 18,
+      DO: 28,
+      EE: 20,
+      EG: 29,
+      ES: 24,
+      FI: 18,
+      FO: 18,
+      FR: 27,
+      GB: 22,
+      GE: 22,
+      GI: 23,
+      GL: 18,
+      GR: 27,
+      GT: 28,
+      HR: 21,
+      HU: 28,
+      IE: 22,
+      IL: 23,
+      IS: 26,
+      IT: 27,
+      JO: 30,
+      KW: 30,
+      KZ: 20,
+      LB: 28,
+      LI: 21,
+      LT: 20,
+      LU: 20,
+      LV: 21,
+      MC: 27,
+      MD: 24,
+      ME: 22,
+      MK: 19,
+      MR: 27,
+      MT: 31,
+      MU: 30,
+      NL: 18,
+      NO: 15,
+      PK: 24,
+      PL: 28,
+      PS: 29,
+      PT: 25,
+      QA: 29,
+      RO: 24,
+      RS: 22,
+      SA: 24,
+      SE: 24,
+      SI: 19,
+      SK: 24,
+      SM: 27,
+      TN: 24,
+      TR: 26,
+      UA: 29,
+      VA: 22,
+      VG: 24,
+      XK: 20,
+    };
+
+    const countryCode = code.substring(0, 2);
+    const expectedLength = countryLengths[countryCode];
+
+    if (expectedLength && code.length !== expectedLength) {
+      return {
+        valid: false,
+        message: `IBAN for ${countryCode} must be exactly ${expectedLength} characters`,
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
   const validateAccountNumber = (accountNumber) => {
     const digitsOnly = accountNumber.replace(/\D/g, "");
 
@@ -521,7 +666,6 @@ const EmployeeForm = ({
   const handleBlur = (field) => {
     const newErrors = { ...mandatoryErrors };
     const newOptionalErrors = { ...optionalErrors };
-    console.log(field);
 
     if (field === "firstName") {
       const validation = validateName(employeeData.firstName, "First name");
@@ -652,6 +796,28 @@ const EmployeeForm = ({
         }
       } else {
         delete newOptionalErrors.ifscCode;
+      }
+    } else if (field === "swiftCode") {
+      if (employeeData.swiftCode && employeeData.swiftCode.trim() !== "") {
+        const validation = validateSWIFTCode(employeeData.swiftCode);
+        if (!validation.valid) {
+          newOptionalErrors.swiftCode = validation.message;
+        } else {
+          delete newOptionalErrors.swiftCode;
+        }
+      } else {
+        delete newOptionalErrors.swiftCode;
+      }
+    } else if (field === "ibankNo") {
+      if (employeeData.ibankNo && employeeData.ibankNo.trim() !== "") {
+        const validation = validateIBAN(employeeData.ibankNo);
+        if (!validation.valid) {
+          newOptionalErrors.ibankNo = validation.message;
+        } else {
+          delete newOptionalErrors.ibankNo;
+        }
+      } else {
+        delete newOptionalErrors.ibankNo;
       }
     } else if (field === "accountNumber") {
       if (
@@ -1317,6 +1483,68 @@ const EmployeeForm = ({
             onChange={(e) => handleInputChange("joiningDate", e.target.value)}
           />
         </div>
+        <div className="input-wrapper">
+          <label className="input-label">Is Probation</label>
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              alignItems: "center",
+              marginTop: "8px",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name="isProbation"
+                checked={!employeeData.isProbation}
+                onChange={() => handleInputChange("isProbation", false)}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              <span style={{ fontSize: "14px", color: "#374151" }}>No</span>
+            </label>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name="isProbation"
+                checked={employeeData.isProbation}
+                onChange={() => handleInputChange("isProbation", true)}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              <span style={{ fontSize: "14px", color: "#374151" }}>Yes</span>
+            </label>
+          </div>
+        </div>
+
+        {employeeData.isProbation && (
+          <div className="input-wrapper">
+            <label className="input-label">Confirmation Date</label>
+            <input
+              type="date"
+              className="input-field"
+              value={employeeData.confirmationDate || ""}
+              onChange={(e) =>
+                handleInputChange("confirmationDate", e.target.value)
+              }
+              min={getMinFutureDate()}
+              max={getMaxFutureDate(50)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="form-section">
@@ -1466,6 +1694,41 @@ const EmployeeForm = ({
             )}
           </div>
         </div>
+        {employeeData.workLocation === "On-site" && (
+          <div className="grid-cols-2">
+            <div className="input-wrapper">
+              <label className="input-label">Swift Code</label>
+              <input
+                type="text"
+                className={`input-field ${
+                  optionalErrors.swiftCode ? "error" : ""
+                }`}
+                value={employeeData.swiftCode}
+                onChange={(e) => handleInputChange("swiftCode", e.target.value)}
+                onBlur={() => handleBlur("swiftCode")}
+              />
+              {optionalErrors.swiftCode && (
+                <span className="input-error">{optionalErrors.swiftCode}</span>
+              )}
+            </div>
+            <div className="input-wrapper">
+              <label className="input-label">IBank Number</label>
+              <input
+                type="text"
+                className={`input-field ${
+                  optionalErrors.ibankNo ? "error" : ""
+                }`}
+                value={employeeData.ibankNo}
+                onChange={(e) => handleInputChange("ibankNo", e.target.value)}
+                onBlur={() => handleBlur("ibankNo")}
+                placeholder="9-18 digits"
+              />
+              {optionalErrors.ibankNo && (
+                <span className="input-error">{optionalErrors.ibankNo}</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="form-section">
@@ -1498,6 +1761,8 @@ const EmployeeForm = ({
                     handleInputChange("qidExpirationDate", e.target.value)
                   }
                   onBlur={() => handleBlur("qidExpirationDate")}
+                  min={getMinFutureDate()}
+              max={getMaxFutureDate(50)}
                 />
                 {optionalErrors.qidExpirationDate && (
                   <span className="input-error">
@@ -1541,6 +1806,8 @@ const EmployeeForm = ({
                 handleInputChange("passportValidTill", e.target.value)
               }
               onBlur={() => handleBlur("passportValidTill")}
+              min={getMinFutureDate()}
+              max={getMaxFutureDate(50)}
             />
             {optionalErrors.passportValidTill && (
               <span className="input-error">

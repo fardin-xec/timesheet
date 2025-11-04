@@ -70,6 +70,8 @@ const EmployeeProfileDialog = ({
     branchName: "",
     ifscCode: "",
     accountNumber: "",
+    swiftCode: "",
+    ibankNo: "",
   });
   const [documents, setDocuments] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -190,6 +192,135 @@ const EmployeeProfileDialog = ({
     QA: 8,
     ZA: 9,
   };
+  //
+  const validateSWIFTCode = (code) => {
+    // SWIFT code: 8 or 11 characters
+    // Format: AAAABBCCXXX where:
+    // AAAA = Bank code (4 letters)
+    // BB = Country code (2 letters)
+    // CC = Location code (2 letters or digits)
+    // XXX = Branch code (3 letters or digits, optional)
+    const swiftRegex = /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
+
+    if (!code) {
+      return { valid: true, message: "" }; // Optional field
+    }
+
+    if (!swiftRegex.test(code)) {
+      return {
+        valid: false,
+        message:
+          "SWIFT code must be 8 or 11 characters (e.g., SBININBB or SBININBB123)",
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
+  const validateIBAN = (code) => {
+    // IBAN: up to 34 alphanumeric characters
+    // Format: 2 letter country code + 2 check digits + up to 30 alphanumeric characters
+    const ibanRegex = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/;
+
+    if (!code) {
+      return { valid: true, message: "" }; // Optional field
+    }
+
+    if (!ibanRegex.test(code)) {
+      return {
+        valid: false,
+        message:
+          "IBAN must start with 2 letter country code, 2 digits, followed by up to 30 alphanumeric characters (e.g., GB82WEST12345698765432)",
+      };
+    }
+
+    // Length validation by country (common examples)
+    const countryLengths = {
+      AD: 24,
+      AE: 23,
+      AL: 28,
+      AT: 20,
+      AZ: 28,
+      BA: 20,
+      BE: 16,
+      BG: 22,
+      BH: 22,
+      BR: 29,
+      BY: 28,
+      CH: 21,
+      CR: 22,
+      CY: 28,
+      CZ: 24,
+      DE: 22,
+      DK: 18,
+      DO: 28,
+      EE: 20,
+      EG: 29,
+      ES: 24,
+      FI: 18,
+      FO: 18,
+      FR: 27,
+      GB: 22,
+      GE: 22,
+      GI: 23,
+      GL: 18,
+      GR: 27,
+      GT: 28,
+      HR: 21,
+      HU: 28,
+      IE: 22,
+      IL: 23,
+      IS: 26,
+      IT: 27,
+      JO: 30,
+      KW: 30,
+      KZ: 20,
+      LB: 28,
+      LI: 21,
+      LT: 20,
+      LU: 20,
+      LV: 21,
+      MC: 27,
+      MD: 24,
+      ME: 22,
+      MK: 19,
+      MR: 27,
+      MT: 31,
+      MU: 30,
+      NL: 18,
+      NO: 15,
+      PK: 24,
+      PL: 28,
+      PS: 29,
+      PT: 25,
+      QA: 29,
+      RO: 24,
+      RS: 22,
+      SA: 24,
+      SE: 24,
+      SI: 19,
+      SK: 24,
+      SM: 27,
+      TN: 24,
+      TR: 26,
+      UA: 29,
+      VA: 22,
+      VG: 24,
+      XK: 20,
+    };
+
+    const countryCode = code.substring(0, 2);
+    const expectedLength = countryLengths[countryCode];
+
+    if (expectedLength && code.length !== expectedLength) {
+      return {
+        valid: false,
+        message: `IBAN for ${countryCode} must be exactly ${expectedLength} characters`,
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
   // Validation functions
   const validateEmail = (email) => {
     if (!email) return { valid: true, message: "" }; // Optional field
@@ -217,6 +348,21 @@ const EmployeeProfileDialog = ({
       };
     }
     return { valid: true, message: "" };
+  };
+
+  // Get maximum future date (e.g., 100 years from now)
+  const getMaxFutureDate = (yearsAhead = 100) => {
+    const today = new Date();
+    const maxDate = new Date(
+      today.getFullYear() + yearsAhead,
+      today.getMonth(),
+      today.getDate()
+    );
+    return maxDate.toISOString().split("T")[0];
+  };
+  const getMinFutureDate = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
   };
 
   const validateIFSCCode = (code) => {
@@ -443,6 +589,7 @@ const EmployeeProfileDialog = ({
   const fetchBankInfo = useCallback(async (employeeId) => {
     try {
       const data = await personalInfoAPI.getBankInfo(employeeId);
+      console.log(data)
       setBankInfo({
         accountHolderName: data.accountHolderName || "",
         bankName: data.bankName || "",
@@ -450,6 +597,8 @@ const EmployeeProfileDialog = ({
         branchName: data.branchName || "",
         ifscCode: data.ifscCode || "",
         accountNumber: data.accountNo || "",
+        swiftCode: data.swiftCode|| "",
+        ibankNo: data.ibankNo|| "",
       });
     } catch (error) {
       console.error("Error fetching bank info:", error);
@@ -710,6 +859,28 @@ const EmployeeProfileDialog = ({
           newErrors.accountNumber = validation.message;
         } else {
           delete newErrors.accountNumber;
+        }
+      } else if (field === "swiftCode") {
+        if (bankInfo.swiftCode && bankInfo.swiftCode.trim() !== "") {
+          const validation = validateSWIFTCode(bankInfo.swiftCode);
+          if (!validation.valid) {
+            newErrors.swiftCode = validation.message;
+          } else {
+            delete newErrors.swiftCode;
+          }
+        } else {
+          delete newErrors.swiftCode;
+        }
+      } else if (field === "ibankNo") {
+        if (bankInfo.ibankNo && bankInfo.ibankNo.trim() !== "") {
+          const validation = validateIBAN(bankInfo.ibankNo);
+          if (!validation.valid) {
+            newErrors.ibankNo = validation.message;
+          } else {
+            delete newErrors.ibankNo;
+          }
+        } else {
+          delete newErrors.ibankNo;
         }
       }
 
@@ -1833,6 +2004,88 @@ const EmployeeProfileDialog = ({
                         }}
                       />
                     </div>
+
+                    <div className="input-wrapper">
+                      <label className="input-label">Is Probation</label>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "16px",
+                          alignItems: "center",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="isProbation"
+                            checked={!employeeData.isProbation}
+                            onChange={() =>
+                              handleInputChange("isProbation", false)
+                            }
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              cursor: "pointer",
+                            }}
+                          />
+                          <span style={{ fontSize: "14px", color: "#374151" }}>
+                            No
+                          </span>
+                        </label>
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="isProbation"
+                            checked={employeeData.isProbation}
+                            onChange={() =>
+                              handleInputChange("isProbation", true)
+                            }
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              cursor: "pointer",
+                            }}
+                          />
+                          <span style={{ fontSize: "14px", color: "#374151" }}>
+                            Yes
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {employeeData.isProbation && (
+                      <div className="input-wrapper">
+                        <label className="input-label">Confirmation Date</label>
+                        <input
+                          type="date"
+                          className="input-field"
+                          value={employeeData.confirmationDate || ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "confirmationDate",
+                              e.target.value
+                            )
+                          }
+                          min={getMinFutureDate()}
+                          max={getMaxFutureDate(50)}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2200,6 +2453,63 @@ const EmployeeProfileDialog = ({
                         9-18 digit account number
                       </span>
                     </div>
+                    {employeeData.workLocation === "On-site" && (
+                      <>
+                        <div className="form-field">
+                          <label>Swift Code *</label>
+                          <input
+                            type="text"
+                            value={bankInfo?.swiftCode || ""}
+                            onChange={(e) =>
+                              handleBankInputChange(
+                                "swiftCode",
+                                e.target.value.toUpperCase()
+                              )
+                            }
+                            onBlur={() => handleBlur("swiftCode", "bank")}
+                            className={`input-field ${
+                              bankErrors.swiftCode ? "error" : ""
+                            }`}
+                            placeholder="e.g., SBIN0001234"
+                            maxLength="11"
+                          />
+                          {bankErrors.swiftCode && (
+                            <span className="input-error">
+                              {bankErrors.swiftCode}
+                            </span>
+                          )}
+                          <span className="field-hint">
+                            11-character Swift code
+                          </span>
+                        </div>
+                        <div className="form-field">
+                          <label>IBank Number *</label>
+                          <input
+                            type="text"
+                            value={bankInfo?.ibankNo || ""}
+                            onChange={(e) =>
+                              handleBankInputChange(
+                                "ibankNo",
+                                e.target.value
+                              )
+                            }
+                            onBlur={() => handleBlur("ibankNo", "bank")}
+                            className={`input-field ${
+                              bankErrors.ibankNo ? "error" : ""
+                            }`}
+                            placeholder="Enter IBank number"
+                          />
+                          {bankErrors.ibankNo && (
+                            <span className="input-error">
+                              {bankErrors.ibankNo}
+                            </span>
+                          )}
+                          <span className="field-hint">
+                            15-34 digit IBank Number
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2248,6 +2558,8 @@ const EmployeeProfileDialog = ({
                               )
                             }
                             onBlur={() => handleBlur("qidExpirationDate")}
+                            min={getMinFutureDate()}
+                            max={getMaxFutureDate(50)}
                           />
                           {/* <Calendar size={16} className="icon" /> */}
                           {documentErrors.qidExpirationDate && (
@@ -2292,6 +2604,8 @@ const EmployeeProfileDialog = ({
                           handleInputChange("passportValidTill", e.target.value)
                         }
                         onBlur={() => handleBlur("passportValidTill")}
+                        min={getMinFutureDate()}
+                        max={getMaxFutureDate(50)}
                       />
                       {documentErrors.passportValidTill && (
                         <span className="input-error">

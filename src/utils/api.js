@@ -936,6 +936,8 @@ export const personalInfoAPI = {
         branchName: data.branchName?.trim() || "",
         ifscCode: data.ifscCode?.toUpperCase().trim() || "",
         accountNo: data.accountNumber?.trim() || "",
+        swiftCode:data.swiftCode?.trim() || "",
+        ibankNo:data.ibankNo?.trim() || "",
       };
 
       const response = await api.put(`/personal/bank-account`, payload, {
