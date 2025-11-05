@@ -210,7 +210,7 @@ const EmployeeProfileDialog = ({
       return {
         valid: false,
         message:
-          "SWIFT code must be 8 or 11 characters (e.g., SBININBB or SBININBB123)",
+          "SWIFT code must be 8 or 11 characters  with proper format (e.g., SBININBB or SBININBB123)",
       };
     }
 
@@ -373,7 +373,7 @@ const EmployeeProfileDialog = ({
     if (!ifscRegex.test(code)) {
       return {
         valid: false,
-        message: "IFSC code must be 11 characters (e.g., SBIN0001234)",
+        message: "IFSC code must be 11 characters with proper format (e.g., SBIN0001234)",
       };
     }
     return { valid: true, message: "" };
