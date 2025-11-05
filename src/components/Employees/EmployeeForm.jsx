@@ -985,7 +985,11 @@ const EmployeeForm = ({
 
     if (validate()) {
       try {
-        await onSave(employeeData);
+        const updatedEmployeeData = {
+        ...employeeData,
+        phone: selectedCountry.dialCode + employeeData.phone,
+      };
+        await onSave(updatedEmployeeData);
       } catch (error) {
         console.error("Error saving employee:", error);
         setIsSaving(false);
@@ -1762,7 +1766,7 @@ const EmployeeForm = ({
                   }
                   onBlur={() => handleBlur("qidExpirationDate")}
                   min={getMinFutureDate()}
-              max={getMaxFutureDate(50)}
+                  max={getMaxFutureDate(50)}
                 />
                 {optionalErrors.qidExpirationDate && (
                   <span className="input-error">
