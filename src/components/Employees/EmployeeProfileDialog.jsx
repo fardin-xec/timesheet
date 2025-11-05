@@ -1370,6 +1370,7 @@ const EmployeeProfileDialog = ({
             personalErrors[getFieldName()] ? "error" : ""
           }`}
           disabled={fieldName === "phone"}
+          maxLength={PHONE_LENGTH_BY_COUNTRY[selectedCountryData.code]}
         />
         {personalErrors[fieldName] && (
           <span className="input-error">{personalErrors[fieldName]}</span>
@@ -2498,6 +2499,7 @@ const EmployeeProfileDialog = ({
                               bankErrors.ibankNo ? "error" : ""
                             }`}
                             placeholder="Enter IBank number"
+                            maxLength="34"
                           />
                           {bankErrors.ibankNo && (
                             <span className="input-error">
@@ -2536,6 +2538,7 @@ const EmployeeProfileDialog = ({
                               handleInputChange("qid", e.target.value)
                             }
                             onBlur={() => handleBlur("qid", "documents")}
+                            maxLength="11"
                           />
                           {documentErrors.qid && (
                             <span className="input-error">
@@ -2584,6 +2587,7 @@ const EmployeeProfileDialog = ({
                           handleInputChange("passportNumber", e.target.value)
                         }
                         onBlur={() => handleBlur("passportNumber", "documents")}
+                        maxLength={9}
                       />
 
                       {documentErrors.passportNumber && (

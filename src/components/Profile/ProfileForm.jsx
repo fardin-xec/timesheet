@@ -1075,6 +1075,7 @@ const ProfileForm = () => {
             personalErrors[fieldName] ? "error" : ""
           }`}
           disabled={type === "main"}
+          maxLength={PHONE_LENGTH_BY_COUNTRY[selectedCountryData.code]}
         />
       </div>
     );
@@ -1912,6 +1913,8 @@ const ProfileForm = () => {
                           className={`pi-input ${
                             personalErrors.midName ? "error" : ""
                           }`}
+                          maxLength="11"
+                          minLength="9"
                         />
                         {bankErrors.swiftCode && (
                           <span className="pi-error">
@@ -1931,10 +1934,12 @@ const ProfileForm = () => {
                           value={bankInfo.ibankNo}
                           onChange={handleBankChange}
                           onBlur={() => handleBankBlur("ibankNo")}
-                          placeholder="9-18 digits"
+                          placeholder="32-34 digits"
                           className={`pi-input ${
                             personalErrors.midName ? "error" : ""
                           }`}
+                          maxLength="34"
+                          minLength="32"
                         />
                         {bankErrors.ibankNo && (
                           <span className="pi-error">{bankErrors.ibankNo}</span>

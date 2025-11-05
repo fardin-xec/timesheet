@@ -1215,6 +1215,7 @@ const EmployeeForm = ({
                   mandatoryErrors.phone ? "error" : ""
                 }`}
                 style={{ height: "2.7rem" }}
+                maxLength={PHONE_LENGTH_BY_COUNTRY[selectedCountry.code]}
               />
             </div>
           </div>
@@ -1672,6 +1673,7 @@ const EmployeeForm = ({
               value={employeeData.ifscCode}
               onChange={(e) => handleInputChange("ifscCode", e.target.value)}
               onBlur={() => handleBlur("ifscCode")}
+              maxLength="11"
             />
             {optionalErrors.ifscCode && (
               <span className="input-error">{optionalErrors.ifscCode}</span>
@@ -1690,6 +1692,8 @@ const EmployeeForm = ({
               }
               onBlur={() => handleBlur("accountNumber")}
               placeholder="9-18 digits"
+              maxLength="18"
+                minLength="9"
             />
             {optionalErrors.accountNumber && (
               <span className="input-error">
@@ -1710,6 +1714,8 @@ const EmployeeForm = ({
                 value={employeeData.swiftCode}
                 onChange={(e) => handleInputChange("swiftCode", e.target.value)}
                 onBlur={() => handleBlur("swiftCode")}
+                maxLength="11"
+                minLength="8"
               />
               {optionalErrors.swiftCode && (
                 <span className="input-error">{optionalErrors.swiftCode}</span>
@@ -1725,7 +1731,9 @@ const EmployeeForm = ({
                 value={employeeData.ibankNo}
                 onChange={(e) => handleInputChange("ibankNo", e.target.value)}
                 onBlur={() => handleBlur("ibankNo")}
-                placeholder="9-18 digits"
+                placeholder="32-34 digits"
+                maxLength="34"
+                minLength="32"
               />
               {optionalErrors.ibankNo && (
                 <span className="input-error">{optionalErrors.ibankNo}</span>
@@ -1748,6 +1756,7 @@ const EmployeeForm = ({
                   value={employeeData.qid}
                   onChange={(e) => handleInputChange("qid", e.target.value)}
                   onBlur={() => handleBlur("qid")}
+                  maxLength="11"
                 />
                 {optionalErrors.qid && (
                   <span className="input-error">{optionalErrors.qid}</span>
@@ -1791,6 +1800,7 @@ const EmployeeForm = ({
                 handleInputChange("passportNumber", e.target.value)
               }
               onBlur={() => handleBlur("passportNumber")}
+              maxLength="9"
             />
             {optionalErrors.passportNumber && (
               <span className="input-error">
