@@ -373,7 +373,8 @@ const EmployeeProfileDialog = ({
     if (!ifscRegex.test(code)) {
       return {
         valid: false,
-        message: "IFSC code must be 11 characters with proper format (e.g., SBIN0001234)",
+        message:
+          "IFSC code must be 11 characters with proper format (e.g., SBIN0001234)",
       };
     }
     return { valid: true, message: "" };
@@ -589,7 +590,7 @@ const EmployeeProfileDialog = ({
   const fetchBankInfo = useCallback(async (employeeId) => {
     try {
       const data = await personalInfoAPI.getBankInfo(employeeId);
-      console.log(data)
+      console.log(data);
       setBankInfo({
         accountHolderName: data.accountHolderName || "",
         bankName: data.bankName || "",
@@ -597,8 +598,8 @@ const EmployeeProfileDialog = ({
         branchName: data.branchName || "",
         ifscCode: data.ifscCode || "",
         accountNumber: data.accountNo || "",
-        swiftCode: data.swiftCode|| "",
-        ibankNo: data.ibankNo|| "",
+        swiftCode: data.swiftCode || "",
+        ibankNo: data.ibankNo || "",
       });
     } catch (error) {
       console.error("Error fetching bank info:", error);
@@ -2444,6 +2445,8 @@ const EmployeeProfileDialog = ({
                           bankErrors.accountNumber ? "error" : ""
                         }`}
                         placeholder="Enter account number"
+                        maxLength="18"
+                        minLength="9"
                       />
                       {bankErrors.accountNumber && (
                         <span className="input-error">
@@ -2489,10 +2492,7 @@ const EmployeeProfileDialog = ({
                             type="text"
                             value={bankInfo?.ibankNo || ""}
                             onChange={(e) =>
-                              handleBankInputChange(
-                                "ibankNo",
-                                e.target.value
-                              )
+                              handleBankInputChange("ibankNo", e.target.value)
                             }
                             onBlur={() => handleBlur("ibankNo", "bank")}
                             className={`input-field ${
@@ -2500,6 +2500,7 @@ const EmployeeProfileDialog = ({
                             }`}
                             placeholder="Enter IBank number"
                             maxLength="34"
+                            minLength="32"
                           />
                           {bankErrors.ibankNo && (
                             <span className="input-error">

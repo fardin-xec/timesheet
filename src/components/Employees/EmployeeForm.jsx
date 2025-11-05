@@ -374,7 +374,8 @@ const EmployeeForm = ({
     if (!ifscRegex.test(code)) {
       return {
         valid: false,
-        message: "IFSC code must be 11 characters with proper format (e.g., SBIN0001234) ",
+        message:
+          "IFSC code must be 11 characters with proper format (e.g., SBIN0001234) ",
       };
     }
 
@@ -986,9 +987,9 @@ const EmployeeForm = ({
     if (validate()) {
       try {
         const updatedEmployeeData = {
-        ...employeeData,
-        phone: selectedCountry.dialCode + employeeData.phone,
-      };
+          ...employeeData,
+          phone: selectedCountry.dialCode + employeeData.phone,
+        };
         await onSave(updatedEmployeeData);
       } catch (error) {
         console.error("Error saving employee:", error);
@@ -1693,7 +1694,7 @@ const EmployeeForm = ({
               onBlur={() => handleBlur("accountNumber")}
               placeholder="9-18 digits"
               maxLength="18"
-                minLength="9"
+              minLength="9"
             />
             {optionalErrors.accountNumber && (
               <span className="input-error">
