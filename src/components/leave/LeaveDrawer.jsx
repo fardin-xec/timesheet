@@ -41,8 +41,15 @@ import {
   Download,
   Close,
   Visibility,
+  CalendarMonth,
 } from "@mui/icons-material";
 import { personalInfoAPI, leaveAPI } from "../../utils/api";
+
+// Weekend configuration (Friday and Saturday)
+const WEEKEND_CONFIG = {
+  weekendDays: [5, 6], // 5 = Friday, 6 = Saturday (0 = Sunday, 1 = Monday, etc.)
+  displayNames: ["Friday", "Saturday"]
+};
 
 const formatLeaveTypeName = (leaveType) => {
   const nameMap = {
@@ -103,6 +110,82 @@ const formatFileSize = (bytes) => {
   const kb = bytes / 1024;
   const mb = kb / 1024;
   return mb > 1 ? `${mb.toFixed(2)} MB` : `${kb.toFixed(2)} KB`;
+};
+
+// Check if a date is a weekend based on configuration
+const isWeekend = (date) => {
+  const dayOfWeek = date.getDay();
+  return WEEKEND_CONFIG.weekendDays.includes(dayOfWeek);
+};
+
+// Check if there's a sandwich leave pattern (weekends surrounded by leave days)
+const hasSandwichLeave = (startDate, endDate) => {
+  if (!startDate || !endDate) return false;
+  
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (start > end) return false;
+  
+  // Check if there are any weekends in between that are surrounded by working days
+  const currentDate = new Date(start);
+  let foundSandwich = false;
+  
+  while (currentDate <= end) {
+    if (isWeekend(currentDate)) {
+      // Check if this weekend is surrounded by leave days (sandwich pattern)
+      const beforeWeekend = new Date(currentDate);
+      beforeWeekend.setDate(beforeWeekend.getDate() - 1);
+      
+      const afterWeekend = new Date(currentDate);
+      // Move to next non-weekend day
+      do {
+        afterWeekend.setDate(afterWeekend.getDate() + 1);
+      } while (afterWeekend <= end && isWeekend(afterWeekend));
+      
+      // If both before and after dates are within the leave period and not weekends
+      if (beforeWeekend >= start && afterWeekend <= end) {
+        foundSandwich = true;
+        break;
+      }
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return foundSandwich;
+};
+
+// Calculate working days with sandwich leave logic
+const calculateWorkingDays = (startDate, endDate) => {
+  if (!startDate || !endDate) return 0;
+  
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (start > end) return 0;
+  
+  // Check if sandwich leave pattern exists
+  const isSandwichLeave = hasSandwichLeave(startDate, endDate);
+  
+  if (isSandwichLeave) {
+    // Include all days (weekends + working days) for sandwich leave
+    const diffTime = Math.abs(end - start);
+    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return totalDays;
+  }
+  
+  // Normal calculation - exclude weekends
+  let workingDays = 0;
+  const currentDate = new Date(start);
+  
+  while (currentDate <= end) {
+    if (!isWeekend(currentDate)) {
+      workingDays++;
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return workingDays;
 };
 
 // Component for displaying existing attachments
@@ -382,7 +465,7 @@ const LeaveDrawer = ({
         });
       }
     }
-  }, [open,selectedApplication]);
+  }, [open, selectedApplication]);
 
   // Check if application is approved
   const isApproved = formData.status === "Approved";
@@ -502,14 +585,34 @@ const LeaveDrawer = ({
   const calculateLeaveDays = () => {
     if (!formData.startDate || !formData.endDate) return 0;
 
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-
     if (formData.durationType === "half-day") return 0.5;
 
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
+    // Calculate working days with sandwich leave logic
+    return calculateWorkingDays(formData.startDate, formData.endDate);
+  };
+
+  // Get list of weekend dates in the selected range
+  const getWeekendDatesInRange = () => {
+    if (!formData.startDate || !formData.endDate) return [];
+    
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
+    const weekendDates = [];
+    const currentDate = new Date(start);
+    
+    while (currentDate <= end) {
+      if (isWeekend(currentDate)) {
+        weekendDates.push(new Date(currentDate));
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return weekendDates;
+  };
+
+  // Check if current selection has sandwich leave
+  const isSandwichLeavePattern = () => {
+    return hasSandwichLeave(formData.startDate, formData.endDate);
   };
 
   // Validation functions
@@ -616,12 +719,6 @@ const LeaveDrawer = ({
       ...prev,
       [field]: value,
     }));
-
-    // Also update parent state
-    // setSelectedApplication((prev) => ({
-    //   ...prev,
-    //   [field]: value,
-    // }));
 
     // Clear validation error for this field
     setValidationErrors((prev) => {
@@ -960,6 +1057,15 @@ const LeaveDrawer = ({
     handleDeleteApplication(formData.id);
   };
 
+  const weekendDates = getWeekendDatesInRange();
+  const totalCalendarDays = formData.startDate && formData.endDate 
+    ? Math.ceil((new Date(formData.endDate) - new Date(formData.startDate)) / (1000 * 60 * 60 * 24)) + 1 
+    : 0;
+  const isSandwich = isSandwichLeavePattern();
+
+  // Get today's date for min attribute in date picker
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <>
       <Drawer
@@ -996,6 +1102,16 @@ const LeaveDrawer = ({
               This leave application has been approved. Document modifications and deletion are disabled.
             </Alert>
           )}
+
+          {/* Weekend Configuration Info */}
+          <Alert severity="info" icon={<CalendarMonth />} sx={{ mb: 3 }}>
+            <Typography variant="body2" fontWeight="600">
+              Weekend Configuration
+            </Typography>
+            <Typography variant="caption">
+              Weekends: {WEEKEND_CONFIG.displayNames.join(" & ")} (excluded from leave calculation)
+            </Typography>
+          </Alert>
 
           <Grid container spacing={3}>
             {/* Leave Type */}
@@ -1269,6 +1385,7 @@ const LeaveDrawer = ({
                 onChange={(e) => handleFieldChange("startDate", e.target.value)}
                 onBlur={(e) => handleBlur("startDate", e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ min: today }}
                 error={!!validationErrors.startDate}
                 helperText={validationErrors.startDate}
                 required
@@ -1287,12 +1404,119 @@ const LeaveDrawer = ({
                 onChange={(e) => handleFieldChange("endDate", e.target.value)}
                 onBlur={(e) => handleBlur("endDate", e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ min: formData.startDate || today }}
                 error={!!validationErrors.endDate}
                 helperText={validationErrors.endDate}
                 required
                 disabled={loading}
               />
             </Grid>
+
+            {/* Leave Days Calculation Summary */}
+            {formData.startDate && formData.endDate && formData.durationType === "full-day" && (
+              <Grid item xs={12}>
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 2,
+                    backgroundColor: isSandwich ? "rgba(255, 152, 0, 0.08)" : "rgba(33, 150, 243, 0.04)",
+                    border: `1px solid ${isSandwich ? "rgba(255, 152, 0, 0.5)" : "rgba(33, 150, 243, 0.3)"}`,
+                  }}
+                >
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography variant="subtitle2" fontWeight="600" color={isSandwich ? "warning.main" : "primary"}>
+                        Leave Period Summary
+                      </Typography>
+                      {isSandwich && (
+                        <Chip 
+                          label="Sandwich Leave" 
+                          size="small" 
+                          color="warning" 
+                          icon={<CalendarMonth />}
+                          sx={{ fontWeight: 600 }}
+                        />
+                      )}
+                    </Stack>
+                    
+                    {isSandwich && (
+                      <Alert severity="warning" sx={{ mb: 1 }}>
+                        <strong>Sandwich Leave Detected:</strong> Weekends between working days will be counted as leave days.
+                      </Alert>
+                    )}
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={4}>
+                        <Typography variant="caption" color="text.secondary">
+                          Total Days
+                        </Typography>
+                        <Typography variant="body1" fontWeight="600">
+                          {totalCalendarDays} days
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography variant="caption" color="text.secondary">
+                          {isSandwich ? "Weekends (Included)" : "Weekends"}
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          fontWeight="600" 
+                          color={isSandwich ? "warning.main" : "text.secondary"}
+                          sx={{ textDecoration: isSandwich ? "none" : "line-through" }}
+                        >
+                          {weekendDates.length} days
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography variant="caption" color="text.secondary">
+                          Leave Applied
+                        </Typography>
+                        <Typography variant="body1" fontWeight="700" color="success.main">
+                          {calculateLeaveDays()} days
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                    {weekendDates.length > 0 && (
+                      <Box sx={{ mt: 1, pt: 1.5, borderTop: "1px solid rgba(0,0,0,0.1)" }}>
+                        <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                          Weekend dates {isSandwich ? "(included in leave count)" : "(excluded)"}:
+                        </Typography>
+                        <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                          {weekendDates.map((date, index) => (
+                            <Chip
+                              key={index}
+                              label={date.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              })}
+                              size="small"
+                              color={isSandwich ? "warning" : "default"}
+                              variant={isSandwich ? "filled" : "outlined"}
+                              sx={{ fontSize: "0.7rem" }}
+                            />
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
+                  </Stack>
+                </Paper>
+              </Grid>
+            )}
+
+            {/* Half-day info */}
+            {formData.durationType === "half-day" && formData.startDate && (
+              <Grid item xs={12}>
+                <Alert severity="info">
+                  Half-day leave: 0.5 days will be applied on{" "}
+                  {new Date(formData.startDate).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </Alert>
+              </Grid>
+            )}
 
             {/* Reason */}
             <Grid item xs={12}>
@@ -1388,7 +1612,7 @@ const LeaveDrawer = ({
                   />
                 ))}
 
-                {/* Upload zone - show if no document exists and can modify, OR if document was removed */}
+                {/* Upload zone */}
                 {existingDocuments.length === 0 && canModifyDocument && !loading && (
                   <FileUploadZone
                     onFileDrop={handleFileUpload}
