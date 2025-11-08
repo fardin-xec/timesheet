@@ -20,7 +20,7 @@ const Leaves = () => {
       <Breadcrumb items={breadcrumbItems} />
 
       <>
-        {role === "superadmin" ? <SuperadminLeavesView /> : <UserLeavesView />}
+        {role === "admin" ? <SuperadminLeavesView /> : <UserLeavesView />}
       </>
     </>
   );

@@ -23,6 +23,10 @@ import {
   IconButton,
   Tooltip,
   Drawer,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogActions,
 } from "@mui/material";
 import {
   AttachFile,
@@ -30,80 +34,94 @@ import {
   CloudUpload,
   CheckCircle,
   Error as ErrorIcon,
-  Visibility,
   Description,
   Image,
   PictureAsPdf,
   InsertDriveFile,
   Download,
   Close,
+  Visibility,
 } from "@mui/icons-material";
-import { leaveAPI } from "../../utils/api";
-import axios from "axios";
+import { personalInfoAPI, leaveAPI } from "../../utils/api";
 
-const API_BASE_URL = "http://localhost:3000"; // Update with your backend URL
-
-// Helper to get file extension
-const getFileExtension = (filename) => {
-  return filename?.split('.').pop()?.toLowerCase() || '';
+const formatLeaveTypeName = (leaveType) => {
+  const nameMap = {
+    casual: "Casual Leave",
+    sick: "Sick Leave",
+    annual: "Annual Leave",
+    emergency: "Emergency Leave",
+    lossOfPay: "Loss of Pay",
+  };
+  return (
+    nameMap[leaveType] || leaveType.charAt(0).toUpperCase() + leaveType.slice(1)
+  );
 };
 
-// Helper to get file icon based on type
+// Helper functions
+const getFileExtension = (filename) => {
+  return filename?.split(".").pop()?.toLowerCase() || "";
+};
+
 const getFileIconByType = (fileName, mimeType) => {
   const extension = getFileExtension(fileName);
-  
-  if (mimeType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) {
+
+  if (
+    mimeType?.includes("image") ||
+    ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"].includes(extension)
+  ) {
     return <Image color="primary" />;
   }
-  
-  if (mimeType?.includes('pdf') || extension === 'pdf') {
+
+  if (mimeType?.includes("pdf") || extension === "pdf") {
     return <PictureAsPdf color="error" />;
   }
-  
-  if (['doc', 'docx', 'txt', 'rtf', 'odt'].includes(extension) || 
-      mimeType?.includes('word') || mimeType?.includes('text')) {
+
+  if (
+    ["doc", "docx", "txt", "rtf", "odt"].includes(extension) ||
+    mimeType?.includes("word") ||
+    mimeType?.includes("text")
+  ) {
     return <Description color="info" />;
   }
-  
+
   return <InsertDriveFile color="action" />;
 };
 
-// Helper to get file type label
 const getFileTypeLabel = (fileName, mimeType) => {
   const extension = getFileExtension(fileName).toUpperCase();
-  
-  if (mimeType?.includes('pdf') || extension === 'PDF') {
-    return 'PDF';
-  }
-  if (mimeType?.includes('image')) {
-    return 'Image';
-  }
-  if (mimeType?.includes('word') || ['DOC', 'DOCX'].includes(extension)) {
-    return 'Document';
-  }
-  
-  return extension || 'File';
+
+  if (mimeType?.includes("pdf") || extension === "PDF") return "PDF";
+  if (mimeType?.includes("image")) return "Image";
+  if (mimeType?.includes("word") || ["DOC", "DOCX"].includes(extension))
+    return "Document";
+
+  return extension || "File";
 };
 
-// Helper to format file size
 const formatFileSize = (bytes) => {
-  if (!bytes) return '0 KB';
+  if (!bytes) return "0 KB";
   const kb = bytes / 1024;
   const mb = kb / 1024;
   return mb > 1 ? `${mb.toFixed(2)} MB` : `${kb.toFixed(2)} KB`;
 };
 
-// Component for displaying existing attachments (from backend)
-const ExistingAttachmentItem = ({ document, onRemove, onDownload, canDelete = true }) => {
+// Component for displaying existing attachments
+const ExistingAttachmentItem = ({
+  document,
+  onRemove,
+  onView,
+  canDelete = true,
+}) => {
   const getFileTypeChip = (fileName, mimeType) => {
     const label = getFileTypeLabel(fileName, mimeType);
     const extension = getFileExtension(fileName);
-    
+
     let color = "default";
-    if (['pdf'].includes(extension)) color = "error";
-    else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) color = "primary";
-    else if (['doc', 'docx', 'txt'].includes(extension)) color = "info";
-    
+    if (["pdf"].includes(extension)) color = "error";
+    else if (["jpg", "jpeg", "png", "gif"].includes(extension))
+      color = "primary";
+    else if (["doc", "docx", "txt"].includes(extension)) color = "info";
+
     return <Chip label={label} size="small" color={color} variant="outlined" />;
   };
 
@@ -126,7 +144,12 @@ const ExistingAttachmentItem = ({ document, onRemove, onDownload, canDelete = tr
             <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
               {document.originalName}
             </Typography>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{ mt: 0.5 }}
+            >
               {getFileTypeChip(document.originalName, document.mimeType)}
               <Typography variant="caption" color="text.secondary">
                 {formatFileSize(document.size)}
@@ -137,14 +160,18 @@ const ExistingAttachmentItem = ({ document, onRemove, onDownload, canDelete = tr
             </Stack>
           </Box>
           <Stack direction="row" spacing={1}>
-            <Tooltip title="Download">
-              <IconButton size="small" onClick={() => onDownload(document.id)}>
-                <Download fontSize="small" />
+            <Tooltip title="View Document">
+              <IconButton size="small" color="primary" onClick={() => onView(document)}>
+                <Visibility fontSize="small" />
               </IconButton>
             </Tooltip>
             {canDelete && (
               <Tooltip title="Remove">
-                <IconButton size="small" color="error" onClick={() => onRemove(document.id)}>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => onRemove(document.id)}
+                >
                   <Delete fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -156,8 +183,8 @@ const ExistingAttachmentItem = ({ document, onRemove, onDownload, canDelete = tr
   );
 };
 
-// File upload zone with drag & drop
-const FileUploadZone = ({ onFileDrop, uploading, children }) => {
+// File upload zone
+const FileUploadZone = ({ onFileDrop, uploading, disabled, children }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragOver = useCallback((e) => {
@@ -179,10 +206,12 @@ const FileUploadZone = ({ onFileDrop, uploading, children }) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragOver(false);
-      const files = Array.from(e.dataTransfer.files);
-      onFileDrop(files);
+      if (!disabled) {
+        const files = Array.from(e.dataTransfer.files);
+        onFileDrop(files);
+      }
     },
-    [onFileDrop]
+    [onFileDrop, disabled]
   );
 
   return (
@@ -193,14 +222,17 @@ const FileUploadZone = ({ onFileDrop, uploading, children }) => {
         borderRadius: 2,
         p: 3,
         textAlign: "center",
-        cursor: uploading ? "not-allowed" : "pointer",
-        backgroundColor: isDragOver ? "rgba(25, 118, 210, 0.04)" : "transparent",
+        cursor: uploading || disabled ? "not-allowed" : "pointer",
+        backgroundColor: isDragOver
+          ? "rgba(25, 118, 210, 0.04)"
+          : "transparent",
         transition: "all 0.3s ease",
         minHeight: 120,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        opacity: disabled ? 0.5 : 1,
       }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -211,7 +243,7 @@ const FileUploadZone = ({ onFileDrop, uploading, children }) => {
   );
 };
 
-// File item component for files being uploaded
+// File item component
 const FileItem = ({ file, progress, status, onRemove }) => {
   const getStatusIcon = () => {
     switch (status) {
@@ -246,7 +278,11 @@ const FileItem = ({ file, progress, status, onRemove }) => {
         mb: 2,
         backgroundColor: getStatusColor(),
         border: `1px solid ${
-          status === "success" ? "#4caf50" : status === "error" ? "#f44336" : "#e0e0e0"
+          status === "success"
+            ? "#4caf50"
+            : status === "error"
+            ? "#f44336"
+            : "#e0e0e0"
         }`,
       }}
     >
@@ -264,7 +300,8 @@ const FileItem = ({ file, progress, status, onRemove }) => {
               {formatFileSize(file.size)}
               {status === "success" && " • Uploaded"}
               {status === "error" && " • Upload failed"}
-              {status === "uploading" && ` • ${Math.round(progress || 0)}% uploading`}
+              {status === "uploading" &&
+                ` • ${Math.round(progress || 0)}% uploading`}
             </Typography>
           </Box>
           {status !== "uploading" && (
@@ -278,7 +315,11 @@ const FileItem = ({ file, progress, status, onRemove }) => {
 
         {status === "uploading" && typeof progress === "number" && (
           <Box sx={{ mt: 2 }}>
-            <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{ height: 6, borderRadius: 3 }}
+            />
           </Box>
         )}
       </CardContent>
@@ -291,7 +332,6 @@ const LeaveDrawer = ({
   open,
   onClose,
   selectedApplication,
-  setSelectedApplication,
   isNewApplication,
   statusOptions = ["Pending", "Approved", "Rejected"],
   handleDeleteApplication,
@@ -303,142 +343,346 @@ const LeaveDrawer = ({
   const [existingDocuments, setExistingDocuments] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [leaveBalances, setLeaveBalances] = useState([]);
-  const [fetchingBalance, setFetchingBalance] = useState(false);
+  const [eligibleLeaveTypes, setEligibleLeaveTypes] = useState([]);
+  const [fetchingLeaveTypes, setFetchingLeaveTypes] = useState(false);
+  const [viewDocumentDialog, setViewDocumentDialog] = useState({
+    open: false,
+    document: null,
+    data: null,
+    loading: false,
+  });
 
-  const formData = selectedApplication || {
+  // Use local state for form data to prevent glitching
+  const [formData, setFormData] = useState({
     durationType: "full-day",
     status: "Pending",
     leaveType: "",
-    startDate: null,
-    endDate: null,
+    startDate: "",
+    endDate: "",
     reason: "",
     halfDayType: null,
     documentId: null,
-  };
+  });
 
-  // Format leave type display name
-  const formatLeaveType = (leaveType) => {
-    const typeMap = {
-      'casual': 'Casual Leave',
-      'sick': 'Sick Leave',
-      'annual': 'Annual Leave',
-      'emergency': 'Emergency Leave',
-      'lossOfPay': 'Loss of Pay',
-      'maternity': 'Maternity Leave',
-    };
-    return typeMap[leaveType] || leaveType.charAt(0).toUpperCase() + leaveType.slice(1);
-  };
-
-  // Fetch leave balances
+  // Initialize formData only when drawer opens
   useEffect(() => {
-    const fetchLeaveBalance = async () => {
-      if (!employeeId || !open) return;
-      
-      setFetchingBalance(true);
+    if (open) {
+      if (selectedApplication) {
+        setFormData({ ...selectedApplication });
+      } else {
+        setFormData({
+          durationType: "full-day",
+          status: "Pending",
+          leaveType: "",
+          startDate: "",
+          endDate: "",
+          reason: "",
+          halfDayType: null,
+          documentId: null,
+        });
+      }
+    }
+  }, [open,selectedApplication]);
+
+  // Check if application is approved
+  const isApproved = formData.status === "Approved";
+  
+  // Determine if document can be modified
+  const canModifyDocument = isNewApplication || !isApproved;
+
+  useEffect(() => {
+    const fetchEligibleLeaveTypes = async () => {
+      if (!open) return;
+
+      setFetchingLeaveTypes(true);
       try {
-        const response = await leaveAPI.getLeaveBalance(employeeId);
-        if (response.statusCode === 200 && response.data && Array.isArray(response.data)) {
-          const transformedBalances = response.data.map(balance => ({
-            id: balance.id,
-            leaveType: balance.leaveType,
-            displayName: formatLeaveType(balance.leaveType),
-            totalDays: parseFloat(balance.totalAllowed) || 0,
-            usedDays: parseFloat(balance.used) || 0,
-            carriedForward: parseFloat(balance.carryForwarded) || 0,
-            year: balance.year,
-            isUnlimited: balance.leaveType === 'lossOfPay' || parseFloat(balance.totalAllowed) >= 365,
+        const response = await leaveAPI.fetchLeaveBalance(employeeId);
+
+        if (response?.statusCode === 200 && response?.data) {
+          const leaveTypes = Array.isArray(response.data) ? response.data : [];
+
+          const transformedLeaveTypes = leaveTypes.map((leave) => ({
+            leaveType: leave.leaveType,
+            displayName: formatLeaveTypeName(leave.leaveType),
+            totalAllowed: parseFloat(leave.totalAllowed),
+            used: parseFloat(leave.used),
+            carryForward: parseFloat(leave.carryForwarded),
+            pending: parseFloat(leave.pending),
+            availableBalance:
+              parseFloat(leave.totalAllowed) -
+              parseFloat(leave.used) -
+              parseFloat(leave.pending),
+            usedBalance: parseFloat(leave.used),
+            isUnlimited: leave.leaveType === "lossOfPay",
+            requiresDocument:
+              leave.leaveType === "emergency",
           }));
-          
-          setLeaveBalances(transformedBalances);
+
+          setEligibleLeaveTypes(transformedLeaveTypes);
+        } else {
+          setEligibleLeaveTypes([]);
         }
       } catch (error) {
-        console.error("Error fetching leave balance:", error);
-        onError?.("Failed to fetch leave balances");
+        console.error("Error fetching eligible leave types:", error);
+        setEligibleLeaveTypes([]);
+        onError?.("Failed to fetch leave types");
       } finally {
-        setFetchingBalance(false);
+        setFetchingLeaveTypes(false);
       }
     };
 
-    fetchLeaveBalance();
-  }, [employeeId, open, onError]);
+    fetchEligibleLeaveTypes();
+  }, [open, employeeId, onError]);
 
-  // Fetch existing document if documentId exists
+  // Fetch existing document
   useEffect(() => {
     const fetchExistingDocument = async () => {
-      if (!formData.documentId || !open) return;
-      
+      if (!formData.documentId || !open) {
+        setExistingDocuments([]);
+        return;
+      }
+
       try {
-        const response = await axios.get(`${API_BASE_URL}/documents/${formData.documentId}`);
-        setExistingDocuments([response.data]);
+        setLoading(true);
+        const response = await personalInfoAPI.getDocumentById(employeeId, formData.documentId);
+        if (response) {
+          setExistingDocuments([response]);
+        } else {
+          setExistingDocuments([]);
+        }
       } catch (error) {
         console.error("Error fetching document:", error);
+        setExistingDocuments([]);
+        // If document not found or error, clear the documentId
+        if (error.response?.status === 404) {
+          setFormData((prev) => ({
+            ...prev,
+            documentId: null,
+          }));
+          onError?.("Document not found. Please upload a new document.");
+        }
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchExistingDocument();
-  }, [formData.documentId, open]);
+  }, [formData.documentId, open, employeeId, onError]);
 
-  const getLeaveBalance = (leaveType) => {
-    const balance = leaveBalances.find(b => b.leaveType === leaveType);
-    if (!balance) return { total: 0, used: 0, carriedForward: 0, available: 0, isUnlimited: false };
-    
-    const available = balance.totalDays - balance.usedDays + balance.carriedForward;
-    return {
-      total: balance.totalDays,
-      used: balance.usedDays,
-      carriedForward: balance.carriedForward,
-      available: Math.max(0, available),
-      isUnlimited: balance.isUnlimited,
-      displayName: balance.displayName,
-    };
+  // Reset state when drawer closes
+  useEffect(() => {
+    if (!open) {
+      setUploadingFiles([]);
+      setValidationErrors({});
+      
+      // Clean up blob URL if exists
+      if (viewDocumentDialog.data && typeof viewDocumentDialog.data === 'string' && viewDocumentDialog.data.startsWith('blob:')) {
+        window.URL.revokeObjectURL(viewDocumentDialog.data);
+      }
+      
+      setViewDocumentDialog({
+        open: false,
+        document: null,
+        data: null,
+        loading: false,
+      });
+    }
+  }, [open, viewDocumentDialog.data]);
+
+  // Helper functions
+  const getLeaveTypeDetails = (leaveType) => {
+    return eligibleLeaveTypes.find((t) => t.leaveType === leaveType) || null;
+  };
+
+  const isDocumentRequired = () => {
+    const typeDetails = getLeaveTypeDetails(formData.leaveType);
+    return typeDetails?.requiresDocument || false;
   };
 
   const calculateLeaveDays = () => {
     if (!formData.startDate || !formData.endDate) return 0;
-    
+
     const start = new Date(formData.startDate);
     const end = new Date(formData.endDate);
-    
+
     if (formData.durationType === "half-day") return 0.5;
-    
+
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return diffDays;
   };
 
-  const isDocumentRequired = () => {
-    return formData.leaveType === "emergency";
+  // Validation functions
+  const validateLeaveType = (value) => {
+    if (!value) {
+      return "Leave type is required";
+    }
+
+    const typeDetails = getLeaveTypeDetails(value);
+    if (typeDetails) {
+      const requestedDays = calculateLeaveDays();
+      if (
+        !typeDetails.isUnlimited &&
+        requestedDays > typeDetails.availableBalance
+      ) {
+        return `Insufficient balance. Available: ${typeDetails.availableBalance.toFixed(
+          1
+        )} days`;
+      }
+    }
+
+    return null;
   };
 
+  const validateStartDate = (value) => {
+    if (!value) {
+      return "Start date is required";
+    }
+
+    const start = new Date(value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (start < today) {
+      return "Cannot apply for past dates";
+    }
+
+    if (formData.endDate) {
+      const end = new Date(formData.endDate);
+      if (start > end) {
+        return "Start date cannot be after end date";
+      }
+    }
+
+    return null;
+  };
+
+  const validateEndDate = (value) => {
+    if (!value) {
+      return "End date is required";
+    }
+
+    const end = new Date(value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (end < today) {
+      return "Cannot apply for past dates";
+    }
+
+    if (formData.startDate) {
+      const start = new Date(formData.startDate);
+      if (end < start) {
+        return "End date cannot be before start date";
+      }
+    }
+
+    return null;
+  };
+
+  const validateReason = (value) => {
+    if (!value || !value.trim()) {
+      return "Reason is required";
+    }
+
+    if (value.trim().length < 10) {
+      return "Reason must be at least 10 characters";
+    }
+
+    return null;
+  };
+
+  const validateHalfDayType = () => {
+    if (formData.durationType === "half-day" && !formData.halfDayType) {
+      return "Please select half-day type";
+    }
+    return null;
+  };
+
+  const validateAttachments = () => {
+    if (isDocumentRequired() && !formData.documentId && existingDocuments.length === 0) {
+      const typeDetails = getLeaveTypeDetails(formData.leaveType);
+      return `Supporting document is required for ${
+        typeDetails?.displayName || "this leave type"
+      }`;
+    }
+    return null;
+  };
+
+  // Handle field change with validation
   const handleFieldChange = (field, value) => {
-    setSelectedApplication(prev => ({
+    // Update local state
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
+
+    // Also update parent state
+    // setSelectedApplication((prev) => ({
+    //   ...prev,
+    //   [field]: value,
+    // }));
+
+    // Clear validation error for this field
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  };
+
+  // Handle blur validation
+  const handleBlur = (field, value) => {
+    let error = null;
+
+    switch (field) {
+      case "leaveType":
+        error = validateLeaveType(value);
+        break;
+      case "startDate":
+        error = validateStartDate(value);
+        break;
+      case "endDate":
+        error = validateEndDate(value);
+        break;
+      case "reason":
+        error = validateReason(value);
+        break;
+      case "halfDayType":
+        error = validateHalfDayType();
+        break;
+      default:
+        break;
+    }
+
+    if (error) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [field]: error,
+      }));
+    }
   };
 
   // Upload file to backend
   const uploadFileToBackend = async (file) => {
-    const formDataToSend = new FormData();
-    formDataToSend.append('file', file);
-
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/documents/upload`,
-        formDataToSend,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: (progressEvent) => {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadingFiles(prev => 
-              prev.map(f => f.file.name === file.name ? { ...f, progress } : f)
-            );
-          }
+      const response = await personalInfoAPI.uploadDocument(
+        employeeId,
+        file,
+        "LEAVE",
+        (progressEvent) => {
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadingFiles((prev) =>
+            prev.map((f) =>
+              f.file.name === file.name ? { ...f, progress } : f
+            )
+          );
         }
       );
 
-      return response.data;
+      return response;
     } catch (error) {
       console.error("Upload error:", error);
       throw error;
@@ -450,52 +694,71 @@ const LeaveDrawer = ({
     if (!files || files.length === 0) return;
 
     const maxSize = 10 * 1024 * 1024;
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
     const validFiles = files.filter((file) => {
       if (file.size > maxSize) {
-        alert(`File too large: ${file.name}. Maximum size is 10MB.`);
+        onError?.(`File too large: ${file.name}. Maximum size is 10MB.`);
         return false;
       }
+
+      if (!allowedTypes.includes(file.type)) {
+        onError?.(
+          `Invalid file type: ${file.name}. Accepted: PDF, JPG, PNG, DOC, DOCX`
+        );
+        return false;
+      }
+
       return true;
     });
 
     if (validFiles.length === 0) return;
 
     // Add files to uploading state
-    const newUploadingFiles = validFiles.map(file => ({
+    const newUploadingFiles = validFiles.map((file) => ({
       file,
       progress: 0,
       status: "uploading",
-      id: `${file.name}-${Date.now()}`
+      id: `${file.name}-${Date.now()}`,
     }));
-    
-    setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
+
+    setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
 
     // Upload files one by one
     for (const file of validFiles) {
       try {
         const uploadedDocument = await uploadFileToBackend(file);
-        
-        // Update status to success
-        setUploadingFiles(prev => 
-          prev.map(f => 
-            f.file.name === file.name 
-              ? { ...f, status: "success", documentId: uploadedDocument.id }
-              : f
-          )
-        );
 
-        // Store document ID in form data (only one document supported)
-        handleFieldChange('documentId', uploadedDocument.id);
-        
+        // Store document ID in form data
+        handleFieldChange("documentId", uploadedDocument.id);
+
         // Add to existing documents
         setExistingDocuments([uploadedDocument]);
 
+        // Remove from uploading files array after successful upload
+        setUploadingFiles((prev) =>
+          prev.filter((f) => f.file.name !== file.name)
+        );
+
+        // Clear attachment error if exists
+        setValidationErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.attachments;
+          return newErrors;
+        });
+
+        onSuccess?.(`${file.name} uploaded successfully`);
       } catch (error) {
-        setUploadingFiles(prev => 
-          prev.map(f => 
-            f.file.name === file.name 
-              ? { ...f, status: "error" }
-              : f
+        setUploadingFiles((prev) =>
+          prev.map((f) =>
+            f.file.name === file.name ? { ...f, status: "error" } : f
           )
         );
         onError?.(`Failed to upload ${file.name}`);
@@ -504,59 +767,141 @@ const LeaveDrawer = ({
   };
 
   const handleRemoveUploadingFile = (fileId) => {
-    setUploadingFiles(prev => prev.filter(f => f.id !== fileId));
+    const fileToRemove = uploadingFiles.find((f) => f.id === fileId);
+    
+    // If the file was successfully uploaded, clear the documentId and existing documents
+    if (fileToRemove && fileToRemove.status === "success" && fileToRemove.documentId) {
+      handleFieldChange("documentId", null);
+      setExistingDocuments([]);
+    }
+    
+    setUploadingFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
-  const handleDownloadDocument = async (documentId) => {
+  const handleViewDocument = async (document) => {
+    setViewDocumentDialog({
+      open: true,
+      document,
+      data: null,
+      loading: true,
+    });
+
     try {
-      window.open(`${API_BASE_URL}/documents/${documentId}/download`, '_blank');
+      const response = await personalInfoAPI.downloadDocument(document.id);
+      
+      // Check if response.data is a Blob
+      if (response.data instanceof Blob) {
+        const blobUrl = window.URL.createObjectURL(response.data);
+        
+        setViewDocumentDialog((prev) => ({
+          ...prev,
+          data: blobUrl,
+          loading: false,
+        }));
+      } else {
+        throw new Error("Invalid document data received - expected Blob");
+      }
     } catch (error) {
+      console.error("Error loading document:", error);
+      onError?.("Failed to load document for viewing");
+      setViewDocumentDialog({
+        open: false,
+        document: null,
+        data: null,
+        loading: false,
+      });
+    }
+  };
+
+  const handleCloseViewDialog = () => {
+    // Clean up object URL to prevent memory leaks
+    if (viewDocumentDialog.data && typeof viewDocumentDialog.data === 'string' && viewDocumentDialog.data.startsWith('blob:')) {
+      window.URL.revokeObjectURL(viewDocumentDialog.data);
+    }
+    
+    setViewDocumentDialog({
+      open: false,
+      document: null,
+      data: null,
+      loading: false,
+    });
+  };
+
+  const handleDownloadFromView = () => {
+    if (!viewDocumentDialog.document || !viewDocumentDialog.data) return;
+
+    try {
+      // If data is already a blob URL, use it directly
+      const url = viewDocumentDialog.data;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = viewDocumentDialog.document.originalName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      onSuccess?.("Document downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading document:", error);
       onError?.("Failed to download document");
     }
   };
 
   const handleRemoveExistingDocument = async (documentId) => {
-    if (!window.confirm('Are you sure you want to remove this document?')) return;
-    
+    if (!window.confirm("Are you sure you want to remove this document?"))
+      return;
+
+    setLoading(true);
     try {
-      // Remove document from backend
-      await axios.delete(`${API_BASE_URL}/documents/${documentId}`);
-      
-      // Remove from state
+      await personalInfoAPI.deleteDocument(employeeId, documentId);
+
       setExistingDocuments([]);
-      handleFieldChange('documentId', null);
-      
+      handleFieldChange("documentId", null);
+
       onSuccess?.("Document removed successfully");
     } catch (error) {
+      console.error("Error removing document:", error);
       onError?.("Failed to remove document");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Handle submit
   const handleSubmit = async () => {
-    // Validation
+    // Run all validations
     const errors = {};
-    if (!formData.leaveType) errors.leaveType = "Leave type is required";
-    if (!formData.startDate) errors.startDate = "Start date is required";
-    if (!formData.endDate) errors.endDate = "End date is required";
-    if (!formData.reason?.trim()) errors.reason = "Reason is required";
 
-    // Validate leave balance
-    if (formData.leaveType) {
-      const balance = getLeaveBalance(formData.leaveType);
-      const requestedDays = calculateLeaveDays();
-      
-      if (!balance.isUnlimited && requestedDays > balance.available) {
-        errors.leaveType = `Insufficient balance. Available: ${balance.available} days`;
-      }
+    const leaveTypeError = validateLeaveType(formData.leaveType);
+    if (leaveTypeError) errors.leaveType = leaveTypeError;
 
-      // Validate document requirement
-      if (isDocumentRequired() && !formData.documentId) {
-        errors.attachments = "Document is required for Emergency Leave";
-      }
-    }
+    const startDateError = validateStartDate(formData.startDate);
+    if (startDateError) errors.startDate = startDateError;
+
+    const endDateError = validateEndDate(formData.endDate);
+    if (endDateError) errors.endDate = endDateError;
+
+    const reasonError = validateReason(formData.reason);
+    if (reasonError) errors.reason = reasonError;
+
+    const halfDayError = validateHalfDayType();
+    if (halfDayError) errors.halfDayType = halfDayError;
+
+    const attachmentError = validateAttachments();
+    if (attachmentError) errors.attachments = attachmentError;
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      onError?.("Please fix all validation errors before submitting");
+      return;
+    }
+
+    // Check if there are files still uploading
+    const hasUploadingFiles = uploadingFiles.some(
+      (f) => f.status === "uploading"
+    );
+    if (hasUploadingFiles) {
+      onError?.("Please wait for all files to finish uploading");
       return;
     }
 
@@ -568,309 +913,693 @@ const LeaveDrawer = ({
         startDate: formData.startDate,
         endDate: formData.endDate,
         appliedDays: calculateLeaveDays(),
-        reason: formData.reason,
-        status: formData.status,
+        reason: formData.reason.trim(),
+        status: formData.status || "Pending",
         isHalfDay: formData.durationType === "half-day",
-        halfDayType: formData.durationType === "half-day" ? formData.halfDayType : null,
-        documentId: formData.documentId, // Send document ID
+        halfDayType:
+          formData.durationType === "half-day" ? formData.halfDayType : null,
+        documentId: formData.documentId || null,
       };
 
-      // Call your leave creation/update API
       if (isNewApplication) {
-        await leaveAPI.createLeave(submitData);
+        await leaveAPI.applyLeave(submitData);
+        onSuccess?.("Leave application submitted successfully!");
       } else {
-        await leaveAPI.updateLeave(formData.id, submitData);
+        await leaveAPI.updateLeaveApplication(formData.id, submitData);
+        onSuccess?.("Leave application updated successfully!");
       }
-      
-      onSuccess?.("Leave application submitted successfully!");
+
+      // Reset state and close
+      setValidationErrors({});
+      setUploadingFiles([]);
+      setExistingDocuments([]);
       onClose();
     } catch (error) {
       console.error("Submit error:", error);
-      onError?.("Failed to submit leave application");
+
+      let errorMessage = "Failed to submit leave application";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      onError?.(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = () => {
+    if (isApproved) {
+      onError?.("Cannot delete an approved leave application");
+      return;
+    }
+    
+    // Just call the parent handler - no confirmation here
+    handleDeleteApplication(formData.id);
+  };
+
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      sx={{
-        '& .MuiDrawer-paper': {
-          width: { xs: '100%', sm: 600 },
-          p: 3,
-        },
-      }}
-    >
-      <Box>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h5" fontWeight="600">
-            {isNewApplication ? "New Leave Application" : "Edit Leave Application"}
-          </Typography>
-          <IconButton onClick={onClose}>
-            <Close />
-          </IconButton>
-        </Stack>
+    <>
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={onClose}
+        sx={{
+          "& .MuiDrawer-paper": {
+            width: { xs: "100%", sm: 600 },
+            p: 3,
+          },
+        }}
+      >
+        <Box>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={3}
+          >
+            <Typography variant="h5" fontWeight="600">
+              {isNewApplication ? "Apply for Leave" : "Edit Leave Application"}
+            </Typography>
+            <IconButton onClick={onClose}>
+              <Close />
+            </IconButton>
+          </Stack>
 
-        <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 3 }} />
 
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <TextField
-              select
-              fullWidth
-              label="Leave Type"
-              value={formData.leaveType || ""}
-              onChange={(e) => {
-                handleFieldChange("leaveType", e.target.value);
-                setValidationErrors(prev => ({ ...prev, leaveType: null }));
-              }}
-              error={!!validationErrors.leaveType}
-              helperText={validationErrors.leaveType}
-              disabled={fetchingBalance}
-            >
-              {fetchingBalance ? (
-                <MenuItem disabled>Loading leave types...</MenuItem>
-              ) : leaveBalances.length === 0 ? (
-                <MenuItem disabled>No leave types available</MenuItem>
-              ) : (
-                leaveBalances
-                  .filter(balance => {
-                    const available = balance.totalDays - balance.usedDays + balance.carriedForward;
-                    return balance.isUnlimited || available > 0;
-                  })
-                  .map((balance) => {
-                    const available = balance.isUnlimited 
-                      ? "Unlimited" 
-                      : `${(balance.totalDays - balance.usedDays + balance.carriedForward).toFixed(1)} days`;
-                    
+          {/* Show alert if approved */}
+          {isApproved && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              This leave application has been approved. Document modifications and deletion are disabled.
+            </Alert>
+          )}
+
+          <Grid container spacing={3}>
+            {/* Leave Type */}
+            <Grid item xs={12}>
+              <TextField
+                select
+                fullWidth
+                label="Leave Type"
+                name="leaveType"
+                value={formData.leaveType || ""}
+                onChange={(e) => handleFieldChange("leaveType", e.target.value)}
+                onBlur={(e) => handleBlur("leaveType", e.target.value)}
+                error={!!validationErrors.leaveType}
+                helperText={validationErrors.leaveType}
+                disabled={fetchingLeaveTypes || loading}
+                required
+              >
+                {fetchingLeaveTypes ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    Loading leave types...
+                  </MenuItem>
+                ) : eligibleLeaveTypes.length === 0 ? (
+                  <MenuItem disabled>No eligible leave types available</MenuItem>
+                ) : (
+                  eligibleLeaveTypes.map((type) => {
+                    const balanceText = type.isUnlimited
+                      ? "Unlimited"
+                      : `${type.availableBalance.toFixed(1)} days available`;
+
+                    const balanceColor = type.isUnlimited
+                      ? "#1976d2"
+                      : type.availableBalance > 0
+                      ? "#4caf50"
+                      : "#f44336";
+
                     return (
-                      <MenuItem key={balance.id} value={balance.leaveType}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                          <span>{balance.displayName}</span>
-                          <span style={{ fontSize: '0.85em', color: '#666', marginLeft: '12px' }}>
-                            {available}
-                          </span>
+                      <MenuItem key={type.leaveType} value={type.leaveType}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            width: "100%",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography variant="body2">
+                            {type.displayName}
+                          </Typography>
+                          <Chip
+                            label={balanceText}
+                            size="small"
+                            sx={{
+                              backgroundColor: `${balanceColor}20`,
+                              color: balanceColor,
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                            }}
+                          />
                         </Box>
                       </MenuItem>
                     );
                   })
-              )}
-            </TextField>
+                )}
+              </TextField>
 
-            {formData.leaveType && (
-              <Box sx={{ mt: 2, p: 2, backgroundColor: 'rgba(25, 118, 210, 0.08)', borderRadius: 1 }}>
-                <Typography variant="subtitle2" fontWeight="600" mb={1}>
-                  Leave Balance for {getLeaveBalance(formData.leaveType).displayName}
-                </Typography>
-                {(() => {
-                  const balance = getLeaveBalance(formData.leaveType);
+              {/* Balance Card */}
+              {formData.leaveType &&
+                (() => {
+                  const typeDetails = getLeaveTypeDetails(formData.leaveType);
                   const requestedDays = calculateLeaveDays();
-                  
-                  if (balance.isUnlimited) {
-                    return (
-                      <Stack spacing={1}>
-                        <Typography variant="body2" color="text.secondary">
-                          ✓ Unlimited leaves available
-                        </Typography>
-                        {requestedDays > 0 && (
-                          <Typography variant="body2" color="primary.main">
-                            Requesting: <strong>{requestedDays} days</strong>
-                          </Typography>
-                        )}
-                      </Stack>
-                    );
-                  }
-                  
+
+                  if (!typeDetails) return null;
+
                   return (
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">Available Balance</Typography>
-                        <Typography 
-                          variant="h6" 
-                          fontWeight="700"
-                          color={balance.available > 0 ? "success.main" : "error.main"}
-                        >
-                          {balance.available.toFixed(1)} days
-                        </Typography>
-                      </Grid>
-                      {requestedDays > 0 && (
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">Requesting</Typography>
-                          <Typography variant="body2" fontWeight="600" color="primary.main">
-                            {requestedDays.toFixed(1)} days
+                    <Paper
+                      elevation={1}
+                      sx={{
+                        mt: 2,
+                        p: 2,
+                        backgroundColor: "rgba(25, 118, 210, 0.04)",
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight="600"
+                        mb={2}
+                        color="primary"
+                      >
+                        {typeDetails.displayName} - Balance Information
+                      </Typography>
+
+                      {typeDetails.isUnlimited ? (
+                        <Stack spacing={1}>
+                          <Typography variant="body2" color="text.secondary">
+                            ✓ Unlimited leaves available
                           </Typography>
-                        </Grid>
+                          {requestedDays > 0 && (
+                            <Typography variant="body2" color="primary.main">
+                              Requesting:{" "}
+                              <strong>{requestedDays.toFixed(1)} days</strong>
+                            </Typography>
+                          )}
+                        </Stack>
+                      ) : (
+                        <>
+                          <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Available Balance
+                              </Typography>
+                              <Typography
+                                variant="h6"
+                                fontWeight="700"
+                                color={
+                                  typeDetails.availableBalance > 0
+                                    ? "success.main"
+                                    : "error.main"
+                                }
+                              >
+                                {typeDetails.availableBalance.toFixed(1)} days
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Used This Year
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                fontWeight="600"
+                                color="error.main"
+                              >
+                                {typeDetails.usedBalance.toFixed(1)} days
+                              </Typography>
+                            </Grid>
+                            {typeDetails.carryForward > 0 && (
+                              <Grid item xs={6}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Carry Forward
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight="600"
+                                  color="info.main"
+                                >
+                                  {typeDetails.carryForward.toFixed(1)} days
+                                </Typography>
+                              </Grid>
+                            )}
+                            {requestedDays > 0 && (
+                              <Grid item xs={6}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Requesting
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight="600"
+                                  color={
+                                    requestedDays <= typeDetails.availableBalance
+                                      ? "primary.main"
+                                      : "error.main"
+                                  }
+                                >
+                                  {requestedDays.toFixed(1)} days
+                                </Typography>
+                              </Grid>
+                            )}
+                          </Grid>
+
+                          {requestedDays > typeDetails.availableBalance && (
+                            <Alert severity="error" sx={{ mt: 2 }}>
+                              Insufficient balance! You can only apply for up to{" "}
+                              {typeDetails.availableBalance.toFixed(1)} days.
+                            </Alert>
+                          )}
+                        </>
                       )}
-                    </Grid>
+
+                      {typeDetails.requiresDocument && (
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                          <strong>Document Required:</strong> Supporting documents
+                          must be uploaded for {typeDetails.displayName}.
+                        </Alert>
+                      )}
+                    </Paper>
                   );
                 })()}
-              </Box>
-            )}
-          </Grid>
+            </Grid>
 
-          <Grid item xs={12}>
-            <FormControl component="fieldset">
-              <FormLabel component="legend">Duration Type</FormLabel>
-              <RadioGroup
-                row
-                value={formData.durationType || "full-day"}
-                onChange={(e) => handleFieldChange("durationType", e.target.value)}
-              >
-                <FormControlLabel value="full-day" control={<Radio />} label="Full Day" />
-                <FormControlLabel value="half-day" control={<Radio />} label="Half Day" />
-              </RadioGroup>
-            </FormControl>
-          </Grid>
-
-          {formData.durationType === "half-day" && (
+            {/* Duration Type */}
             <Grid item xs={12}>
               <FormControl component="fieldset">
-                <FormLabel component="legend">Half Day Type</FormLabel>
+                <FormLabel component="legend">Duration Type</FormLabel>
                 <RadioGroup
                   row
-                  value={formData.halfDayType || ""}
-                  onChange={(e) => handleFieldChange("halfDayType", e.target.value)}
+                  value={formData.durationType || "full-day"}
+                  onChange={(e) =>
+                    handleFieldChange("durationType", e.target.value)
+                  }
                 >
-                  <FormControlLabel value="first-half" control={<Radio />} label="First Half" />
-                  <FormControlLabel value="second-half" control={<Radio />} label="Second Half" />
+                  <FormControlLabel
+                    value="full-day"
+                    control={<Radio />}
+                    label="Full Day"
+                  />
+                  <FormControlLabel
+                    value="half-day"
+                    control={<Radio />}
+                    label="Half Day"
+                  />
                 </RadioGroup>
               </FormControl>
             </Grid>
-          )}
 
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              type="date"
-              label="Start Date"
-              value={formData.startDate || ""}
-              onChange={(e) => handleFieldChange("startDate", e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              error={!!validationErrors.startDate}
-              helperText={validationErrors.startDate}
-            />
-          </Grid>
+            {/* Half Day Type */}
+            {formData.durationType === "half-day" && (
+              <Grid item xs={12}>
+                <FormControl
+                  component="fieldset"
+                  error={!!validationErrors.halfDayType}
+                >
+                  <FormLabel component="legend">Half Day Type *</FormLabel>
+                  <RadioGroup
+                    row
+                    value={formData.halfDayType || ""}
+                    onChange={(e) =>
+                      handleFieldChange("halfDayType", e.target.value)
+                    }
+                    onBlur={() => handleBlur("halfDayType")}
+                  >
+                    <FormControlLabel
+                      value="first_half"
+                      control={<Radio />}
+                      label="First Half"
+                    />
+                    <FormControlLabel
+                      value="second_half"
+                      control={<Radio />}
+                      label="Second Half"
+                    />
+                  </RadioGroup>
+                  {validationErrors.halfDayType && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                      {validationErrors.halfDayType}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+            )}
 
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              type="date"
-              label="End Date"
-              value={formData.endDate || ""}
-              onChange={(e) => handleFieldChange("endDate", e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              error={!!validationErrors.endDate}
-              helperText={validationErrors.endDate}
-            />
-          </Grid>
+            {/* Start Date */}
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Start Date"
+                name="startDate"
+                value={formData.startDate || ""}
+                onChange={(e) => handleFieldChange("startDate", e.target.value)}
+                onBlur={(e) => handleBlur("startDate", e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                error={!!validationErrors.startDate}
+                helperText={validationErrors.startDate}
+                required
+                disabled={loading}
+              />
+            </Grid>
 
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              label="Reason"
-              value={formData.reason || ""}
-              onChange={(e) => handleFieldChange("reason", e.target.value)}
-              error={!!validationErrors.reason}
-              helperText={validationErrors.reason}
-            />
-          </Grid>
+            {/* End Date */}
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="End Date"
+                name="endDate"
+                value={formData.endDate || ""}
+                onChange={(e) => handleFieldChange("endDate", e.target.value)}
+                onBlur={(e) => handleBlur("endDate", e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                error={!!validationErrors.endDate}
+                helperText={validationErrors.endDate}
+                required
+                disabled={loading}
+              />
+            </Grid>
 
-          {(isDocumentRequired() || existingDocuments.length > 0 || uploadingFiles.length > 0) && (
+            {/* Reason */}
             <Grid item xs={12}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="subtitle1" fontWeight="600">
-                  Attachments {isDocumentRequired() && <span style={{ color: '#d32f2f' }}>*</span>}
-                </Typography>
-                {isDocumentRequired() && (
-                  <Chip 
-                    label="Required" 
-                    color="error" 
-                    size="small" 
-                    variant="outlined"
-                  />
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Reason"
+                name="reason"
+                value={formData.reason || ""}
+                onChange={(e) => handleFieldChange("reason", e.target.value)}
+                onBlur={(e) => handleBlur("reason", e.target.value)}
+                error={!!validationErrors.reason}
+                helperText={validationErrors.reason || "Minimum 10 characters"}
+                placeholder="Please provide a detailed reason for your leave application"
+                required
+                disabled={loading}
+              />
+            </Grid>
+
+            {/* File Upload Section */}
+            {(isDocumentRequired() ||
+              existingDocuments.length > 0 ||
+              uploadingFiles.length > 0 ||
+              formData.documentId) && (
+              <Grid item xs={12}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={2}
+                >
+                  <Typography variant="subtitle1" fontWeight="600">
+                    Attachments{" "}
+                    {isDocumentRequired() && (
+                      <span style={{ color: "#d32f2f" }}>*</span>
+                    )}
+                  </Typography>
+                  {isDocumentRequired() && (
+                    <Chip
+                      label="Required"
+                      color="error"
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                </Stack>
+
+                {isDocumentRequired() && !formData.documentId && existingDocuments.length === 0 && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <strong>Document Required:</strong> Supporting documents must
+                    be uploaded for this leave type.
+                  </Alert>
                 )}
-              </Stack>
 
-              {isDocumentRequired() && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <strong>Document Required:</strong> Supporting documents must be uploaded for Emergency Leave.
-                </Alert>
-              )}
+                {validationErrors.attachments && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {validationErrors.attachments}
+                  </Alert>
+                )}
 
-              {validationErrors.attachments && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {validationErrors.attachments}
-                </Alert>
-              )}
-
-              {/* Show existing documents */}
-              {existingDocuments.map((doc) => (
-                <ExistingAttachmentItem
-                  key={doc.id}
-                  document={doc}
-                  onRemove={handleRemoveExistingDocument}
-                  onDownload={handleDownloadDocument}
-                />
-              ))}
-
-              {/* Show files being uploaded */}
-              {uploadingFiles.map((item) => (
-                <FileItem
-                  key={item.id}
-                  file={item.file}
-                  progress={item.progress}
-                  status={item.status}
-                  onRemove={() => handleRemoveUploadingFile(item.id)}
-                />
-              ))}
-
-              {/* Upload zone - only show if no document exists */}
-              {!formData.documentId && (
-                <FileUploadZone onFileDrop={handleFileUpload} uploading={loading}>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    style={{ display: 'none' }}
-                    id="file-upload"
-                    onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-                  />
-                  <label htmlFor="file-upload">
-                    <Box sx={{ cursor: 'pointer' }}>
-                      <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-                      <Typography variant="body1" color="text.secondary">
-                        Drag and drop file here or click to browse
+                {/* Loading indicator for fetching document */}
+                {loading && formData.documentId && existingDocuments.length === 0 && uploadingFiles.length === 0 && (
+                  <Card elevation={2} sx={{ mb: 2, p: 2 }}>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <CircularProgress size={24} />
+                      <Typography variant="body2" color="text.secondary">
+                        Loading document...
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Maximum file size: 10MB • Accepted formats: PDF, DOC, DOCX, JPG, PNG
+                    </Stack>
+                  </Card>
+                )}
+
+                {/* Show existing documents */}
+                {existingDocuments.map((doc) => (
+                  <ExistingAttachmentItem
+                    key={doc.id}
+                    document={doc}
+                    onRemove={handleRemoveExistingDocument}
+                    onView={handleViewDocument}
+                    canDelete={canModifyDocument && !loading}
+                  />
+                ))}
+
+                {/* Show files being uploaded */}
+                {uploadingFiles.map((item) => (
+                  <FileItem
+                    key={item.id}
+                    file={item.file}
+                    progress={item.progress}
+                    status={item.status}
+                    onRemove={() => handleRemoveUploadingFile(item.id)}
+                  />
+                ))}
+
+                {/* Upload zone - show if no document exists and can modify, OR if document was removed */}
+                {existingDocuments.length === 0 && canModifyDocument && !loading && (
+                  <FileUploadZone
+                    onFileDrop={handleFileUpload}
+                    uploading={loading}
+                    disabled={!canModifyDocument || loading}
+                  >
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      style={{ display: "none" }}
+                      id="file-upload"
+                      onChange={(e) => {
+                        handleFileUpload(Array.from(e.target.files));
+                        e.target.value = null;
+                      }}
+                      disabled={!canModifyDocument || loading}
+                    />
+                    <label htmlFor="file-upload">
+                      <Box sx={{ cursor: loading || !canModifyDocument ? "not-allowed" : "pointer" }}>
+                        <CloudUpload
+                          sx={{ fontSize: 48, color: "primary.main", mb: 1 }}
+                        />
+                        <Typography variant="body1" color="text.secondary">
+                          Drag and drop file here or click to browse
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Maximum file size: 10MB • Accepted formats: PDF, DOC,
+                          DOCX, JPG, PNG
+                        </Typography>
+                      </Box>
+                    </label>
+                  </FileUploadZone>
+                )}
+
+                {!canModifyDocument && formData.documentId && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Document cannot be modified for approved leave applications.
+                  </Alert>
+                )}
+              </Grid>
+            )}
+          </Grid>
+
+          {/* Action Buttons */}
+          <Stack direction="row" spacing={2} mt={4}>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={
+                loading ||
+                uploadingFiles.some((f) => f.status === "uploading") ||
+                fetchingLeaveTypes
+              }
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : isNewApplication ? (
+                "Submit Application"
+              ) : (
+                "Update Application"
+              )}
+            </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+          </Stack>
+
+          {/* Delete Button for existing applications */}
+          {!isNewApplication && handleDeleteApplication && (
+            <Box mt={2}>
+              <Tooltip 
+                title={isApproved ? "Cannot delete approved leave applications" : "Delete this application"}
+                arrow
+              >
+                <span>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="error"
+                    onClick={handleDelete}
+                    disabled={loading || isApproved}
+                  >
+                    Delete Application
+                  </Button>
+                </span>
+              </Tooltip>
+              {isApproved && (
+                <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                  Approved applications cannot be deleted
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Drawer>
+
+      {/* Document Viewer Dialog */}
+      <Dialog
+        open={viewDocumentDialog.open}
+        onClose={handleCloseViewDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { height: "90vh" }
+        }}
+      >
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="h6">View Document</Typography>
+              {viewDocumentDialog.document && (
+                <Typography variant="caption" color="text.secondary">
+                  {viewDocumentDialog.document.originalName}
+                </Typography>
+              )}
+            </Box>
+            <IconButton onClick={handleCloseViewDialog}>
+              <Close />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
+          {viewDocumentDialog.loading ? (
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, p: 4 }}>
+              <CircularProgress size={48} />
+              <Typography variant="body2" color="text.secondary">
+                Loading document...
+              </Typography>
+            </Box>
+          ) : viewDocumentDialog.data && viewDocumentDialog.document ? (
+            <Box sx={{ width: "100%", height: "100%", overflow: "auto", p: 2 }}>
+              {(() => {
+                const isImage = viewDocumentDialog.document.mimeType?.includes("image") || 
+                  ["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(
+                    getFileExtension(viewDocumentDialog.document.originalName)
+                  );
+                const isPdf = viewDocumentDialog.document.mimeType === "application/pdf" ||
+                  getFileExtension(viewDocumentDialog.document.originalName) === "pdf";
+
+                if (isImage) {
+                  return (
+                    <Box
+                      sx={{
+                        width: "100%",
+                        height: "100%",
+                        minHeight: "500px",
+                        backgroundImage: `url(${viewDocumentDialog.data})`,
+                        backgroundSize: "contain",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center",
+                      }}
+                    />
+                  );
+                } else if (isPdf) {
+                  return (
+                    <iframe
+                      src={viewDocumentDialog.data}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        border: "none",
+                        minHeight: "600px",
+                      }}
+                      title={viewDocumentDialog.document.originalName}
+                    />
+                  );
+                } else {
+                  return (
+                    <Box sx={{ p: 4, textAlign: "center" }}>
+                      <InsertDriveFile sx={{ fontSize: 64, color: "text.secondary", mb: 2 }} />
+                      <Typography variant="h6" gutterBottom>
+                        Preview not available
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        This file type cannot be previewed in the browser.
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Please download the file to view it.
                       </Typography>
                     </Box>
-                  </label>
-                </FileUploadZone>
-              )}
-            </Grid>
+                  );
+                }
+              })()}
+            </Box>
+          ) : (
+            <Box sx={{ p: 4, textAlign: "center" }}>
+              <ErrorIcon sx={{ fontSize: 64, color: "error.main", mb: 2 }} />
+              <Typography variant="h6" color="error">
+                Failed to load document
+              </Typography>
+            </Box>
           )}
-        </Grid>
-
-        <Stack direction="row" spacing={2} mt={4}>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: "1px solid #e0e0e0" }}>
           <Button
-            fullWidth
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={loading || uploadingFiles.some(f => f.status === "uploading")}
+            startIcon={<Download />}
+            onClick={handleDownloadFromView}
+            disabled={viewDocumentDialog.loading || !viewDocumentDialog.data}
           >
-            {loading ? <CircularProgress size={24} /> : isNewApplication ? "Submit" : "Update"}
+            Download
           </Button>
-          <Button fullWidth variant="outlined" onClick={onClose}>
-            Cancel
-          </Button>
-        </Stack>
-      </Box>
-    </Drawer>
+          <Button onClick={handleCloseViewDialog}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

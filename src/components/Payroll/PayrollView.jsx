@@ -698,7 +698,7 @@ const PayrollView = ({ user }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  const isSuperAdmin = user?.role === "superadmin";
+  const isSuperAdmin = user?.role === "admin";
 
   useEffect(() => {
     if (!editDrawerOpen) {

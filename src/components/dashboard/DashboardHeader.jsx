@@ -193,7 +193,7 @@ const DashboardHeader = ({ user, onLogout }) => {
   // Handle login as user (mock implementation)
   const handleLoginAsUser = () => {
     // Update the user role to 'user'
-    const updatedUser = { ...user, role: "user" };
+    const updatedUser = { ...user, role: "manager" };
 
     // Save the updated user back to localStorage (keeping this one for auth)
     localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -254,7 +254,7 @@ const DashboardHeader = ({ user, onLogout }) => {
           </div>
           {isDropdownOpen && (
             <div className="dropdown-menu">
-              {user?.role === "superadmin" && (
+              {user?.role === "admin" && (
                 <button className="dropdown-item" onClick={handleLoginAsUser}>
                   Login as User
                 </button>

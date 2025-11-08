@@ -80,7 +80,7 @@ const DashboardSidebar = ({ activePage }) => {
         path: "/employees",
         icon: BadgeIcon,
         label: "Employee's Details",
-        show: user?.role === "admin" || user?.role === "superadmin",
+        show: user?.role === "admin" ,
       },
       {
         path: "/payroll",

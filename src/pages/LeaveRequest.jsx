@@ -14,12 +14,12 @@ const LeavesRequest = () => {
 
   // Assuming the role is part of the user object (e.g., user.role)
   const role = user?.role; // Use optional chaining to safely access role
-
+  console.log(role)
   return (
     <>
       <Breadcrumb items={breadcrumbItems} />
 
-      <>{role === "user" && <LeaveRequestsView />}</>
+      {(role === "admin" || role === "manager") && <LeaveRequestsView />}
     </>
   );
 };

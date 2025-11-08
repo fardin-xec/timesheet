@@ -16,7 +16,7 @@ const Dashboard = () => {
       <Breadcrumb items={breadcrumbItems} />
       <h1>Welcome, {user?.employee?.firstName || 'User'}!</h1>
       <p>This is your dashboard. You can manage your account and settings here.</p>
-      {user?.role === "superadmin" ? (
+      {user?.role === "admin" ? (
         <SuperadminDashboard />
       ) : (
         <UserDashboard />

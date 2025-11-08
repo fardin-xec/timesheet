@@ -18,7 +18,7 @@ const Payroll = () => {
 
   return (
     <>
-      {user.role === "superadmin" ? (
+      {user.role === "admin" ? (
         <>
           <Breadcrumb items={breadcrumbItems} />
           <h1>Payroll</h1>

@@ -13,7 +13,7 @@ const Attendance = () => {
     { label: "Attendance", path: "/attendance" },
   ];
 
-  const isSuperAdmin = user?.role === "superadmin"; // Adjust role field as per your auth schema
+  const isSuperAdmin = user?.role === "admin"; // Adjust role field as per your auth schema
 
   return (
     <>

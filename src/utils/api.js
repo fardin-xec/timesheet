@@ -2,82 +2,66 @@ import api from "./api_call";
 
 
 
-const getToken = () => {
+export const getToken = () => {
   const token = localStorage.getItem("access_token");
   if (!token) {
     throw new Error("No authentication token found. Please log in.");
   }
   return token;
 };
-/*
- Leaves Api
-*/
-export const fetchLeavesEntries = async (role,employeeId) => {
-  const token = getToken();
-  const url = role==='user' ? `/leaves/employees/${employeeId}` : '/leaves';
-  const response = await api.get(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
- if (response.status !== 200 && response.status !== 201){
-        throw new Error(response.data.message);
-    } 
-
-return response.data.data;
-};
-
-export const createLeaveEntry = async (data) => {
-  const token = getToken();
 
 
-  const response = await api.post('/leaves', data, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+// export const createLeaveEntry = async (data) => {
+//   const token = getToken();
 
-     },  });
-  if (response.status !== 200 && response.status !== 201){
-    throw new Error(response.data.message);
-} 
+
+//   const response = await api.post('/leaves', data, {
+// headers: { 
+//       Authorization: `Bearer ${token}`,
+//       'Content-Type': 'application/json'
+
+//      },  });
+//   if (response.status !== 200 && response.status !== 201){
+//     throw new Error(response.data.message);
+// } 
   
-  return response.data.data;
-};
+//   return response.data.data;
+// };
 
-export const updateLeaveEntry = async (data) => {
-  const token = getToken();
+// export const updateLeaveEntry = async (data) => {
+//   const token = getToken();
  
 
-  const response = await api.put(`/leaves/${data.id}`, data, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+//   const response = await api.put(`/leaves/${data.id}`, data, {
+// headers: { 
+//       Authorization: `Bearer ${token}`,
+//       'Content-Type': 'application/json'
 
-     },  });
+//      },  });
 
- if (response.status !== 200 && response.status !== 201){
-        throw new Error(response.data.message);
-    } 
+//  if (response.status !== 200 && response.status !== 201){
+//         throw new Error(response.data.message);
+//     } 
 
-return response.data.data;
-};
+// return response.data.data;
+// };
 
-export const deleteLeaveEntry = async (id) => {
-  const token = getToken();
+// export const deleteLeaveEntry = async (id) => {
+//   const token = getToken();
  
 
-  const response = await api.delete(`/leaves/${id}`, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+//   const response = await api.delete(`/leaves/${id}`, {
+// headers: { 
+//       Authorization: `Bearer ${token}`,
+//       'Content-Type': 'application/json'
 
-     },  });
-  if (response.status !== 200 && response.status !== 201){
-    throw new Error(response.data.message);
-} 
+//      },  });
+//   if (response.status !== 200 && response.status !== 201){
+//     throw new Error(response.data.message);
+// } 
 
-return response.data.data;
-};
+// return response.data.data;
+// };
 
 export const fetchEmployees = async (orgId) => {
   const token = getToken();
@@ -115,29 +99,29 @@ headers: {
   return response.data.data;
 };
 
-export const updateLeaveStatus = async (leaveId,data) => {
-    const token = getToken();
+// export const updateLeaveStatus = async (leaveId,data) => {
+//     const token = getToken();
   
   
-    const response = await api.put(`/leaves/${leaveId}/updateStatus`,data, {
-  headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+//     const response = await api.put(`/leaves/${leaveId}/updateStatus`,data, {
+//   headers: { 
+//       Authorization: `Bearer ${token}`,
+//       'Content-Type': 'application/json'
 
-     },    });
-      if (response.status !== 200 && response.status !== 201){
-        throw new Error(response.data.message);
-    } 
+//      },    });
+//       if (response.status !== 200 && response.status !== 201){
+//         throw new Error(response.data.message);
+//     } 
     
     
-    return response.data.data;
-  };
+//     return response.data.data;
+//   };
 
 export const fetchEmployeeLeaves = async (employeeId) => {
     const token = getToken();
   
   
-    const response = await api.get(`/leaves/employees/${employeeId}`, {
+    const response = await api.get(`/leaves/employee/${employeeId}`, {
   headers: { 
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -150,28 +134,28 @@ export const fetchEmployeeLeaves = async (employeeId) => {
     
     return response.data.data;
   };
-export const fetchLeaveBalance = async (employeeId) => {
-  const token = getToken();
-  const response = await api.get(`/leaves/balance/employees/${employeeId}`, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+// export const fetchLeaveBalance = async (employeeId) => {
+//   const token = getToken();
+//   const response = await api.get(`/leaves/balance/employee/${employeeId}`, {
+// headers: { 
+//       Authorization: `Bearer ${token}`,
+//       'Content-Type': 'application/json'
 
-     },  });
+//      },  });
 
-     console.log(response.status);
+//      console.log(response.status);
      
-    if (response.status !== 200 && response.status !== 404){
-        throw new Error(response.data.message);
-    } 
+//     if (response.status !== 200 && response.status !== 404){
+//         throw new Error(response.data.message);
+//     } 
   
   
-  return response.data.data;
-};
+//   return response.data.data;
+// };
 
 export const fetchEmployeeRules = async (employeeId) => {
   const token = getToken();
-  const response = await api.get(`/leaves/rules/employees/${employeeId}`, {
+  const response = await api.get(`/leaves/rules/employee/${employeeId}`, {
 headers: { 
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -182,7 +166,7 @@ headers: {
     } 
     
     const data=response.data.data
-
+    console.log(data)
     return data.map((item) => ({
         id: item.rule.id,
         name: item.rule.leaveType,
@@ -194,7 +178,7 @@ headers: {
 export const fetchAllLeaveRules = async (orgId) => {
   const token = getToken();
  
-  const response = await api.get(`/leaves/rules/${orgId}`, {
+  const response = await api.get(`/leaves/rules`, {
 headers: { 
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -213,12 +197,12 @@ headers: {
 
 export const assignRule = async (employeeId, ruleId) => {
   const token = getToken();
-  const response = await api.post(`/leaves/assign-rule/${employeeId}/${ruleId}`, {
-headers: { 
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+  const response = await api.post(`/leaves/assign-rule/${employeeId}/${ruleId}`,{},{
+      headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
 
-     },  });
+    },  });
     if (response.status !== 200 && response.status !== 201){
         throw new Error(response.data.message);
     } 
@@ -235,10 +219,14 @@ headers: {
       'Content-Type': 'application/json'
 
      },  });
+    
+
     if (response.status !== 200 && response.status !== 201){
         throw new Error(response.data.message);
     } 
-  
+   if(response.data.statusCode !== 200 &&response.data.statusCode !== 201){
+          throw new Error(response.data.message);
+      }
   
   return response.data.data;
 };
@@ -544,115 +532,115 @@ export const updatePayroll = async (payslipId,data) => {
   return response;
   };
 
-export const leaveAPI = {
+// export const leaveAPI = {
   
-uploadAttachment: async (file, onProgress) => {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
+// uploadAttachment: async (file, onProgress) => {
+//   try {
+//     const formData = new FormData();
+//     formData.append('file', file);
 
-    const response = await api.post('/leaves/upload-attachment', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (event) => {
-        if (event.lengthComputable) {
-          const percentComplete = (event.loaded * 100) / event.total;
-          onProgress?.(percentComplete);
-        }
-      },
-    });
+//     const response = await api.post('/leaves/upload-attachment', formData, {
+//       headers: {
+//         'Content-Type': 'multipart/form-data',
+//       },
+//       onUploadProgress: (event) => {
+//         if (event.lengthComputable) {
+//           const percentComplete = (event.loaded * 100) / event.total;
+//           onProgress?.(percentComplete);
+//         }
+//       },
+//     });
 
-    return response.data;
-  } catch (error) {
-    throw new Error(error.response?.data?.message || 'Upload failed');
-  }
-},
+//     return response.data;
+//   } catch (error) {
+//     throw new Error(error.response?.data?.message || 'Upload failed');
+//   }
+// },
 
 
-  createLeave: async (leaveData) => {
-    try {
-      const response = await api.post('/leaves', leaveData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to create leave application');
-    }
-  },
+//   createLeave: async (leaveData) => {
+//     try {
+//       const response = await api.post('/leaves', leaveData, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//       });
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(error.response?.data?.message || 'Failed to create leave application');
+//     }
+//   },
 
-  updateLeave: async (id, leaveData) => {
-    try {
-      const response = await api.put(`/leaves/${id}`, leaveData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to update leave application');
-    }
-  },
+//   updateLeave: async (id, leaveData) => {
+//     try {
+//       const response = await api.put(`/leaves/${id}`, leaveData, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//       });
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(error.response?.data?.message || 'Failed to update leave application');
+//     }
+//   },
 
-  updateLeaveStatus: async (id, statusData) => {
-    try {
-      const response = await api.put(`/leaves/${id}/updateStatus`, statusData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to update leave status');
-    }
-  },
+//   updateLeaveStatus: async (id, statusData) => {
+//     try {
+//       const response = await api.put(`/leaves/${id}/updateStatus`, statusData, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//       });
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(error.response?.data?.message || 'Failed to update leave status');
+//     }
+//   },
 
-  deleteLeave: async (id) => {
-    try {
-      const response = await api.delete(`/leaves/${id}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to delete leave application');
-    }
-  },
+//   deleteLeave: async (id) => {
+//     try {
+//       const response = await api.delete(`/leaves/${id}`);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(error.response?.data?.message || 'Failed to delete leave application');
+//     }
+//   },
 
-  getLeaveBalance: async (employeeId) => {
-    try {
-      const response = await api.get(`/leaves/balance/employees/${employeeId}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch leave balance');
-    }
-  },
+//   getLeaveBalance: async (employeeId) => {
+//     try {
+//       const response = await api.get(`/leaves/balance/employees/${employeeId}`);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(error.response?.data?.message || 'Failed to fetch leave balance');
+//     }
+//   },
 
-  getEmployeeLeaveRules: async (employeeId) => {
-    try {
-      const response = await api.get(`/leaves/rules/employees/${employeeId}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch leave rules');
-    }
-  },
+//   getEmployeeLeaveRules: async (employeeId) => {
+//     try {
+//       const response = await api.get(`/leaves/rules/employees/${employeeId}`);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(error.response?.data?.message || 'Failed to fetch leave rules');
+//     }
+//   },
 
-  getPendingLeaves: async (employeeIds) => {
-    try {
-      const response = await api.post(
-        '/leaves/employees/pending-leaves',
-        { employeeIds },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch pending leaves');
-    }
-  },
-};
+//   getPendingLeaves: async (employeeIds) => {
+//     try {
+//       const response = await api.post(
+//         '/leaves/employees/pending-leaves',
+//         { employeeIds },
+//         {
+//           headers: {
+//             'Content-Type': 'application/json',
+//           },
+//         }
+//       );
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(error.response?.data?.message || 'Failed to fetch pending leaves');
+//     }
+//   },
+// };
 
 export const personalInfoAPI = {
   // ============ PERSONAL INFORMATION ============
@@ -1171,29 +1159,28 @@ export const personalInfoAPI = {
    * @param {string} documentId - Document ID
    * @returns {Promise} Document file blob
    */
-  // downloadDocument: async (documentId) => {
-  //   const token = getToken();
-  //   try {
-  //     const response = await api.get(
-  //       `/personal/documents/${documentId}/download`,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //         responseType: "blob",
-  //         params: { employeeId },
-  //       }
-  //     );
+ downloadDocument: async (documentId) => {
+  const token = getToken();
+  try {
+    const response = await api.get(
+      `/documents/${documentId}/download`,  // Updated path
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      }
+    );
 
-  //     return response.data;
-  //   } catch (error) {
-  //     throw new Error(
-  //       error.response?.data?.message ||
-  //         error.message ||
-  //         "Failed to download document"
-  //     );
-  //   }
-  // },
+    return response;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to download document"
+    );
+  }
+},
 };
 
 export default personalInfoAPI;
@@ -1581,4 +1568,553 @@ export const checkExistence = async (payload) => {
   }
 
   return response.data.data;
+};
+
+
+/*
+ * ==================== LEAVE RULES APIs ====================
+ */
+
+/**
+ * Create a new leave rule (Admin only)
+ * @param {Object} ruleData - Leave rule data
+ * @returns {Promise} Created leave rule
+ */
+export const createLeaveRule = async (ruleData) => {
+  const token = getToken();
+  
+  const response = await api.post('/leaves/rules', ruleData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to create leave rule');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Update an existing leave rule (Admin only)
+ * @param {number} ruleId - Leave rule ID
+ * @param {Object} ruleData - Updated leave rule data
+ * @returns {Promise} Updated leave rule
+ */
+export const updateLeaveRule = async (ruleId, ruleData) => {
+  const token = getToken();
+  
+  const response = await api.put(`/leaves/rules/${ruleId}`, ruleData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to update leave rule');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get all leave rules for organization (Admin/Manager)
+ * @returns {Promise} Array of leave rules
+ */
+export const getLeaveRules = async () => {
+  const token = getToken();
+  
+  const response = await api.get('/leaves/rules', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch leave rules');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get leave rule by type (Admin/Manager)
+ * @param {string} leaveType - Leave type (e.g., 'sick', 'casual', 'annual')
+ * @returns {Promise} Leave rule details
+ */
+export const getLeaveRuleByType = async (leaveType) => {
+  const token = getToken();
+  
+  const response = await api.get(`/leaves/rules/${leaveType}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch leave rule');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Delete a leave rule (Admin only)
+ * @param {number} ruleId - Leave rule ID
+ * @returns {Promise} Deletion confirmation
+ */
+export const deleteLeaveRule = async (ruleId) => {
+  const token = getToken();
+  
+  const response = await api.delete(`/leaves/rules/${ruleId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 204) {
+    throw new Error(response.data.message || 'Failed to delete leave rule');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Initialize default leave rules for organization (Admin only)
+ * @param {string} location - Location ('India' or 'Qatar')
+ * @returns {Promise} Created default rules
+ */
+export const initializeDefaultLeaveRules = async (location) => {
+  const token = getToken();
+  
+  const response = await api.post('/leaves/rules/initialize', { location }, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to initialize default rules');
+  }
+
+  return response.data.data;
+};
+
+/*
+ * ==================== LEAVE APPLICATIONS APIs ====================
+ */
+
+/**
+ * Apply for leave
+ * @param {Object} leaveData - Leave application data
+ * @returns {Promise} Created leave application
+ */
+export const applyLeave = async (leaveData) => {
+  const token = getToken();
+  
+  const response = await api.post('/leaves/apply', leaveData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to apply for leave');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Update leave application
+ * @param {number} leaveId - Leave ID
+ * @param {Object} leaveData - Updated leave data
+ * @returns {Promise} Updated leave application
+ */
+export const updateLeaveApplication = async (leaveId, leaveData) => {
+  const token = getToken();
+  
+  const response = await api.put(`/leaves/${leaveId}`, leaveData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to update leave application');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Delete leave application
+ * @param {number} leaveId - Leave ID
+ * @returns {Promise} Deletion confirmation
+ */
+export const deleteLeaveApplication = async (leaveId) => {
+  const token = getToken();
+  
+  const response = await api.delete(`/leaves/${leaveId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 204) {
+    throw new Error(response.data.message || 'Failed to delete leave application');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Approve or reject leave (Admin/Manager only)
+ * @param {number} leaveId - Leave ID
+ * @param {Object} statusData - Status update data (status, remarks)
+ * @returns {Promise} Updated leave application
+ */
+export const approveRejectLeave = async (leaveId, statusData) => {
+  const token = getToken();
+  
+  const response = await api.put(`/leaves/${leaveId}/status`, statusData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to update leave status');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get current user's leaves
+ * @param {Object} filter - Filter parameters (optional)
+ * @returns {Promise} Array of user's leaves
+ */
+export const getMyLeaves = async (filter = {}) => {
+  const token = getToken();
+  
+  const queryParams = new URLSearchParams(filter).toString();
+  const url = `/leaves/my-leaves${queryParams ? `?${queryParams}` : ''}`;
+  
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch your leaves');
+  }
+
+  return response.data;
+};
+
+/**
+ * Get subordinate leaves (for managers)
+ * @param {Object} filter - Filter parameters (optional)
+ * @returns {Promise} Array of subordinate leaves
+ */
+export const getSubordinateLeaves = async (filter = {}) => {
+  const token = getToken();
+  
+  const queryParams = new URLSearchParams(filter).toString();
+  const url = `/leaves/subordinates${queryParams ? `?${queryParams}` : ''}`;
+  
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch subordinate leaves');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get subordinate leaves with pagination (for managers)
+ * @param {Object} filter - Filter parameters (optional)
+ * @param {number} page - Page number (default: 1)
+ * @param {number} limit - Items per page (default: 10)
+ * @returns {Promise} Paginated subordinate leaves with metadata
+ */
+export const getSubordinateLeavesWithPagination = async (filter = {}, page = 1, limit = 10) => {
+  const token = getToken();
+  
+  const params = {
+    ...filter,
+    page: page.toString(),
+    limit: limit.toString()
+  };
+  
+  const queryParams = new URLSearchParams(params).toString();
+  const url = `/leaves/subordinates/leaves/paginated?${queryParams}`;
+  
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch subordinate leaves');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get leaves for a specific employee (Admin/Manager only)
+ * @param {number} employeeId - Employee ID
+ * @param {Object} filter - Filter parameters (optional)
+ * @returns {Promise} Array of employee's leaves
+ */
+export const getEmployeeLeaves = async (employeeId, filter = {}) => {
+  const token = getToken();
+  
+  const queryParams = new URLSearchParams(filter).toString();
+  const url = `/leaves/employee/${employeeId}${queryParams ? `?${queryParams}` : ''}`;
+  
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch employee leaves');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get all leaves (Admin/Manager only)
+ * @param {Object} filter - Filter parameters (optional)
+ * @returns {Promise} Array of all leaves
+ */
+export const getAllLeaves = async (filter = {}) => {
+  const token = getToken();
+  
+  const queryParams = new URLSearchParams(filter).toString();
+  const url = `/leaves${queryParams ? `?${queryParams}` : ''}`;
+  
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch all leaves');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get leave details by ID
+ * @param {number} leaveId - Leave ID
+ * @returns {Promise} Leave details
+ */
+export const getLeaveById = async (leaveId) => {
+  const token = getToken();
+  
+  const response = await api.get(`/leaves/${leaveId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch leave details');
+  }
+
+  return response.data.data;
+};
+
+/*
+ * ==================== LEAVE BALANCE & REPORTS ====================
+ */
+
+/**
+ * Get leave balance for an employee
+ * @param {number} employeeId - Employee ID
+ * @returns {Promise} Leave balance details
+ */
+export const getLeaveBalance = async (employeeId) => {
+  const token = getToken();
+  
+  const response = await api.get(`/leaves/balance/employee/${employeeId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 404) {
+    throw new Error(response.data.message || 'Failed to fetch leave balance');
+  }
+
+  return response.data;
+};
+
+/**
+ * Get compliance report (Admin only)
+ * @param {Object} filter - Filter parameters
+ * @returns {Promise} Compliance report data
+ */
+export const getComplianceReport = async (filter = {}) => {
+  const token = getToken();
+  
+  const queryParams = new URLSearchParams(filter).toString();
+  const url = `/leaves/reports/compliance${queryParams ? `?${queryParams}` : ''}`;
+  
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch compliance report');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Get audit report (Admin only)
+ * @param {Object} filter - Filter parameters
+ * @returns {Promise} Audit report data
+ */
+export const getAuditReport = async (filter = {}) => {
+  const token = getToken();
+  
+  const queryParams = new URLSearchParams(filter).toString();
+  const url = `/leaves/reports/audit${queryParams ? `?${queryParams}` : ''}`;
+  
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch audit report');
+  }
+
+  return response.data.data;
+};
+
+export const getLeaveTypesWithBalances = async () => {
+  const token = getToken();
+
+  const response = await api.get('leaves/my-leave-types/balances', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data.message || 'Failed to fetch leave types with balances');
+  }
+
+  return response.data.data;
+};
+
+/*
+ * ==================== LEGACY COMPATIBILITY ====================
+ * Keep existing functions for backward compatibility
+ */
+
+export const fetchLeavesEntries = async (role, employeeId) => {
+  if (role === 'user') {
+    return await getMyLeaves();
+  } else {
+    return await getAllLeaves();
+  }
+};
+
+export const createLeaveEntry = async (data) => {
+  return await applyLeave(data);
+};
+
+export const updateLeaveEntry = async (data) => {
+  return await updateLeaveApplication(data.id, data);
+};
+
+export const deleteLeaveEntry = async (id) => {
+  return await deleteLeaveApplication(id);
+};
+
+export const updateLeaveStatus = async (leaveId, data) => {
+  return await approveRejectLeave(leaveId, data);
+};
+
+export const fetchLeaveBalance = async (employeeId) => {
+  return await getLeaveBalance(employeeId);
+};
+
+// Export all leave-related functions
+export const leaveAPI = {
+  // Leave Rules
+  createLeaveRule,
+  updateLeaveRule,
+  getLeaveRules,
+  getLeaveRuleByType,
+  deleteLeaveRule,
+  initializeDefaultLeaveRules,
+  
+  // Leave Applications
+  applyLeave,
+  updateLeaveApplication,
+  deleteLeaveApplication,
+  approveRejectLeave,
+  getMyLeaves,
+  getEmployeeLeaves,
+  getAllLeaves,
+  getLeaveById,
+  getSubordinateLeaves,
+  
+  // Balance & Reports
+  getLeaveTypesWithBalances,
+  getLeaveBalance,
+  getComplianceReport,
+  getAuditReport,
+  
+  // Legacy compatibility
+  fetchLeavesEntries,
+  createLeaveEntry,
+  updateLeaveEntry,
+  deleteLeaveEntry,
+  updateLeaveStatus,
+  fetchLeaveBalance,
 };

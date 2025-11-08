@@ -1,16 +1,30 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import ReactDOM from "react-dom";
 import DataTable from "../common/DataTable";
-import { fetchPendingEmployeesLeaves, updateLeaveStatus } from "../../utils/api";
+import {
+  getAllLeaves,
+  getSubordinateLeaves,
+  approveRejectLeave,
+} from "../../utils/api";
 
 const LeaveRequestsView = () => {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedRows, setSelectedRows] = useState([]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [remarksDialogOpen, setRemarksDialogOpen] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState(null);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [remarks, setRemarks] = useState("");
   const dropdownRef = useRef(null);
-  const buttonRefs = useRef({}); // Store refs for each button to calculate position
+  const buttonRefs = useRef({});
+  const textareaRef = useRef(null);
 
   // Get user data safely with error handling
   const getUserData = useCallback(() => {
@@ -24,26 +38,22 @@ const LeaveRequestsView = () => {
   }, []);
 
   const user = useMemo(() => getUserData(), [getUserData]);
-  const employeeId = user?.employee?.id;
+  const userRole = user?.role?.toLowerCase();
+  const isAdmin = userRole === "admin";
 
-  // Memoize initialEmployees to prevent unnecessary re-renders
-  const initialEmployees = useMemo(() => {
-    return user?.employee?.subordinates || [];
-  }, [user?.employee?.subordinates]);
-
-  // Fetch pending leaves from backend
+  // Fetch leaves based on role
   const fetchLeaves = useCallback(async () => {
-    if (!initialEmployees.length) {
-      setLeaves([]);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const employeeIds = initialEmployees.map(employee => employee.id);
-      const response = await fetchPendingEmployeesLeaves(employeeIds);
+      let response;
+      if (isAdmin) {
+        response = await getAllLeaves({ status: "pending" });
+      } else {
+        response = await getSubordinateLeaves({ status: "pending" });
+      }
+
       setLeaves(Array.isArray(response) ? response : []);
     } catch (err) {
       const errorMessage = err.message || "Failed to fetch leave data";
@@ -53,36 +63,30 @@ const LeaveRequestsView = () => {
     } finally {
       setLoading(false);
     }
-  }, [initialEmployees]);
+  }, [isAdmin]);
 
-  // Update leave status
+  // Update leave status with remarks
   const handleStatusChange = useCallback(
-    async (leaveId, newStatus) => {
-      if (!employeeId) {
-        setError("Employee ID not found");
-        return;
-      }
-
+    async (leaveId, newStatus, remarksText = "") => {
       setLoading(true);
       setOpenDropdownId(null);
+      setRemarksDialogOpen(false);
 
-      const originalLeave = leaves.find(leave => leave.id === leaveId);
+      const originalLeave = leaves.find((leave) => leave.id === leaveId);
 
       try {
         setLeaves((prev) =>
           prev.map((leave) =>
-            leave.id === leaveId
-              ? { ...leave, status: newStatus, approvedBy: employeeId }
-              : leave
+            leave.id === leaveId ? { ...leave, status: newStatus } : leave
           )
         );
 
-        const updatedStatus = {
+        await approveRejectLeave(leaveId, {
           status: newStatus,
-          approvedBy: employeeId,
-        };
+          remarks: remarksText || undefined,
+        });
 
-        await updateLeaveStatus(leaveId, updatedStatus);
+        await fetchLeaves();
       } catch (err) {
         const errorMessage = err.message || "Failed to update leave status";
         setError(errorMessage);
@@ -90,38 +94,57 @@ const LeaveRequestsView = () => {
 
         if (originalLeave) {
           setLeaves((prev) =>
-            prev.map((leave) =>
-              leave.id === leaveId ? originalLeave : leave
-            )
+            prev.map((leave) => (leave.id === leaveId ? originalLeave : leave))
           );
         }
       } finally {
         setLoading(false);
+        setRemarks("");
+        setSelectedLeave(null);
+        setPendingStatus(null);
       }
     },
-    [employeeId, leaves]
+    [leaves, fetchLeaves]
   );
+
+  // Open remarks dialog
+  const openRemarksDialog = useCallback((leaveId, status) => {
+    setSelectedLeave(leaveId);
+    setPendingStatus(status);
+    setRemarksDialogOpen(true);
+    setOpenDropdownId(null);
+  }, []);
+
+  // Handle remarks submission
+  const handleRemarksSubmit = useCallback(() => {
+    if (selectedLeave && pendingStatus) {
+      handleStatusChange(selectedLeave, pendingStatus, remarks);
+    }
+  }, [selectedLeave, pendingStatus, remarks, handleStatusChange]);
 
   // Toggle dropdown
   const toggleDropdown = useCallback((leaveId) => {
-    setOpenDropdownId(prev => (prev === leaveId ? null : leaveId));
+    setOpenDropdownId((prev) => (prev === leaveId ? null : leaveId));
   }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target) &&
-        !Object.values(buttonRefs.current).some(ref => ref && ref.contains(event.target))
+        !Object.values(buttonRefs.current).some(
+          (ref) => ref && ref.contains(event.target)
+        )
       ) {
         setOpenDropdownId(null);
       }
     };
 
     if (openDropdownId) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [openDropdownId]);
 
@@ -140,30 +163,138 @@ const LeaveRequestsView = () => {
   const formatName = useCallback((employee) => {
     if (!employee) return "";
     const { firstName = "", midName = "", lastName = "" } = employee;
-    return `${firstName} ${midName} ${lastName}`.trim().replace(/\s+/g, ' ');
+    return `${firstName} ${midName} ${lastName}`.trim().replace(/\s+/g, " ");
   }, []);
 
-  // Dropdown component to render via portal
+  // Calculate days between dates
+  const calculateDays = useCallback((startDate, endDate) => {
+    if (!startDate || !endDate) return "N/A";
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+    } catch (error) {
+      console.error("Error calculating days:", error);
+      return "N/A";
+    }
+  }, []);
+
+  // Effect to force LTR direction in textarea
+  useEffect(() => {
+    if (remarksDialogOpen && textareaRef.current) {
+      textareaRef.current.setAttribute('dir', 'ltr');
+      textareaRef.current.style.direction = 'ltr';
+    }
+  }, [remarksDialogOpen]);
+
+  const RemarksDialog = () => {
+    if (!remarksDialogOpen) return null;
+
+    const handleTextInput = (e) => {
+      const input = e.target;
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const value = e.target.value;
+      
+      setRemarks(value);
+      
+      // Restore cursor position after React re-render
+      requestAnimationFrame(() => {
+        if (input) {
+          input.setSelectionRange(start, end);
+        }
+      });
+    };
+
+    return ReactDOM.createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Add Remarks {pendingStatus === "approved" ? "(Optional)" : ""}
+            </h3>
+          </div>
+          <div className="px-6 py-4">
+            <input
+              type="text"
+              ref={textareaRef}
+              value={remarks}
+              onChange={handleTextInput}
+              onInput={handleTextInput}
+              placeholder="Enter remarks for this decision..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              dir="ltr"
+              style={{
+                direction: 'ltr !important',
+                textAlign: 'left !important',
+                unicodeBidi: 'normal'
+              }}
+            />
+          </div>
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setRemarksDialogOpen(false);
+                setRemarks("");
+                setSelectedLeave(null);
+                setPendingStatus(null);
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRemarksSubmit}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                pendingStatus === "approved"
+                  ? "bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                  : "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+              }`}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Submit"}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  // Dropdown component
   const Dropdown = ({ leaveId, currentStatus, onStatusChange }) => {
     const statusOptions = [
-      { value: 'approved', label: 'Approve', color: 'text-green-600', icon: '✓' },
-      { value: 'rejected', label: 'Reject', color: 'text-red-600', icon: '✗' },
-      { value: 'pending', label: 'Mark as Pending', color: 'text-yellow-600', icon: '⏳' }
+      {
+        value: "approved",
+        label: "Approve",
+        color: "text-green-600",
+        icon: "✓",
+      },
+      { value: "rejected", label: "Reject", color: "text-red-600", icon: "✗" },
     ];
 
-    const availableOptions = statusOptions.filter(option => option.value !== currentStatus);
+    const availableOptions = statusOptions.filter(
+      (option) => option.value !== currentStatus
+    );
 
-    // Get button position for dynamic placement
     const buttonRef = buttonRefs.current[leaveId];
     const position = buttonRef ? buttonRef.getBoundingClientRect() : null;
     const style = position
       ? {
-          position: 'fixed',
-          top: position.bottom + window.scrollY + 2, // Position below button, account for scroll
-          left: position.right + window.scrollX - 192, // Align right edge, 192px = w-48 (48 * 4px)
-          zIndex: 1000, // High z-index to ensure visibility
+          position: "fixed",
+          top: position.bottom + window.scrollY + 2,
+          left: position.right + window.scrollX - 192,
+          zIndex: 1000,
         }
-      : { display: 'none' }; // Hide if no position
+      : { display: "none" };
 
     return ReactDOM.createPortal(
       <div
@@ -182,33 +313,15 @@ const LeaveRequestsView = () => {
                 key={option.value}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onStatusChange(leaveId, option.value);
+                  openRemarksDialog(leaveId, option.value);
                 }}
                 className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors duration-150 flex items-center gap-2 ${option.color} disabled:opacity-50 disabled:cursor-not-allowed`}
                 disabled={loading}
               >
-                <span className="text-base" aria-hidden="true">{option.icon}</span>
+                <span className="text-base" aria-hidden="true">
+                  {option.icon}
+                </span>
                 {option.label}
-                {loading && (
-                  <span className="ml-auto">
-                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" aria-hidden="true">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  </span>
-                )}
               </button>
             ))
           ) : (
@@ -218,134 +331,210 @@ const LeaveRequestsView = () => {
           )}
         </div>
       </div>,
-      document.body // Render dropdown at the body level
+      document.body
     );
   };
 
   // Define columns for the DataTable
-  const columns = useMemo(() => [
-    {
-      field: "employee.employeeId",
-      headerName: "Employee ID",
-      sortable: true,
-      renderCell: ({ row }) => row.employee?.employeeId || "N/A",
-    },
-    {
-      field: "fullName",
-      headerName: "Name",
-      sortable: true,
-      renderCell: ({ row }) => formatName(row.employee),
-    },
-    {
-      field: "employee.jobTitle",
-      headerName: "Job Title",
-      sortable: true,
-      renderCell: ({ row }) => row.employee?.jobTitle || "N/A",
-    },
-    {
-      field: "leaveType",
-      headerName: "Leave Type",
-      sortable: true,
-      renderCell: ({ row }) => {
-        const leaveType = row.leaveType;
-        return leaveType ? leaveType.charAt(0).toUpperCase() + leaveType.slice(1) : "N/A";
-      },
-    },
-    {
-      field: "startDate",
-      headerName: "Start Date",
-      sortable: true,
-      renderCell: ({ row }) => formatDate(row.startDate),
-    },
-    {
-      field: "endDate",
-      headerName: "End Date",
-      sortable: true,
-      renderCell: ({ row }) => formatDate(row.endDate),
-    },
-    {
-      field: "reason",
-      headerName: "Reason",
-      sortable: true,
-      renderCell: ({ row }) => row.reason || "N/A",
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      sortable: true,
-      renderCell: ({ row }) => {
-        const status = row.status;
-        const statusColors = {
-          pending: "bg-yellow-100 text-yellow-800",
-          approved: "bg-green-100 text-green-800",
-          rejected: "bg-red-100 text-red-800",
-        };
-
-        return (
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
-              statusColors[status] || "bg-gray-100 text-gray-800"
-            }`}
-          >
-            {status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown"}
+  const columns = useMemo(
+    () => [
+      {
+        field: "employee.employeeId",
+        headerName: "Employee ID",
+        sortable: true,
+        width: "120px",
+        renderCell: ({ row }) => (
+          <span className="font-medium text-gray-900">
+            {row.employee?.employeeId || "N/A"}
           </span>
-        );
+        ),
       },
-    },
-    {
-      field: "actions",
-      headerName: "Actions",
-      sortable: false,
-      renderCell: ({ row }) => {
-        const isDropdownOpen = openDropdownId === row.id;
-        const currentStatus = row.status;
-
-        return (
-          <div className="relative dropdown-container">
-            <button
-              ref={(el) => (buttonRefs.current[row.id] = el)}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleDropdown(row.id);
-              }}
-              className={`p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
+      {
+        field: "fullName",
+        headerName: "Employee Name",
+        sortable: true,
+        width: "180px",
+        renderCell: ({ row }) => (
+          <span className="font-semibold text-gray-800">
+            {formatName(row.employee)}
+          </span>
+        ),
+      },
+      {
+        field: "employee.department",
+        headerName: "Department",
+        sortable: true,
+        width: "150px",
+        renderCell: ({ row }) => (
+          <span className="text-gray-700">
+            {row.employee?.department || "N/A"}
+          </span>
+        ),
+      },
+      {
+        field: "leaveType",
+        headerName: "Leave Type",
+        sortable: true,
+        width: "140px",
+        renderCell: ({ row }) => {
+          const leaveType = row.leaveType;
+          const typeColors = {
+            sick: "bg-red-100 text-red-800",
+            casual: "bg-blue-100 text-blue-800",
+            annual: "bg-green-100 text-green-800",
+            emergency: "bg-orange-100 text-orange-800",
+            maternity: "bg-pink-100 text-pink-800",
+            paternity: "bg-purple-100 text-purple-800",
+          };
+          return (
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                typeColors[leaveType?.toLowerCase()] ||
+                "bg-gray-100 text-gray-800"
               }`}
-              disabled={loading}
-              title="Status actions"
-              aria-label="Status actions"
             >
-              <svg
-                className="w-4 h-4 text-gray-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-              </svg>
-            </button>
-            {isDropdownOpen && (
-              <Dropdown
-                leaveId={row.id}
-                currentStatus={currentStatus}
-                onStatusChange={handleStatusChange}
-              />
-            )}
-          </div>
-        );
+              {leaveType
+                ? leaveType.charAt(0).toUpperCase() + leaveType.slice(1)
+                : "N/A"}
+            </span>
+          );
+        },
       },
-    },
-  ], [openDropdownId, loading, toggleDropdown, handleStatusChange, formatDate, formatName]);
+      {
+        field: "startDate",
+        headerName: "Start Date",
+        sortable: true,
+        width: "120px",
+        renderCell: ({ row }) => (
+          <span className="text-gray-700">{formatDate(row.startDate)}</span>
+        ),
+      },
+      {
+        field: "endDate",
+        headerName: "End Date",
+        sortable: true,
+        width: "120px",
+        renderCell: ({ row }) => (
+          <span className="text-gray-700">{formatDate(row.endDate)}</span>
+        ),
+      },
+      {
+        field: "duration",
+        headerName: "Duration",
+        sortable: false,
+        width: "100px",
+        renderCell: ({ row }) => (
+          <span className="text-gray-700 font-medium">
+            {row.appliedDays + " days"}
+          </span>
+        ),
+      },
+      {
+        field: "reason",
+        headerName: "Reason",
+        sortable: true,
+        width: "200px",
+        renderCell: ({ row }) => (
+          <span className="text-gray-700" title={row.reason}>
+            {row.reason || "N/A"}
+          </span>
+        ),
+      },
+      {
+        field: "status",
+        headerName: "Status",
+        sortable: true,
+        width: "110px",
+        renderCell: ({ row }) => {
+          const status = row.status;
+          const statusColors = {
+            pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+            approved: "bg-green-100 text-green-800 border-green-200",
+            rejected: "bg-red-100 text-red-800 border-red-200",
+          };
 
-  // Initialize employees and fetch leaves
+          return (
+            <span
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                statusColors[status] ||
+                "bg-gray-100 text-gray-800 border-gray-200"
+              }`}
+            >
+              {status
+                ? status.charAt(0).toUpperCase() + status.slice(1)
+                : "Unknown"}
+            </span>
+          );
+        },
+      },
+      {
+        field: "actions",
+        headerName: "Actions",
+        sortable: false,
+        width: "80px",
+        align: "center",
+        renderCell: ({ row }) => {
+          const isDropdownOpen = openDropdownId === row.id;
+          const currentStatus = row.status;
+
+          if (currentStatus !== "pending") {
+            return (
+              <span className="text-xs text-gray-400 italic">
+                {currentStatus === "approved" ? "Approved" : "Rejected"}
+              </span>
+            );
+          }
+
+          return (
+            <div className="relative dropdown-container">
+              <button
+                ref={(el) => (buttonRefs.current[row.id] = el)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDropdown(row.id);
+                }}
+                className={`p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={loading}
+                title="Status actions"
+                aria-label="Status actions"
+              >
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                >
+                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                </svg>
+              </button>
+              {isDropdownOpen && (
+                <Dropdown
+                  leaveId={row.id}
+                  currentStatus={currentStatus}
+                  onStatusChange={handleStatusChange}
+                />
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [
+      openDropdownId,
+      loading,
+      toggleDropdown,
+      handleStatusChange,
+      formatDate,
+      formatName,
+    ]
+  );
+
+  // Initialize and fetch leaves
   useEffect(() => {
     fetchLeaves();
   }, [fetchLeaves]);
-
-  // Handle row selection
-  const handleSelectionChange = useCallback((newSelected) => {
-    setSelectedRows(newSelected);
-  }, []);
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
@@ -364,19 +553,21 @@ const LeaveRequestsView = () => {
       const exportData = leaves.map((leave) => ({
         employeeId: leave.employee?.employeeId || "",
         name: formatName(leave.employee),
-        jobTitle: leave.employee?.jobTitle || "",
+        department: leave.employee?.department || "",
         leaveType: leave.leaveType || "",
         startDate: leave.startDate || "",
         endDate: leave.endDate || "",
+        duration: calculateDays(leave.startDate, leave.endDate),
         reason: leave.reason || "",
         status: leave.status || "",
+        remarks: leave.remarks || "",
       }));
 
       const csvContent = [
-        "Employee ID,Name,Job Title,Leave Type,Start Date,End Date,Reason,Status",
+        "Employee ID,Name,Department,Leave Type,Start Date,End Date,Duration,Reason,Status,Remarks",
         ...exportData.map((row) =>
           Object.values(row)
-            .map(value => `"${String(value).replace(/"/g, '""')}"`)
+            .map((value) => `"${String(value).replace(/"/g, '""')}"`)
             .join(",")
         ),
       ].join("\n");
@@ -385,7 +576,9 @@ const LeaveRequestsView = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `employee_leaves_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `leave_requests_${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -394,7 +587,7 @@ const LeaveRequestsView = () => {
       console.error("Error exporting data:", error);
       alert("Failed to export data. Please try again.");
     }
-  }, [leaves, formatName]);
+  }, [leaves, formatName, calculateDays]);
 
   // Clear error after some time
   useEffect(() => {
@@ -417,19 +610,31 @@ const LeaveRequestsView = () => {
   }
 
   return (
-    <div className="p-4">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Employee Leave Dashboard</h2>
+    <div className="p-6">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {isAdmin ? "All Leave Requests" : "Team Leave Requests"}
+        </h2>
         <p className="text-gray-600 mt-1">
-          Manage leave requests for {initialEmployees.length} subordinate{initialEmployees.length !== 1 ? 's' : ''}
+          {isAdmin
+            ? "Review and manage all pending leave requests across the organization"
+            : "Review and manage leave requests from your team members"}
         </p>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-gray-200 text-red-700 rounded-lg flex items-center justify-between">
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
           <div className="flex items-center">
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
             </svg>
             <span>{error}</span>
           </div>
@@ -439,39 +644,41 @@ const LeaveRequestsView = () => {
             aria-label="Dismiss error"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
             </svg>
           </button>
         </div>
       )}
 
-      <DataTable
-        columns={columns}
-        data={leaves}
-        loading={loading}
-        error={error}
-        statusColorMap={{
-          active: "#10B981",
-          inactive: "#EF4444",
-        }}
-        selectable={true}
-        onSelectionChange={handleSelectionChange}
-        selectedRows={selectedRows}
-        maxSelectable={5}
-        pagination={true}
-        pageSize={5}
-        sortable={true}
-        searchable={true}
-        onRefresh={handleRefresh}
-        onExport={handleExport}
-        emptyStateMessage={
-          initialEmployees.length === 0
-            ? "No subordinates found"
-            : "No leave requests found"
-        }
-        stickyHeader={true}
-        dense={false}
-      />
+      <div className="bg-white rounded-lg shadow-md border border-gray-200">
+        <DataTable
+          columns={columns}
+          data={leaves}
+          loading={loading}
+          error={error}
+          statusColorMap={{
+            pending: "#F59E0B",
+            approved: "#10B981",
+            rejected: "#EF4444",
+          }}
+          selectable={false}
+          pagination={true}
+          pageSize={10}
+          sortable={true}
+          searchable={true}
+          onRefresh={handleRefresh}
+          onExport={handleExport}
+          emptyStateMessage="No pending leave requests found"
+          stickyHeader={true}
+          dense={false}
+        />
+      </div>
+
+      <RemarksDialog />
     </div>
   );
 };
