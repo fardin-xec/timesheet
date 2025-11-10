@@ -33,7 +33,8 @@ const LeaveRequestsView = () => {
     data: null,
     loading: false,
   });
-  const [submitting, setSubmitting] = useState(false); // NEW: Track submission state
+  const [submitting, setSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("pending"); // NEW: Status filter state
   const dropdownRef = useRef(null);
   const buttonRefs = useRef({});
   const textareaRef = useRef(null);
@@ -53,7 +54,7 @@ const LeaveRequestsView = () => {
   const userRole = user?.role?.toLowerCase();
   const isAdmin = userRole === "admin";
 
-  // Fetch leaves based on role
+  // Fetch leaves based on role and status filter
   const fetchLeaves = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -61,9 +62,9 @@ const LeaveRequestsView = () => {
     try {
       let response;
       if (isAdmin) {
-        response = await getAllLeaves({ status: "pending" });
+        response = await getAllLeaves({ status: statusFilter });
       } else {
-        response = await getSubordinateLeaves({ status: "pending" });
+        response = await getSubordinateLeaves({ status: statusFilter });
       }
 
       setLeaves(Array.isArray(response) ? response : []);
@@ -75,12 +76,12 @@ const LeaveRequestsView = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, statusFilter]);
 
   // Update leave status with remarks
   const handleStatusChange = useCallback(
     async (leaveId, newStatus, remarksText = "") => {
-      setSubmitting(true); // NEW: Set submitting state
+      setSubmitting(true);
       setOpenDropdownId(null);
       setRemarksDialogOpen(false);
 
@@ -119,7 +120,7 @@ const LeaveRequestsView = () => {
           );
         }
       } finally {
-        setSubmitting(false); // NEW: Clear submitting state
+        setSubmitting(false);
         setRemarks("");
         setSelectedLeave(null);
         setPendingStatus(null);
@@ -1140,9 +1141,77 @@ const LeaveRequestsView = () => {
         </h2>
         <p className="text-gray-600 mt-1">
           {isAdmin
-            ? "Review and manage all pending leave requests across the organization"
+            ? "Review and manage all leave requests across the organization"
             : "Review and manage leave requests from your team members"}
         </p>
+      </div>
+
+      {/* Status Filter Tabs */}
+      <div className="mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8" aria-label="Status Filter">
+            <button
+              onClick={() => setStatusFilter("pending")}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                statusFilter === "pending"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <span>Pending</span>
+                {statusFilter === "pending" && leaves.length > 0 && (
+                  <span className="bg-yellow-100 text-yellow-800 py-0.5 px-2 rounded-full text-xs font-semibold">
+                    {leaves.length}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setStatusFilter("approved")}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                statusFilter === "approved"
+                  ? "border-green-500 text-green-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Approved</span>
+                {statusFilter === "approved" && leaves.length > 0 && (
+                  <span className="bg-green-100 text-green-800 py-0.5 px-2 rounded-full text-xs font-semibold">
+                    {leaves.length}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setStatusFilter("rejected")}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                statusFilter === "rejected"
+                  ? "border-red-500 text-red-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span>Rejected</span>
+                {statusFilter === "rejected" && leaves.length > 0 && (
+                  <span className="bg-red-100 text-red-800 py-0.5 px-2 rounded-full text-xs font-semibold">
+                    {leaves.length}
+                  </span>
+                )}
+              </div>
+            </button>
+          </nav>
+        </div>
       </div>
 
       {error && (
@@ -1195,7 +1264,7 @@ const LeaveRequestsView = () => {
           searchable={true}
           onRefresh={handleRefresh}
           onExport={handleExport}
-          emptyStateMessage="No pending leave requests found"
+          emptyStateMessage={`No ${statusFilter} leave requests found`}
           stickyHeader={true}
           dense={false}
           onRowClick={handleRowClick}

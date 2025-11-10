@@ -649,6 +649,18 @@ const LeaveDrawer = ({
     if (start < today) {
       return "Cannot apply for past dates";
     }
+    
+    // Check if leave type is CL or SL and date is beyond current year
+    if ((formData.leaveType === 'casual' || formData.leaveType === 'sick')) {
+      const currentYear = new Date().getFullYear();
+      const dec31 = new Date(currentYear, 11, 31); // December 31st of current year
+      dec31.setHours(23, 59, 59, 999);
+      
+      if (start > dec31) {
+        const leaveTypeName = formData.leaveType === 'casual' ? 'Casual Leave' : 'Sick Leave';
+        return `${leaveTypeName} can only be applied within the current leave cycle (Jan–Dec ${currentYear})`;
+      }
+    }
 
     if (formData.endDate) {
       const end = new Date(formData.endDate);
@@ -671,6 +683,18 @@ const LeaveDrawer = ({
 
     if (end < today) {
       return "Cannot apply for past dates";
+    }
+    
+    // Check if leave type is CL or SL and date is beyond current year
+    if ((formData.leaveType === 'casual' || formData.leaveType === 'sick')) {
+      const currentYear = new Date().getFullYear();
+      const dec31 = new Date(currentYear, 11, 31); // December 31st of current year
+      dec31.setHours(23, 59, 59, 999);
+      
+      if (end > dec31) {
+        const leaveTypeName = formData.leaveType === 'casual' ? 'Casual Leave' : 'Sick Leave';
+        return `${leaveTypeName} can only be applied within the current leave cycle (Jan–Dec ${currentYear})`;
+      }
     }
 
     if (formData.startDate) {
@@ -1065,6 +1089,13 @@ const LeaveDrawer = ({
 
   // Get today's date for min attribute in date picker
   const today = new Date().toISOString().split('T')[0];
+  
+  // Get December 31st of current year for max date restriction
+  const currentYear = new Date().getFullYear();
+  const dec31CurrentYear = `${currentYear}-12-31`;
+  
+  // Check if selected leave type is CL or SL
+  const isRestrictedLeaveType = formData.leaveType === 'casual' || formData.leaveType === 'sick';
 
   return (
     <>
@@ -1337,6 +1368,20 @@ const LeaveDrawer = ({
                 </RadioGroup>
               </FormControl>
             </Grid>
+            
+            {/* CL/SL Date Restriction Alert */}
+            {isRestrictedLeaveType && (
+              <Grid item xs={12}>
+                <Alert severity="warning" icon={<CalendarMonth />}>
+                  <Typography variant="body2" fontWeight="600">
+                    Leave Cycle Restriction
+                  </Typography>
+                  <Typography variant="caption">
+                    {formData.leaveType === 'casual' ? 'Casual Leave' : 'Sick Leave'} can only be applied within the current leave cycle (January 1 – December 31, {currentYear})
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
 
             {/* Half Day Type */}
             {formData.durationType === "half-day" && (
@@ -1385,7 +1430,10 @@ const LeaveDrawer = ({
                 onChange={(e) => handleFieldChange("startDate", e.target.value)}
                 onBlur={(e) => handleBlur("startDate", e.target.value)}
                 InputLabelProps={{ shrink: true }}
-                inputProps={{ min: today }}
+                inputProps={{ 
+                  min: today,
+                  max: isRestrictedLeaveType ? dec31CurrentYear : undefined
+                }}
                 error={!!validationErrors.startDate}
                 helperText={validationErrors.startDate}
                 required
@@ -1404,7 +1452,10 @@ const LeaveDrawer = ({
                 onChange={(e) => handleFieldChange("endDate", e.target.value)}
                 onBlur={(e) => handleBlur("endDate", e.target.value)}
                 InputLabelProps={{ shrink: true }}
-                inputProps={{ min: formData.startDate || today }}
+                inputProps={{ 
+                  min: formData.startDate || today,
+                  max: isRestrictedLeaveType ? dec31CurrentYear : undefined
+                }}
                 error={!!validationErrors.endDate}
                 helperText={validationErrors.endDate}
                 required
