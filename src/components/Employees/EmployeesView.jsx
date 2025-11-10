@@ -508,10 +508,9 @@ const EmployeesView = () => {
           payload.currency = employeeData.currency;
         }
         if (
-          employeeData.reportTo !== undefined &&
-          employeeData.reportTo !== null
+          employeeData.reportTo !== undefined 
         ) {
-          payload.reportTo = parseInt(employeeData.reportTo);
+          payload.reportTo = employeeData.reportTo;
         }
 
         // const bankPayload = buildBankAccountPayload(
@@ -537,7 +536,8 @@ const EmployeesView = () => {
       }
 
   
-
+      console.log(payload);
+      
       const method = isNewEmployee ? api.post : api.put;
       const response = await method(endpoint, payload, {
         headers: { Authorization: `Bearer ${token}` },
