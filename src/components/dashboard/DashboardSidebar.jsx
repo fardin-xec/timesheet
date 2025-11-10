@@ -92,7 +92,7 @@ const DashboardSidebar = ({ activePage }) => {
         path: "/leaveRequests",
         icon: EventBusyIcon,
         label: "Leave Requests",
-        show: user?.hasSubordinates,
+        show: user?.role==="admin" || user?.role==="manager",
       },
     ];
 

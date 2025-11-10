@@ -142,7 +142,12 @@ const SuperadminView = () => {
 
   // Validation functions
   const validateMaxAllowed = (value) => {
-    const num = parseInt(value);
+    // Convert to number for validation
+    const num = typeof value === 'string' ? parseInt(value) : value;
+    
+    if (value === "" || value === null || value === undefined) {
+      return "Max allowed is required";
+    }
     if (isNaN(num)) {
       return "Max allowed must be a number";
     }
@@ -207,7 +212,12 @@ const SuperadminView = () => {
   };
 
   const validateAdvanceNoticeDays = (value) => {
-    const num = parseInt(value);
+    // Convert to number for validation
+    const num = typeof value === 'string' ? parseInt(value) : value;
+    
+    if (value === "" || value === null || value === undefined) {
+      return "Advance notice days is required";
+    }
     if (isNaN(num)) {
       return "Advance notice days must be a number";
     }
@@ -249,11 +259,11 @@ const SuperadminView = () => {
       case "maxAllowed":
         // Only allow positive integers, max 365
         if (value === "" || value === null) {
-          sanitizedValue = 0;
+          sanitizedValue = "";
         } else {
           const num = parseInt(value);
           if (isNaN(num) || num < 0) {
-            sanitizedValue = 0;
+            return; // Don't update if invalid
           } else if (num > 365) {
             sanitizedValue = 365;
           } else {
@@ -265,12 +275,12 @@ const SuperadminView = () => {
       case "carryForwardMax":
         // Only allow positive integers, max = maxAllowed
         if (value === "" || value === null) {
-          sanitizedValue = 0;
+          sanitizedValue = "";
         } else {
           const num = parseInt(value);
           const maxAllowed = editingRule?.maxAllowed || 365;
           if (isNaN(num) || num < 0) {
-            sanitizedValue = 0;
+            return; // Don't update if invalid
           } else if (num > maxAllowed) {
             sanitizedValue = maxAllowed;
           } else {
@@ -282,11 +292,11 @@ const SuperadminView = () => {
       case "accrualRate":
         // Only allow positive numbers with decimals, max 30
         if (value === "" || value === null) {
-          sanitizedValue = 0;
+          sanitizedValue = "";
         } else {
           const num = parseFloat(value);
           if (isNaN(num) || num < 0) {
-            sanitizedValue = 0;
+            return; // Don't update if invalid
           } else if (num > 30) {
             sanitizedValue = 30;
           } else {
@@ -299,11 +309,11 @@ const SuperadminView = () => {
       case "minTenureMonths":
         // Only allow positive integers, max 120
         if (value === "" || value === null) {
-          sanitizedValue = 0;
+          sanitizedValue = "";
         } else {
           const num = parseInt(value);
           if (isNaN(num) || num < 0) {
-            sanitizedValue = 0;
+            return; // Don't update if invalid
           } else if (num > 120) {
             sanitizedValue = 120;
           } else {
@@ -315,11 +325,11 @@ const SuperadminView = () => {
       case "advanceNoticeDays":
         // Only allow positive integers, min 1, max 90
         if (value === "" || value === null) {
-          sanitizedValue = 1;
+          sanitizedValue = "";
         } else {
           const num = parseInt(value);
           if (isNaN(num) || num < 1) {
-            sanitizedValue = 1;
+            return; // Don't update if invalid
           } else if (num > 90) {
             sanitizedValue = 90;
           } else {
@@ -460,7 +470,15 @@ const SuperadminView = () => {
 
   // Handle Edit Rule
   const handleEditRule = (rule) => {
-    setEditingRule({ ...rule });
+    // Ensure numeric fields have proper values
+    setEditingRule({ 
+      ...rule,
+      maxAllowed: rule.maxAllowed || 0,
+      carryForwardMax: rule.carryForwardMax || "",
+      accrualRate: rule.accrualRate || "",
+      minTenureMonths: rule.minTenureMonths || "",
+      advanceNoticeDays: rule.advanceNoticeDays || 1,
+    });
     setEditDialogOpen(true);
     setValidationErrors({});
     setTouched({});
@@ -485,15 +503,25 @@ const SuperadminView = () => {
 
     try {
       setRulesLoading(true);
-      await updateLeaveRule(editingRule.id, {
-        maxAllowed: editingRule.maxAllowed,
-        carryForwardMax: editingRule.carryForwardMax || null,
-        accrualRate: editingRule.accrualRate || null,
+      
+      // Prepare the update payload with proper null/number handling
+      const updatePayload = {
+        maxAllowed: parseInt(editingRule.maxAllowed) || 0,
+        carryForwardMax: editingRule.carryForwardMax === "" || editingRule.carryForwardMax === null 
+          ? null 
+          : parseInt(editingRule.carryForwardMax),
+        accrualRate: editingRule.accrualRate === "" || editingRule.accrualRate === null 
+          ? null 
+          : parseFloat(editingRule.accrualRate),
         isActive: editingRule.isActive,
-        minTenureMonths: editingRule.minTenureMonths || null,
-        advanceNoticeDays: editingRule.advanceNoticeDays,
+        minTenureMonths: editingRule.minTenureMonths === "" || editingRule.minTenureMonths === null 
+          ? 0 
+          : parseInt(editingRule.minTenureMonths),
+        advanceNoticeDays: parseInt(editingRule.advanceNoticeDays) || 1,
         requiresDocument: editingRule.requiresDocument,
-      });
+      };
+
+      await updateLeaveRule(editingRule.id, updatePayload);
 
       await loadLeaveRules();
       setEditDialogOpen(false);
@@ -527,6 +555,22 @@ const SuperadminView = () => {
 
   const isFormValid = () => {
     if (!editingRule) return false;
+    
+    // Check if required fields are filled and valid
+    const maxAllowed = editingRule.maxAllowed;
+    const advanceNoticeDays = editingRule.advanceNoticeDays;
+    
+    // maxAllowed must be a valid number > 0
+    if (maxAllowed === "" || maxAllowed === null || maxAllowed === undefined || maxAllowed === 0) {
+      return false;
+    }
+    
+    // advanceNoticeDays must be a valid number >= 1
+    if (advanceNoticeDays === "" || advanceNoticeDays === null || advanceNoticeDays === undefined || advanceNoticeDays < 1) {
+      return false;
+    }
+    
+    // Check for validation errors
     const errors = validateAllFields(editingRule);
     return Object.keys(errors).length === 0;
   };
@@ -999,7 +1043,7 @@ const SuperadminView = () => {
             <TextField
               label="Max Allowed"
               type="number"
-              value={editingRule?.maxAllowed || 0}
+              value={editingRule?.maxAllowed || ""}
               onChange={(e) => handleFieldChange("maxAllowed", e.target.value)}
               onBlur={() => handleFieldBlur("maxAllowed")}
               onKeyDown={(e) => {
@@ -1018,7 +1062,7 @@ const SuperadminView = () => {
             <TextField
               label="Carry Forward Max"
               type="number"
-              value={editingRule?.carryForwardMax || 0}
+              value={editingRule?.carryForwardMax || ""}
               onChange={(e) => handleFieldChange("carryForwardMax", e.target.value)}
               onBlur={() => handleFieldBlur("carryForwardMax")}
               onKeyDown={(e) => {
@@ -1036,7 +1080,7 @@ const SuperadminView = () => {
             <TextField
               label="Accrual Rate"
               type="number"
-              value={editingRule?.accrualRate || 0}
+              value={editingRule?.accrualRate || ""}
               onChange={(e) => handleFieldChange("accrualRate", e.target.value)}
               onBlur={() => handleFieldBlur("accrualRate")}
               onKeyDown={(e) => {
@@ -1054,7 +1098,7 @@ const SuperadminView = () => {
             <TextField
               label="Minimum Tenure (Months)"
               type="number"
-              value={editingRule?.minTenureMonths || 0}
+              value={editingRule?.minTenureMonths || ""}
               onChange={(e) => handleFieldChange("minTenureMonths", e.target.value)}
               onBlur={() => handleFieldBlur("minTenureMonths")}
               onKeyDown={(e) => {
@@ -1072,7 +1116,7 @@ const SuperadminView = () => {
             <TextField
               label="Advance Notice Days"
               type="number"
-              value={editingRule?.advanceNoticeDays || 1}
+              value={editingRule?.advanceNoticeDays || ""}
               onChange={(e) => handleFieldChange("advanceNoticeDays", e.target.value)}
               onBlur={() => handleFieldBlur("advanceNoticeDays")}
               onKeyDown={(e) => {
