@@ -86,7 +86,7 @@ const ProfileForm = () => {
     ifscCode: "",
     accountNumber: "",
     swiftCode: "",
-    ibankNo: "",
+    ibanNo: "",
   });
   const [bankErrors, setBankErrors] = useState({});
 
@@ -215,7 +215,8 @@ const ProfileForm = () => {
     if (!ifscRegex.test(code)) {
       return {
         valid: false,
-        message: "IFSC code must be 11 characters  with proper format (e.g., SBIN0001234)",
+        message:
+          "IFSC code must be 11 characters  with proper format (e.g., SBIN0001234)",
       };
     }
     return { valid: true, message: "" };
@@ -461,7 +462,7 @@ const ProfileForm = () => {
         ifscCode: bankData.ifscCode || "",
         accountNumber: bankData.accountNo || "",
         swiftCode: bankData.swiftCode || "",
-        ibankNo: bankData.ibankNo || "",
+        ibanNo: bankData.ibanNo || "",
       });
 
       const docsData = await personalInfoAPI.getDocuments(user.employee.id);
@@ -638,16 +639,16 @@ const ProfileForm = () => {
       } else {
         delete newErrors.swiftCode;
       }
-    } else if (field === "ibankNo") {
-      if (bankInfo.ibankNo && bankInfo.ibankNo.trim() !== "") {
-        const validation = validateIBAN(bankInfo.ibankNo);
+    } else if (field === "ibanNo") {
+      if (bankInfo.ibanNo && bankInfo.ibanNo.trim() !== "") {
+        const validation = validateIBAN(bankInfo.ibanNo);
         if (!validation.valid) {
-          newErrors.ibankNo = validation.message;
+          newErrors.ibanNo = validation.message;
         } else {
-          delete newErrors.ibankNo;
+          delete newErrors.ibanNo;
         }
       } else {
-        delete newErrors.ibankNo;
+        delete newErrors.ibanNo;
       }
     }
 
@@ -1727,20 +1728,22 @@ const ProfileForm = () => {
                     { label: "Bank Name", value: bankInfo.bankName },
                     { label: "City", value: bankInfo.city },
                     { label: "Branch Name", value: bankInfo.branchName },
-                    { label: "IFSC Code", value: bankInfo.ifscCode },
+
                     ...(personalInfo.workLocation?.trim().toLowerCase() ===
                     "on-site"
                       ? [
                           { label: "Swift Code", value: bankInfo.swiftCode },
-                          { label: "IBank Number", value: bankInfo.iban },
+                          { label: "IBan Number", value: bankInfo.ibanNo },
                         ]
-                      : []),
-                    {
-                      label: "Account Number",
-                      value: bankInfo.accountNumber
-                        ? `****${bankInfo.accountNumber.slice(-4)}`
-                        : "Not provided",
-                    },
+                      : [
+                          { label: "IFSC Code", value: bankInfo.ifscCode },
+                          {
+                            label: "Account Number",
+                            value: bankInfo.accountNumber
+                              ? `****${bankInfo.accountNumber.slice(-4)}`
+                              : "Not provided",
+                          },
+                        ]),
                   ].map((item, idx) => (
                     <motion.div
                       key={idx}
@@ -1850,52 +1853,55 @@ const ProfileForm = () => {
                       )}
                     </motion.div>
                   </div>
+                  {personalInfo.workLocation !== "On-site" && (
+                    <div className="pi-form-row">
+                      <motion.div
+                        className="pi-form-group"
+                        variants={itemVariants}
+                      >
+                        <label>IFSC Code</label>
+                        <input
+                          name="ifscCode"
+                          type="text"
+                          value={bankInfo.ifscCode}
+                          onChange={handleBankChange}
+                          onBlur={() => handleBankBlur("ifscCode")}
+                          placeholder="e.g., SBIN0001234"
+                          className={`pi-input ${
+                            personalErrors.midName ? "error" : ""
+                          }`}
+                        />
+                        {bankErrors.ifscCode && (
+                          <span className="pi-error">
+                            {bankErrors.ifscCode}
+                          </span>
+                        )}
+                      </motion.div>
 
-                  <div className="pi-form-row">
-                    <motion.div
-                      className="pi-form-group"
-                      variants={itemVariants}
-                    >
-                      <label>IFSC Code</label>
-                      <input
-                        name="ifscCode"
-                        type="text"
-                        value={bankInfo.ifscCode}
-                        onChange={handleBankChange}
-                        onBlur={() => handleBankBlur("ifscCode")}
-                        placeholder="e.g., SBIN0001234"
-                        className={`pi-input ${
-                          personalErrors.midName ? "error" : ""
-                        }`}
-                      />
-                      {bankErrors.ifscCode && (
-                        <span className="pi-error">{bankErrors.ifscCode}</span>
-                      )}
-                    </motion.div>
-
-                    <motion.div
-                      className="pi-form-group"
-                      variants={itemVariants}
-                    >
-                      <label>Account Number</label>
-                      <input
-                        name="accountNumber"
-                        type="text"
-                        value={bankInfo.accountNumber}
-                        onChange={handleBankChange}
-                        onBlur={() => handleBankBlur("accountNumber")}
-                        placeholder="9-18 digits"
-                        className={`pi-input ${
-                          personalErrors.midName ? "error" : ""
-                        }`}
-                      />
-                      {bankErrors.accountNumber && (
-                        <span className="pi-error">
-                          {bankErrors.accountNumber}
-                        </span>
-                      )}
-                    </motion.div>
-                  </div>
+                      <motion.div
+                        className="pi-form-group"
+                        variants={itemVariants}
+                      >
+                        <label>Account Number</label>
+                        <input
+                          name="accountNumber"
+                          type="text"
+                          value={bankInfo.accountNumber}
+                          onChange={handleBankChange}
+                          onBlur={() => handleBankBlur("accountNumber")}
+                          placeholder="9-18 digits"
+                          className={`pi-input ${
+                            personalErrors.midName ? "error" : ""
+                          }`}
+                        />
+                        {bankErrors.accountNumber && (
+                          <span className="pi-error">
+                            {bankErrors.accountNumber}
+                          </span>
+                        )}
+                      </motion.div>
+                    </div>
+                  )}
                   {personalInfo.workLocation === "On-site" && (
                     <div className="pi-form-row">
                       <motion.div
@@ -1927,13 +1933,13 @@ const ProfileForm = () => {
                         className="pi-form-group"
                         variants={itemVariants}
                       >
-                        <label>IBank Number</label>
+                        <label>IBan Number</label>
                         <input
-                          name="ibankNo"
+                          name="ibanNo"
                           type="text"
-                          value={bankInfo.ibankNo}
+                          value={bankInfo.ibanNo}
                           onChange={handleBankChange}
-                          onBlur={() => handleBankBlur("ibankNo")}
+                          onBlur={() => handleBankBlur("ibanNo")}
                           placeholder="32-34 digits"
                           className={`pi-input ${
                             personalErrors.midName ? "error" : ""
@@ -1941,8 +1947,8 @@ const ProfileForm = () => {
                           maxLength="34"
                           minLength="32"
                         />
-                        {bankErrors.ibankNo && (
-                          <span className="pi-error">{bankErrors.ibankNo}</span>
+                        {bankErrors.ibanNo && (
+                          <span className="pi-error">{bankErrors.ibanNo}</span>
                         )}
                       </motion.div>
                     </div>

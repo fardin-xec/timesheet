@@ -925,7 +925,7 @@ export const personalInfoAPI = {
         ifscCode: data.ifscCode?.toUpperCase().trim() || "",
         accountNo: data.accountNumber?.trim() || "",
         swiftCode:data.swiftCode?.trim() || "",
-        ibankNo:data.ibankNo?.trim() || "",
+        ibanNo:data.ibanNo?.trim() || "",
       };
 
       const response = await api.put(`/personal/bank-account`, payload, {
@@ -2050,6 +2050,103 @@ export const getLeaveTypesWithBalances = async () => {
   return response.data.data;
 };
 
+/**
+ * Validate leave dates (check weekends, holidays, sandwiching)
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise} Validation result with details
+ */
+export const validateLeaveDates = async (startDate, endDate) => {
+  const token = getToken();
+  
+  const response = await api.get('/leaves/validate-dates', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    params: {
+      startDate,
+      endDate
+    }
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to validate leave dates');
+  }
+
+  return response.data;
+};
+
+/**
+ * Get organization holidays
+ * @param {number} year - Year (optional, defaults to current year)
+ * @returns {Promise} Array of holidays
+ */
+export const getHolidays = async (year) => {
+  const token = getToken();
+  
+  const params = year ? { year: year.toString() } : {};
+  
+  const response = await api.get('/leaves/holidays', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    params
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to fetch holidays');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Create a new holiday (Admin only)
+ * @param {Object} holidayData - Holiday data { name, date, description }
+ * @returns {Promise} Created holiday
+ */
+export const createHoliday = async (holidayData) => {
+  const token = getToken();
+  
+  const response = await api.post('/leaves/holidays', holidayData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(response.data.message || 'Failed to create holiday');
+  }
+
+  return response.data.data;
+};
+
+/**
+ * Delete a holiday (Admin only)
+ * @param {number} holidayId - Holiday ID
+ * @returns {Promise} Deletion confirmation
+ */
+export const deleteHoliday = async (holidayId) => {
+  const token = getToken();
+  
+  const response = await api.delete(`/leaves/holidays/${holidayId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status !== 200 && response.status !== 204) {
+    throw new Error(response.data.message || 'Failed to delete holiday');
+  }
+
+  return response.data;
+};
+
+
 /*
  * ==================== LEGACY COMPATIBILITY ====================
  * Keep existing functions for backward compatibility
@@ -2117,4 +2214,10 @@ export const leaveAPI = {
   deleteLeaveEntry,
   updateLeaveStatus,
   fetchLeaveBalance,
+
+  //holidays:
+  validateLeaveDates,
+  getHolidays,
+  createHoliday,
+  deleteHoliday,
 };

@@ -10,6 +10,7 @@ import {
   Button,
   Menu,
   MenuItem,
+  Pagination,
 } from "@mui/material";
 import { MoreVertical, User, UserX, Plus, Trash2 } from "lucide-react";
 import { debounce } from "lodash";
@@ -29,7 +30,7 @@ import DeleteConfirmationDialog from "../common/DeleteConfirmationDialog";
 import EmployeeProfileDialog from "./EmployeeProfileDialog";
 import EmployeeDialog from "../leave/EmployeeLeaveDialog";
 import AttendanceEmployeeDialog from "../Attendance/AttendanceEmployeeDialog";
-import InactivationDialog from "./InactivationDialog"; // Import the new dialog
+import InactivationDialog from "./InactivationDialog";
 import api from "../../utils/api_call";
 import "../../styles/employee.css";
 
@@ -70,6 +71,10 @@ const EmployeesView = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [employeesPerPage] = useState(10);
+
   // New state for inactivation dialog
   const [inactivationDialogOpen, setInactivationDialogOpen] = useState(false);
   const [employeeToInactivate, setEmployeeToInactivate] = useState(null);
@@ -92,7 +97,7 @@ const EmployeesView = () => {
     [orgId]
   );
 
-  // Animation variants (keeping all existing variants)
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -184,12 +189,11 @@ const EmployeesView = () => {
   };
 
   const handleProfileDialogClose = async () => {
-  setProfileDialogOpen(false);
-  setSelectedEmployee(null);
-  
-  // Refresh employee data when dialog closes
-  await handleRefresh();
-}
+    setProfileDialogOpen(false);
+    setSelectedEmployee(null);
+    await handleRefresh();
+  };
+
   const fetchData = useCallback(
     async (url, setter, errorMessage) => {
       try {
@@ -241,7 +245,7 @@ const EmployeesView = () => {
         department: emp.department,
         designation: emp.designation,
         jobTitle: emp.jobTitle,
-        employmentType:emp.employmentType,
+        employmentType: emp.employmentType,
         workLocation: emp.workLocation,
         dob: emp.dob,
         joiningDate: emp.joiningDate,
@@ -260,8 +264,8 @@ const EmployeesView = () => {
         qidExpirationDate: emp.qidExpiration,
         passportNumber: emp.passportNumber,
         passportValidTill: emp.passportExpiration,
-        isProbation:emp.isProbation,
-        confirmationDate:emp.confirmationDate,
+        isProbation: emp.isProbation,
+        confirmationDate: emp.confirmationDate,
       }));
       setEmployees(processedEmployees);
       setError(null);
@@ -364,6 +368,7 @@ const EmployeesView = () => {
 
   const handleSearchChange = (e) => {
     debouncedSearch(e.target.value);
+    setCurrentPage(1); // Reset to first page on search
   };
 
   const filteredEmployees = useMemo(() => {
@@ -378,6 +383,20 @@ const EmployeesView = () => {
       ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [searchTerm, employees]);
+
+  // Pagination logic
+  const indexOfLastEmployee = currentPage * employeesPerPage;
+  const indexOfFirstEmployee = indexOfLastEmployee - employeesPerPage;
+  const currentEmployees = filteredEmployees.slice(
+    indexOfFirstEmployee,
+    indexOfLastEmployee
+  );
+  const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleMenuOpen = (event, employee) => {
     event.stopPropagation();
@@ -403,25 +422,6 @@ const EmployeesView = () => {
 
       setLoading(true);
 
-      // const buildBankAccountPayload = (bankInfo) => {
-      //   if (!bankInfo) return undefined;
-      //   return {
-      //     accountHolderName:
-      //       bankInfo.account_holder_name || bankInfo.accountHolderName,
-      //     bankName: bankInfo.bank_name || bankInfo.bankName,
-      //     branchName: bankInfo.branch_name || bankInfo.branchName,
-      //     city: bankInfo.city,
-      //     ifscCode: bankInfo.ifsc_code || bankInfo.ifscCode,
-      //     accountNumber: bankInfo.account_number || bankInfo.accountNumber,
-      //     swiftCode:
-      //       bankInfo.swiftCode || bankInfo.swiftCode || null,
-      //     ibankNo:
-      //       bankInfo.ibankNo ||
-      //       bankInfo.ibankNo ||
-      //       null,
-      //   };
-      // };
-
       if (isNewEmployee) {
         endpoint = `/employees`;
         payload = {
@@ -441,8 +441,8 @@ const EmployeesView = () => {
           workLocation: employeeData.workLocation || null,
           address: employeeData.address || null,
           joiningDate: employeeData.joiningDate || null,
-          isProbation: employeeData.isProbation|| false,
-          confirmationDate: employeeData.confirmationDate||null,
+          isProbation: employeeData.isProbation || false,
+          confirmationDate: employeeData.confirmationDate || null,
           bio: employeeData.bio || null,
           ctc: employeeData.ctc ? employeeData.ctc.toString() : null,
           currency: employeeData.currency || null,
@@ -469,10 +469,7 @@ const EmployeesView = () => {
             null,
           swiftCode:
             employeeData.bank_info?.swiftCode || employeeData.swiftCode || null,
-          ibankNo:
-            employeeData.bank_info?.ibankNo ||
-            employeeData.ibankNo ||
-            null,
+          ibanNo: employeeData.bank_info?.ibanNo || employeeData.ibanNo || null,
           qid: employeeData.qid || null,
           qidExpiration: employeeData.qidExpirationDate || null,
           passportNumber: employeeData.passportNumber || null,
@@ -496,8 +493,8 @@ const EmployeesView = () => {
           workLocation: employeeData.workLocation,
           address: employeeData.address,
           joiningDate: employeeData.joiningDate,
-          isProbation: employeeData.isProbation|| false,
-          confirmationDate: employeeData.confirmationDate||null,
+          isProbation: employeeData.isProbation || false,
+          confirmationDate: employeeData.confirmationDate || null,
           bio: employeeData.bio,
         };
 
@@ -507,18 +504,9 @@ const EmployeesView = () => {
         if (employeeData.currency) {
           payload.currency = employeeData.currency;
         }
-        if (
-          employeeData.reportTo !== undefined 
-        ) {
+        if (employeeData.reportTo !== undefined) {
           payload.reportTo = employeeData.reportTo;
         }
-
-        // const bankPayload = buildBankAccountPayload(
-        //   employeeData.bank_info || employeeData
-        // );
-        // if (bankPayload) {
-        //   Object.assign(payload, bankPayload);
-        // }
 
         if (employeeData.qid) payload.qid = employeeData.qid;
         if (employeeData.qidExpirationDate)
@@ -531,13 +519,10 @@ const EmployeesView = () => {
         Object.keys(payload).forEach(
           (key) => payload[key] === undefined && delete payload[key]
         );
-
-       
       }
 
-  
       console.log(payload);
-      
+
       const method = isNewEmployee ? api.post : api.put;
       const response = await method(endpoint, payload, {
         headers: { Authorization: `Bearer ${token}` },
@@ -567,7 +552,6 @@ const EmployeesView = () => {
     } finally {
       setLoading(false);
       setDrawerOpen(false);
-      // setProfileDialqogOpen(false);
     }
   };
 
@@ -576,7 +560,6 @@ const EmployeesView = () => {
     setSelectedEmployee(null);
   };
 
-  // Updated handleToggleStatus function with reason and remarks parameters
   const handleToggleStatus = async (
     reason = null,
     remarks = null,
@@ -585,10 +568,9 @@ const EmployeesView = () => {
     if (!menuEmployee && !employeeToInactivate) return;
 
     const employee = menuEmployee || employeeToInactivate;
-    //check if inactivationDate is today then set to inactive else to pending_inactive
-    const isActivating = employee.status === "inactive"|| employee.status === "pending_inactive";
+    const isActivating =
+      employee.status === "inactive" || employee.status === "pending_inactive";
     console.log(isActivating);
-    
 
     try {
       setIsUpdatingStatus(true);
@@ -597,12 +579,10 @@ const EmployeesView = () => {
       let payload;
 
       if (isActivating) {
-        // Activating employee
         payload = {
           status: "ACTIVE",
         };
       } else {
-        // Only compare date part, not time
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -610,7 +590,6 @@ const EmployeesView = () => {
         selectedDate.setHours(0, 0, 0, 0);
 
         const isToday = selectedDate.getTime() === today.getTime();
-        // const isFuture = selectedDate.getTime() > today.getTime();
 
         if (selectedDate.getTime() < today.getTime()) {
           setToastMessage("Inactivation date cannot be in the past");
@@ -640,7 +619,6 @@ const EmployeesView = () => {
       );
       setToastOpen(true);
 
-      // Close the inactivation dialog if open
       if (inactivationDialogOpen) {
         setInactivationDialogOpen(false);
         setEmployeeToInactivate(null);
@@ -654,16 +632,13 @@ const EmployeesView = () => {
     }
   };
 
-  // New function to handle status toggle click
   const handleStatusToggleClick = () => {
     if (!menuEmployee) return;
 
     if (menuEmployee.status === "active") {
-      // Show inactivation dialog
       setEmployeeToInactivate(menuEmployee);
       setInactivationDialogOpen(true);
     } else {
-      // Directly activate
       handleToggleStatus();
     }
 
@@ -968,98 +943,139 @@ const EmployeesView = () => {
                     </Typography>
                   </motion.div>
                 ) : (
-                  <motion.div
-                    className="space-y-2"
-                    variants={containerVariants}
-                  >
-                    <AnimatePresence>
-                      {filteredEmployees.map((employee, index) => (
-                        <motion.div
-                          key={employee.id}
-                          custom={index}
-                          variants={employeeCardVariants}
-                          initial="hidden"
-                          animate="visible"
-                          exit="hidden"
-                          whileHover="hover"
-                          whileTap="tap"
-                          className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200 hover:shadow-md transition-all duration-200"
-                          onClick={() => handleEmployeeClick(employee)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="relative">
+                  <>
+                    <motion.div
+                      className="space-y-2"
+                      variants={containerVariants}
+                    >
+                      <AnimatePresence>
+                        {currentEmployees.map((employee, index) => (
+                          <motion.div
+                            key={employee.id}
+                            custom={index}
+                            variants={employeeCardVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="hidden"
+                            whileHover="hover"
+                            whileTap="tap"
+                            className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200 hover:shadow-md transition-all duration-200"
+                            onClick={() => handleEmployeeClick(employee)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="relative">
+                                <motion.div
+                                  whileHover={{ scale: 1.1 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <Avatar
+                                    src={
+                                      "http://localhost:3000" + employee.avatar
+                                    }
+                                    alt={`${employee.firstName} ${employee.lastName}`}
+                                    className="w-12 h-12"
+                                  />
+                                </motion.div>
+                                {employee.status === "active" && (
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ delay: 0.3, type: "spring" }}
+                                    className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"
+                                  />
+                                )}
+                                {employee.status === "pending_inactive" && (
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ delay: 0.3, type: "spring" }}
+                                    className="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full border-2 border-white"
+                                  />
+                                )}
+                              </div>
+                              <div>
+                                <motion.div
+                                  className="font-semibold text-gray-800"
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.1 }}
+                                >
+                                  {employee.firstName} {employee.lastName}
+                                </motion.div>
+                                <motion.div
+                                  className="text-sm text-gray-500"
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.2 }}
+                                >
+                                  {employee.jobTitle} • {employee.department}
+                                </motion.div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                              <motion.div
+                                className="text-xs text-gray-500 text-right"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.3 }}
+                              >
+                                <div className="font-medium">Joined on</div>
+                                <div>{employee.joiningDate}</div>
+                              </motion.div>
                               <motion.div
                                 whileHover={{ scale: 1.1 }}
-                                transition={{ duration: 0.2 }}
+                                whileTap={{ scale: 0.9 }}
                               >
-                                <Avatar
-                                  src={"http://localhost:3000"+employee.avatar}
-                                  alt={`${employee.firstName} ${employee.lastName}`}
-                                  className="w-12 h-12"
-                                />
-                              </motion.div>
-                              {employee.status === "active" && (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ delay: 0.3, type: "spring" }}
-                                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"
-                                />
-                              )}
-                              {employee.status === "pending_inactive" && (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ delay: 0.3, type: "spring" }}
-                                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full border-2 border-white"
-                                />
-                              )}
-                            </div>
-                            <div>
-                              <motion.div
-                                className="font-semibold text-gray-800"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 }}
-                              >
-                                {employee.firstName} {employee.lastName}
-                              </motion.div>
-                              <motion.div
-                                className="text-sm text-gray-500"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.2 }}
-                              >
-                                {employee.jobTitle} • {employee.department}
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => handleMenuOpen(e, employee)}
+                                >
+                                  <MoreVertical size={16} />
+                                </IconButton>
                               </motion.div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <motion.div
-                              className="text-xs text-gray-500 text-right"
-                              initial={{ opacity: 0, x: 10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.3 }}
-                            >
-                              <div className="font-medium">Joined on</div>
-                              <div>{employee.joiningDate}</div>
-                            </motion.div>
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={(e) => handleMenuOpen(e, employee)}
-                              >
-                                <MoreVertical size={16} />
-                              </IconButton>
-                            </motion.div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </motion.div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="flex justify-center mt-6 mb-4"
+                      >
+                        <Pagination
+                          count={totalPages}
+                          page={currentPage}
+                          onChange={handlePageChange}
+                          color="primary"
+                          size="large"
+                          showFirstButton
+                          showLastButton
+                          sx={{
+                            "& .MuiPaginationItem-root": {
+                              fontSize: "1rem",
+                            },
+                          }}
+                        />
+                      </motion.div>
+                    )}
+
+                    {/* Results info */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="text-center text-sm text-gray-500 mt-2"
+                    >
+                      Showing {indexOfFirstEmployee + 1} to{" "}
+                      {Math.min(indexOfLastEmployee, filteredEmployees.length)}{" "}
+                      of {filteredEmployees.length} employees
+                    </motion.div>
+                  </>
                 )}
               </>
             )}

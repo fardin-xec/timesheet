@@ -128,7 +128,7 @@ const EmployeeForm = ({
     branchName: "",
     ifscCode: "",
     accountNumber: "",
-    ibankNo: "",
+    ibanNo: "",
     swiftCode: "",
 
     // Document Information
@@ -809,16 +809,16 @@ const EmployeeForm = ({
       } else {
         delete newOptionalErrors.swiftCode;
       }
-    } else if (field === "ibankNo") {
-      if (employeeData.ibankNo && employeeData.ibankNo.trim() !== "") {
-        const validation = validateIBAN(employeeData.ibankNo);
+    } else if (field === "ibanNo") {
+      if (employeeData.ibanNo && employeeData.ibanNo.trim() !== "") {
+        const validation = validateIBAN(employeeData.ibanNo);
         if (!validation.valid) {
-          newOptionalErrors.ibankNo = validation.message;
+          newOptionalErrors.ibanNo = validation.message;
         } else {
-          delete newOptionalErrors.ibankNo;
+          delete newOptionalErrors.ibanNo;
         }
       } else {
-        delete newOptionalErrors.ibankNo;
+        delete newOptionalErrors.ibanNo;
       }
     } else if (field === "accountNumber") {
       if (
@@ -1662,47 +1662,48 @@ const EmployeeForm = ({
             <span className="input-error">{optionalErrors.branchName}</span>
           )}
         </div>
-
-        <div className="grid-cols-2">
-          <div className="input-wrapper">
-            <label className="input-label">IFSC Code</label>
-            <input
-              type="text"
-              className={`input-field ${
-                optionalErrors.ifscCode ? "error" : ""
-              }`}
-              value={employeeData.ifscCode}
-              onChange={(e) => handleInputChange("ifscCode", e.target.value)}
-              onBlur={() => handleBlur("ifscCode")}
-              maxLength="11"
-            />
-            {optionalErrors.ifscCode && (
-              <span className="input-error">{optionalErrors.ifscCode}</span>
-            )}
+        {employeeData.workLocation !== "On-site" && (
+          <div className="grid-cols-2">
+            <div className="input-wrapper">
+              <label className="input-label">IFSC Code</label>
+              <input
+                type="text"
+                className={`input-field ${
+                  optionalErrors.ifscCode ? "error" : ""
+                }`}
+                value={employeeData.ifscCode}
+                onChange={(e) => handleInputChange("ifscCode", e.target.value)}
+                onBlur={() => handleBlur("ifscCode")}
+                maxLength="11"
+              />
+              {optionalErrors.ifscCode && (
+                <span className="input-error">{optionalErrors.ifscCode}</span>
+              )}
+            </div>
+            <div className="input-wrapper">
+              <label className="input-label">Account Number</label>
+              <input
+                type="text"
+                className={`input-field ${
+                  optionalErrors.accountNumber ? "error" : ""
+                }`}
+                value={employeeData.accountNumber}
+                onChange={(e) =>
+                  handleInputChange("accountNumber", e.target.value)
+                }
+                onBlur={() => handleBlur("accountNumber")}
+                placeholder="9-18 digits"
+                maxLength="18"
+                minLength="9"
+              />
+              {optionalErrors.accountNumber && (
+                <span className="input-error">
+                  {optionalErrors.accountNumber}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="input-wrapper">
-            <label className="input-label">Account Number</label>
-            <input
-              type="text"
-              className={`input-field ${
-                optionalErrors.accountNumber ? "error" : ""
-              }`}
-              value={employeeData.accountNumber}
-              onChange={(e) =>
-                handleInputChange("accountNumber", e.target.value)
-              }
-              onBlur={() => handleBlur("accountNumber")}
-              placeholder="9-18 digits"
-              maxLength="18"
-              minLength="9"
-            />
-            {optionalErrors.accountNumber && (
-              <span className="input-error">
-                {optionalErrors.accountNumber}
-              </span>
-            )}
-          </div>
-        </div>
+        )}
         {employeeData.workLocation === "On-site" && (
           <div className="grid-cols-2">
             <div className="input-wrapper">
@@ -1723,21 +1724,21 @@ const EmployeeForm = ({
               )}
             </div>
             <div className="input-wrapper">
-              <label className="input-label">IBank Number</label>
+              <label className="input-label">IBan Number</label>
               <input
                 type="text"
                 className={`input-field ${
-                  optionalErrors.ibankNo ? "error" : ""
+                  optionalErrors.ibanNo ? "error" : ""
                 }`}
-                value={employeeData.ibankNo}
-                onChange={(e) => handleInputChange("ibankNo", e.target.value)}
-                onBlur={() => handleBlur("ibankNo")}
+                value={employeeData.ibanNo}
+                onChange={(e) => handleInputChange("ibanNo", e.target.value)}
+                onBlur={() => handleBlur("ibanNo")}
                 placeholder="32-34 digits"
                 maxLength="34"
                 minLength="32"
               />
-              {optionalErrors.ibankNo && (
-                <span className="input-error">{optionalErrors.ibankNo}</span>
+              {optionalErrors.ibanNo && (
+                <span className="input-error">{optionalErrors.ibanNo}</span>
               )}
             </div>
           </div>

@@ -71,7 +71,7 @@ const EmployeeProfileDialog = ({
     ifscCode: "",
     accountNumber: "",
     swiftCode: "",
-    ibankNo: "",
+    ibanNo: "",
   });
   const [documents, setDocuments] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -599,7 +599,7 @@ const EmployeeProfileDialog = ({
         ifscCode: data.ifscCode || "",
         accountNumber: data.accountNo || "",
         swiftCode: data.swiftCode || "",
-        ibankNo: data.ibankNo || "",
+        ibanNo: data.ibanNo || "",
       });
     } catch (error) {
       console.error("Error fetching bank info:", error);
@@ -872,16 +872,16 @@ const EmployeeProfileDialog = ({
         } else {
           delete newErrors.swiftCode;
         }
-      } else if (field === "ibankNo") {
-        if (bankInfo.ibankNo && bankInfo.ibankNo.trim() !== "") {
-          const validation = validateIBAN(bankInfo.ibankNo);
+      } else if (field === "ibanNo") {
+        if (bankInfo.ibanNo && bankInfo.ibanNo.trim() !== "") {
+          const validation = validateIBAN(bankInfo.ibanNo);
           if (!validation.valid) {
-            newErrors.ibankNo = validation.message;
+            newErrors.ibanNo = validation.message;
           } else {
-            delete newErrors.ibankNo;
+            delete newErrors.ibanNo;
           }
         } else {
-          delete newErrors.ibankNo;
+          delete newErrors.ibanNo;
         }
       }
 
@@ -2407,56 +2407,65 @@ const EmployeeProfileDialog = ({
                         <span className="input-error">{bankErrors.city}</span>
                       )}
                     </div>
-                    <div className="form-field">
-                      <label>IFSC Code *</label>
-                      <input
-                        type="text"
-                        value={bankInfo?.ifscCode || ""}
-                        onChange={(e) =>
-                          handleBankInputChange(
-                            "ifscCode",
-                            e.target.value.toUpperCase()
-                          )
-                        }
-                        onBlur={() => handleBlur("ifscCode", "bank")}
-                        className={`input-field ${
-                          bankErrors.ifscCode ? "error" : ""
-                        }`}
-                        placeholder="e.g., SBIN0001234"
-                        maxLength="11"
-                      />
-                      {bankErrors.ifscCode && (
-                        <span className="input-error">
-                          {bankErrors.ifscCode}
-                        </span>
-                      )}
-                      <span className="field-hint">11-character IFSC code</span>
-                    </div>
-                    <div className="form-field">
-                      <label>Account Number *</label>
-                      <input
-                        type="text"
-                        value={bankInfo?.accountNumber || ""}
-                        onChange={(e) =>
-                          handleBankInputChange("accountNumber", e.target.value)
-                        }
-                        onBlur={() => handleBlur("accountNumber", "bank")}
-                        className={`input-field ${
-                          bankErrors.accountNumber ? "error" : ""
-                        }`}
-                        placeholder="Enter account number"
-                        maxLength="18"
-                        minLength="9"
-                      />
-                      {bankErrors.accountNumber && (
-                        <span className="input-error">
-                          {bankErrors.accountNumber}
-                        </span>
-                      )}
-                      <span className="field-hint">
-                        9-18 digit account number
-                      </span>
-                    </div>
+                    {employeeData.workLocation !== "On-site" && (
+                      <>
+                        <div className="form-field">
+                          <label>IFSC Code *</label>
+                          <input
+                            type="text"
+                            value={bankInfo?.ifscCode || ""}
+                            onChange={(e) =>
+                              handleBankInputChange(
+                                "ifscCode",
+                                e.target.value.toUpperCase()
+                              )
+                            }
+                            onBlur={() => handleBlur("ifscCode", "bank")}
+                            className={`input-field ${
+                              bankErrors.ifscCode ? "error" : ""
+                            }`}
+                            placeholder="e.g., SBIN0001234"
+                            maxLength="11"
+                          />
+                          {bankErrors.ifscCode && (
+                            <span className="input-error">
+                              {bankErrors.ifscCode}
+                            </span>
+                          )}
+                          <span className="field-hint">
+                            11-character IFSC code
+                          </span>
+                        </div>
+                        <div className="form-field">
+                          <label>Account Number *</label>
+                          <input
+                            type="text"
+                            value={bankInfo?.accountNumber || ""}
+                            onChange={(e) =>
+                              handleBankInputChange(
+                                "accountNumber",
+                                e.target.value
+                              )
+                            }
+                            onBlur={() => handleBlur("accountNumber", "bank")}
+                            className={`input-field ${
+                              bankErrors.accountNumber ? "error" : ""
+                            }`}
+                            placeholder="Enter account number"
+                            maxLength="18"
+                            minLength="9"
+                          />
+                          {bankErrors.accountNumber && (
+                            <span className="input-error">
+                              {bankErrors.accountNumber}
+                            </span>
+                          )}
+                          <span className="field-hint">
+                            9-18 digit account number
+                          </span>
+                        </div>
+                      </>
+                    )}
                     {employeeData.workLocation === "On-site" && (
                       <>
                         <div className="form-field">
@@ -2487,28 +2496,28 @@ const EmployeeProfileDialog = ({
                           </span>
                         </div>
                         <div className="form-field">
-                          <label>IBank Number *</label>
+                          <label>IBan Number *</label>
                           <input
                             type="text"
-                            value={bankInfo?.ibankNo || ""}
+                            value={bankInfo?.ibanNo || ""}
                             onChange={(e) =>
-                              handleBankInputChange("ibankNo", e.target.value)
+                              handleBankInputChange("ibanNo", e.target.value)
                             }
-                            onBlur={() => handleBlur("ibankNo", "bank")}
+                            onBlur={() => handleBlur("ibanNo", "bank")}
                             className={`input-field ${
-                              bankErrors.ibankNo ? "error" : ""
+                              bankErrors.ibanNo ? "error" : ""
                             }`}
-                            placeholder="Enter IBank number"
+                            placeholder="Enter IBan number"
                             maxLength="34"
                             minLength="32"
                           />
-                          {bankErrors.ibankNo && (
+                          {bankErrors.ibanNo && (
                             <span className="input-error">
-                              {bankErrors.ibankNo}
+                              {bankErrors.ibanNo}
                             </span>
                           )}
                           <span className="field-hint">
-                            15-34 digit IBank Number
+                            15-34 digit IBan Number
                           </span>
                         </div>
                       </>
